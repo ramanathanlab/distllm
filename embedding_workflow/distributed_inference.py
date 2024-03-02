@@ -170,12 +170,11 @@ def embed_file(
     from embedding_workflow.distributed_inference import compute_avg_embeddings
     from embedding_workflow.distributed_inference import DataCollator
     from embedding_workflow.distributed_inference import InMemoryDataset
-    from embedding_workflow.embedders import EmbedderTypes
     from embedding_workflow.embedders import get_embedder
     from embedding_workflow.readers import get_reader
 
     # Initialize the model and tokenizer
-    embedder: EmbedderTypes = get_embedder(embedder_kwargs, register=True)
+    embedder = get_embedder(embedder_kwargs, register=True)
 
     # Initialize the data reader
     reader = get_reader(reader_kwargs)
