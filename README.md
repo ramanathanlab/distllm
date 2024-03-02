@@ -13,7 +13,7 @@ pip install -e .
 ## Usage
 Then to create embeddings, run the following command:
 ```bash
-nohup python -m protein_search.distributed_inference --config examples/your-config.yaml &> nohup.out &
+nohup python -m embedding_workflow.distributed_inference --config examples/your-config.yaml &> nohup.out &
 ```
 
 ## Contributing
