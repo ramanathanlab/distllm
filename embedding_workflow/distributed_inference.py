@@ -13,50 +13,15 @@ from parsl.concurrent import ParslPoolExecutor
 from pydantic import Field
 from pydantic import field_validator
 from torch.utils.data import DataLoader
-from torch.utils.data import Dataset
-from transformers import BatchEncoding
-from transformers import PreTrainedTokenizer
 
+from embedding_workflow.datasets import DatasetConfigTypes
 from embedding_workflow.embedders import BaseEmbedder
 from embedding_workflow.embedders import EmbedderConfigTypes
 from embedding_workflow.parsl import ComputeConfigTypes
-from embedding_workflow.readers import ReaderConfigTypes
 from embedding_workflow.utils import BaseModel
 
 # TODO: For big models, see here: https://huggingface.co/docs/accelerate/usage_guides/big_modeling
 # Documentation on using accelerate for inference: https://huggingface.co/docs/accelerate/usage_guides/distributed_inference
-
-
-class InMemoryDataset(Dataset):
-    """Holds the data in memory for efficient batching."""
-
-    def __init__(self, data: list[str]) -> None:
-        self.data = data
-
-    def __len__(self) -> int:
-        """Length of the dataset."""
-        return len(self.data)
-
-    def __getitem__(self, idx: int) -> str:
-        """Get an item from the dataset."""
-        return self.data[idx]
-
-
-class DataCollator:
-    """Data collator for batching sequences."""
-
-    def __init__(self, tokenizer: PreTrainedTokenizer) -> None:
-        """Initialize the data collator."""
-        self.tokenizer = tokenizer
-
-    def __call__(self, batch: list[str]) -> BatchEncoding:
-        """Collate the batch of sequences."""
-        return self.tokenizer(
-            batch,
-            padding=True,
-            truncation=True,
-            return_tensors='pt',
-        )
 
 
 def average_pool(
@@ -158,49 +123,33 @@ def compute_avg_embeddings(
 
 def embed_file(
     file: Path,
-    batch_size: int,
-    num_data_workers: int,
-    reader_kwargs: dict[str, Any],
+    dataset_kwargs: dict[str, Any],
     embedder_kwargs: dict[str, Any],
 ) -> np.ndarray:
     """Embed a single file and return a numpy array with embeddings."""
     # Imports are here since this function is called in a parsl process
-    from torch.utils.data import DataLoader
 
+    from embedding_workflow.datasets import get_dataset
     from embedding_workflow.distributed_inference import compute_avg_embeddings
-    from embedding_workflow.distributed_inference import DataCollator
-    from embedding_workflow.distributed_inference import InMemoryDataset
     from embedding_workflow.embedders import get_embedder
-    from embedding_workflow.readers import get_reader
 
     # Initialize the model and tokenizer
     embedder = get_embedder(embedder_kwargs, register=True)
 
-    # Initialize the data reader
-    reader = get_reader(reader_kwargs)
+    # Initialize the dataset
+    dataset = get_dataset(dataset_kwargs)
 
-    # Read the data
-    data = reader.read(file)
-
-    # Build a torch dataset for efficient batching
-    dataloader = DataLoader(
-        pin_memory=True,
-        batch_size=batch_size,
-        num_workers=num_data_workers,
-        dataset=InMemoryDataset(data),
-        collate_fn=DataCollator(embedder.tokenizer),
-    )
+    # Initialize the dataloader
+    dataloader = dataset.get_dataloader(file, embedder)
 
     # Compute averaged hidden embeddings
     return compute_avg_embeddings(embedder, dataloader)
 
 
-def embed_and_save_file(  # noqa: PLR0913
+def embed_and_save_file(
     file: Path,
     output_dir: Path,
-    batch_size: int,
-    num_data_workers: int,
-    reader_kwargs: dict[str, Any],
+    dataset_kwargs: dict[str, Any],
     embedder_kwargs: dict[str, Any],
 ) -> None:
     """Embed a single file and save a numpy array with embeddings."""
@@ -212,9 +161,7 @@ def embed_and_save_file(  # noqa: PLR0913
     # Embed the file
     embeddings = embed_file(
         file=file,
-        batch_size=batch_size,
-        num_data_workers=num_data_workers,
-        reader_kwargs=reader_kwargs,
+        dataset_kwargs=dataset_kwargs,
         embedder_kwargs=embedder_kwargs,
     )
 
@@ -231,12 +178,8 @@ class Config(BaseModel):
     output_dir: Path
     # A set of glob patterns to match the input files.
     glob_patterns: list[str] = Field(default=['*'])
-    # Number of data workers for batching.
-    num_data_workers: int = 4
-    # Inference batch size.
-    batch_size: int = 8
     # Strategy for reading the input files.
-    reader_config: ReaderConfigTypes
+    dataset_config: DatasetConfigTypes
     # Settings for the embedder.
     embedder_config: EmbedderConfigTypes
     # Settings for the parsl compute backend.
@@ -276,9 +219,7 @@ if __name__ == '__main__':
     worker_fn = functools.partial(
         embed_and_save_file,
         output_dir=embedding_dir,
-        batch_size=config.batch_size,
-        num_data_workers=config.num_data_workers,
-        reader_kwargs=config.reader_config.model_dump(),
+        dataset_kwargs=config.dataset_config.model_dump(),
         embedder_kwargs=config.embedder_config.model_dump(),
     )
 

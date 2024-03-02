@@ -1,4 +1,4 @@
-"""Fasta file reader."""
+"""Fasta file dataset."""
 
 from __future__ import annotations
 
@@ -7,8 +7,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from embedding_workflow.readers.base import BaseReader
-from embedding_workflow.readers.base import BaseReaderConfig
+from torch.utils.data import DataLoader
+
+from embedding_workflow.datasets.base import BaseDataset
+from embedding_workflow.datasets.base import BaseDatasetConfig
+from embedding_workflow.datasets.utils import DataCollator
+from embedding_workflow.datasets.utils import InMemoryDataset
+from embedding_workflow.embedders import BaseEmbedder
 from embedding_workflow.utils import PathLike
 
 
@@ -51,23 +56,51 @@ def write_fasta(
             f.write(f'>{seq.tag}\n{seq.sequence}\n')
 
 
-class FastaReaderConfig(BaseReaderConfig):
-    """Configuration for the FastaReader."""
+class FastaDatasetConfig(BaseDatasetConfig):
+    """Configuration for the FastaDataset."""
 
     name: Literal['fasta'] = 'fasta'  # type: ignore[assignment]
 
+    # Number of data workers for batching.
+    num_data_workers: int = 4
+    # Inference batch size.
+    batch_size: int = 8
+    # Whether to pin memory for the dataloader.
+    pin_memory: bool = True
 
-class FastaReader(BaseReader):
-    """Fasta file reader."""
 
-    def read(self, data_file: PathLike) -> list[str]:
-        """Read the data file.
+class FastaDataset(BaseDataset):
+    """Fasta file dataset."""
+
+    config: FastaDatasetConfig
+
+    def get_dataloader(
+        self,
+        data_file: Path,
+        embedder: BaseEmbedder,
+    ) -> DataLoader:
+        """Instantiate a dataloader for the dataset.
 
         Parameters
         ----------
         data_file : Path
             The file to read.
+
+        Returns
+        -------
+        DataLoader
+            The dataloader instance.
         """
-        return [
+        # Read the sequences from the fasta file
+        data = [
             ' '.join(seq.sequence.upper()) for seq in read_fasta(data_file)
         ]
+
+        # Instantiate the dataloader
+        return DataLoader(
+            pin_memory=self.config.pin_memory,
+            batch_size=self.config.batch_size,
+            num_workers=self.config.num_data_workers,
+            dataset=InMemoryDataset(data),
+            collate_fn=DataCollator(embedder.tokenizer),
+        )
