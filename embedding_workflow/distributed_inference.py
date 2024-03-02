@@ -6,7 +6,6 @@ import functools
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Any
-from typing import Callable
 
 import numpy as np
 import torch
@@ -21,6 +20,7 @@ from transformers import PreTrainedTokenizer
 from embedding_workflow.embedders import BaseEmbedder
 from embedding_workflow.embedders import EmbedderConfigTypes
 from embedding_workflow.parsl import ComputeConfigTypes
+from embedding_workflow.readers import ReaderConfigTypes
 from embedding_workflow.utils import BaseModel
 
 # TODO: For big models, see here: https://huggingface.co/docs/accelerate/usage_guides/big_modeling
@@ -160,7 +160,7 @@ def embed_file(
     file: Path,
     batch_size: int,
     num_data_workers: int,
-    data_reader_fn: Callable[[Path], list[str]],
+    reader_kwargs: dict[str, Any],
     embedder_kwargs: dict[str, Any],
 ) -> np.ndarray:
     """Embed a single file and return a numpy array with embeddings."""
@@ -172,12 +172,16 @@ def embed_file(
     from embedding_workflow.distributed_inference import InMemoryDataset
     from embedding_workflow.embedders import EmbedderTypes
     from embedding_workflow.embedders import get_embedder
+    from embedding_workflow.readers import get_reader
 
     # Initialize the model and tokenizer
     embedder: EmbedderTypes = get_embedder(embedder_kwargs, register=True)
 
+    # Initialize the data reader
+    reader = get_reader(reader_kwargs)
+
     # Read the data
-    data = data_reader_fn(file)
+    data = reader.read(file)
 
     # Build a torch dataset for efficient batching
     dataloader = DataLoader(
@@ -197,7 +201,7 @@ def embed_and_save_file(  # noqa: PLR0913
     output_dir: Path,
     batch_size: int,
     num_data_workers: int,
-    data_reader_fn: Callable[[Path], list[str]],
+    reader_kwargs: dict[str, Any],
     embedder_kwargs: dict[str, Any],
 ) -> None:
     """Embed a single file and save a numpy array with embeddings."""
@@ -211,41 +215,12 @@ def embed_and_save_file(  # noqa: PLR0913
         file=file,
         batch_size=batch_size,
         num_data_workers=num_data_workers,
-        data_reader_fn=data_reader_fn,
+        reader_kwargs=reader_kwargs,
         embedder_kwargs=embedder_kwargs,
     )
 
     # Save the embeddings to disk
     np.save(output_dir / f'{file.stem}.npy', embeddings)
-
-
-def single_sequence_per_line_data_reader(
-    data_file: Path,
-    header_lines: int = 1,
-) -> list[str]:
-    """Read a file with one sequence per line.
-
-    Parameters
-    ----------
-    data_file : Path
-        The file to read.
-    header_lines : int, optional (default=1)
-        The number of header lines to skip.
-    """
-    return data_file.read_text().splitlines()[header_lines:]
-
-
-def fasta_data_reader(data_file: Path) -> list[str]:
-    """Read a fasta file and return a list of sequences."""
-    from embedding_workflow.utils import read_fasta
-
-    return [' '.join(seq.sequence.upper()) for seq in read_fasta(data_file)]
-
-
-READER_STRATEGIES = {
-    'single_sequence_per_line': single_sequence_per_line_data_reader,
-    'fasta': fasta_data_reader,
-}
 
 
 class Config(BaseModel):
@@ -262,7 +237,7 @@ class Config(BaseModel):
     # Inference batch size.
     batch_size: int = 8
     # Strategy for reading the input files.
-    data_reader_fn: str = 'fasta'
+    reader_config: ReaderConfigTypes
     # Settings for the embedder.
     embedder_config: EmbedderConfigTypes
     # Settings for the parsl compute backend.
@@ -298,20 +273,13 @@ if __name__ == '__main__':
     # Log the configuration
     config.write_yaml(config.output_dir / 'config.yaml')
 
-    # Get the data reader function
-    data_reader_fn = READER_STRATEGIES.get(config.data_reader_fn, None)
-    if data_reader_fn is None:
-        raise ValueError(
-            f'Invalid data reader function: {config.data_reader_fn}',
-        )
-
     # Set the static arguments of the worker function
     worker_fn = functools.partial(
         embed_and_save_file,
         output_dir=embedding_dir,
         batch_size=config.batch_size,
         num_data_workers=config.num_data_workers,
-        data_reader_fn=data_reader_fn,
+        reader_kwargs=config.reader_config.model_dump(),
         embedder_kwargs=config.embedder_config.model_dump(),
     )
 

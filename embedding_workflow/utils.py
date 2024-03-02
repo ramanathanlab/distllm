@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
-from dataclasses import dataclass
 from pathlib import Path
 from typing import TypeVar
 from typing import Union
@@ -77,43 +75,3 @@ class BaseModel(_BaseModel):
         with open(path) as fp:
             raw_data = yaml.safe_load(fp)
         return cls(**raw_data)
-
-
-# TODO: Move these to a data reader module
-@dataclass
-class Sequence:
-    """Biological sequence dataclass."""
-
-    sequence: str
-    """Biological sequence (Nucleotide/Amino acid sequence)."""
-    tag: str
-    """Sequence description tag."""
-
-
-def read_fasta(fasta_file: PathLike) -> list[Sequence]:
-    """Read fasta file sequences and description tags into dataclass."""
-    text = Path(fasta_file).read_text()
-    pattern = re.compile('^>', re.MULTILINE)
-    non_parsed_seqs = re.split(pattern, text)[1:]
-    lines = [
-        line.replace('\n', '')
-        for seq in non_parsed_seqs
-        for line in seq.split('\n', 1)
-    ]
-
-    return [
-        Sequence(sequence=seq, tag=tag)
-        for seq, tag in zip(lines[1::2], lines[::2])
-    ]
-
-
-def write_fasta(
-    sequences: Sequence | list[Sequence],
-    fasta_file: PathLike,
-    mode: str = 'w',
-) -> None:
-    """Write or append sequences to a fasta file."""
-    seqs = [sequences] if isinstance(sequences, Sequence) else sequences
-    with open(fasta_file, mode) as f:
-        for seq in seqs:
-            f.write(f'>{seq.tag}\n{seq.sequence}\n')
