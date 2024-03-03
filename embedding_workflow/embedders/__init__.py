@@ -54,13 +54,13 @@ def get_embedder(
         The configuration. Contains a `name` argument
         to specify the strategy to use.
     register : bool, optional
-        Register the embedder instance for warmstart. Caches the
-        embedder instance based on the kwargs, by default False.
+        Register the instance for warmstart. Caches the
+        instance based on the kwargs, by default False.
 
     Returns
     -------
     Embedder
-        The embedder instance.
+        The instance.
 
     Raises
     ------
