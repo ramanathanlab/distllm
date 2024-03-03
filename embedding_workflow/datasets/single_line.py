@@ -7,18 +7,17 @@ from typing import Literal
 
 from torch.utils.data import DataLoader
 
-from embedding_workflow.datasets.base import BaseDataset
-from embedding_workflow.datasets.base import BaseDatasetConfig
 from embedding_workflow.datasets.utils import DataCollator
 from embedding_workflow.datasets.utils import InMemoryDataset
-from embedding_workflow.embedders import BaseEmbedder
+from embedding_workflow.embedders import Embedder
+from embedding_workflow.utils import BaseConfig
 
 
-class SingleSequencePerLineDatasetConfig(BaseDatasetConfig):
+class SequencePerLineDatasetConfig(BaseConfig):
     """Configuration for the SingleSequencePerLineDataset."""
 
     # The name of the dataset
-    name: Literal['single_sequence_per_line'] = 'single_sequence_per_line'  # type: ignore[assignment]
+    name: Literal['sequence_per_line'] = 'sequence_per_line'  # type: ignore[assignment]
 
     # The number of header lines to skip
     header_lines: int = 1
@@ -30,15 +29,17 @@ class SingleSequencePerLineDatasetConfig(BaseDatasetConfig):
     pin_memory: bool = True
 
 
-class SingleSequencePerLineDataset(BaseDataset):
-    """Single sequence per line file dataset."""
+class SequencePerLineDataset:
+    """Sequence per line file dataset."""
 
-    config: SingleSequencePerLineDatasetConfig
+    def __init__(self, config: SequencePerLineDatasetConfig):
+        """Initialize the dataset."""
+        self.config = config
 
     def get_dataloader(
         self,
         data_file: Path,
-        embedder: BaseEmbedder,
+        embedder: Embedder,
     ) -> DataLoader:
         """Instantiate a dataloader for the dataset.
 

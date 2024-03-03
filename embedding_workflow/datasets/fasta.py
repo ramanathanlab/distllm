@@ -9,11 +9,10 @@ from typing import Literal
 
 from torch.utils.data import DataLoader
 
-from embedding_workflow.datasets.base import BaseDataset
-from embedding_workflow.datasets.base import BaseDatasetConfig
 from embedding_workflow.datasets.utils import DataCollator
 from embedding_workflow.datasets.utils import InMemoryDataset
-from embedding_workflow.embedders import BaseEmbedder
+from embedding_workflow.embedders import Embedder
+from embedding_workflow.utils import BaseConfig
 from embedding_workflow.utils import PathLike
 
 
@@ -56,7 +55,7 @@ def write_fasta(
             f.write(f'>{seq.tag}\n{seq.sequence}\n')
 
 
-class FastaDatasetConfig(BaseDatasetConfig):
+class FastaDatasetConfig(BaseConfig):
     """Configuration for the FastaDataset."""
 
     name: Literal['fasta'] = 'fasta'  # type: ignore[assignment]
@@ -69,15 +68,17 @@ class FastaDatasetConfig(BaseDatasetConfig):
     pin_memory: bool = True
 
 
-class FastaDataset(BaseDataset):
+class FastaDataset:
     """Fasta file dataset."""
 
-    config: FastaDatasetConfig
+    def __init__(self, config: FastaDatasetConfig) -> None:
+        """Initialize the dataset."""
+        self.config = config
 
     def get_dataloader(
         self,
         data_file: Path,
-        embedder: BaseEmbedder,
+        embedder: Embedder,
     ) -> DataLoader:
         """Instantiate a dataloader for the dataset.
 

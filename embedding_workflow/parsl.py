@@ -21,15 +21,12 @@ from parsl.launchers import MpiExecLauncher
 from parsl.providers import LocalProvider
 from parsl.providers import PBSProProvider
 
-from embedding_workflow.utils import BaseModel
+from embedding_workflow.utils import BaseConfig
 from embedding_workflow.utils import PathLike
 
 
-class BaseComputeConfig(BaseModel, ABC):
+class BaseComputeConfig(BaseConfig, ABC):
     """Compute configuration (HPC platform, number of GPUs, etc)."""
-
-    name: Literal[''] = ''
-    """Name of the platform to use."""
 
     @abstractmethod
     def get_config(self, run_dir: PathLike) -> Config:

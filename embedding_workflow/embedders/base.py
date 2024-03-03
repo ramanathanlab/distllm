@@ -2,48 +2,42 @@
 
 from __future__ import annotations
 
-from abc import ABC
-from abc import abstractmethod
-from abc import abstractproperty
-from typing import Literal
+from typing import Protocol
 
 import torch
 from transformers import BatchEncoding
 from transformers import PreTrainedTokenizer
-from utils import BaseModel
+
+from embedding_workflow.utils import BaseConfig
 
 
-class BaseEmbedderConfig(BaseModel, ABC):
-    """Base config for all embedders."""
+class Embedder(Protocol):
+    """Embedder protocol for all embedders to follow."""
 
-    # The name of the embedder
-    name: Literal[''] = ''
+    def __init__(self, config: BaseConfig) -> None:
+        """Initialize the embedder with the configuration."""
+        ...
 
-
-class BaseEmbedder(ABC):
-    """Base embedder class for all embedders to inherit from."""
-
-    @abstractproperty
+    @property
     def dtype(self) -> torch.dtype:
         """Get the data type of the embedder."""
         ...
 
-    @abstractproperty
+    @property
     def device(self) -> torch.device:
         """Get the device of the embedder."""
         ...
 
-    @abstractproperty
+    @property
     def embedding_size(self) -> int:
         """Get the embedding size of the embedder."""
         ...
 
-    @abstractproperty
+    @property
     def tokenizer(self) -> PreTrainedTokenizer:
         """Get the tokenizer of the embedder."""
         ...
 
-    @abstractmethod
     def embed(self, batch_encoding: BatchEncoding) -> torch.Tensor:
         """Embed the sequence.
 

@@ -14,11 +14,11 @@ from pydantic import Field
 from pydantic import field_validator
 from torch.utils.data import DataLoader
 
-from embedding_workflow.datasets import DatasetConfigTypes
-from embedding_workflow.embedders import BaseEmbedder
-from embedding_workflow.embedders import EmbedderConfigTypes
+from embedding_workflow.datasets import DatasetConfigs
+from embedding_workflow.embedders import Embedder
+from embedding_workflow.embedders import EmbedderConfigs
 from embedding_workflow.parsl import ComputeConfigTypes
-from embedding_workflow.utils import BaseModel
+from embedding_workflow.utils import BaseConfig
 
 # TODO: For big models, see here: https://huggingface.co/docs/accelerate/usage_guides/big_modeling
 # Documentation on using accelerate for inference: https://huggingface.co/docs/accelerate/usage_guides/distributed_inference
@@ -65,14 +65,14 @@ def average_pool(
 
 @torch.no_grad()
 def compute_avg_embeddings(
-    embedder: BaseEmbedder,
+    embedder: Embedder,
     dataloader: DataLoader,
 ) -> np.ndarray:
     """Compute averaged hidden embeddings.
 
     Parameters
     ----------
-    embedder : BaseEmbedder
+    embedder : Embedder
         The embedder to use for inference.
     dataloader : DataLoader
         The dataloader to use for batching the data.
@@ -169,7 +169,7 @@ def embed_and_save_file(
     np.save(output_dir / f'{file.stem}.npy', embeddings)
 
 
-class Config(BaseModel):
+class Config(BaseConfig):
     """Configuration for distributed inference."""
 
     # An input directory containing .fasta files.
@@ -179,9 +179,9 @@ class Config(BaseModel):
     # A set of glob patterns to match the input files.
     glob_patterns: list[str] = Field(default=['*'])
     # Strategy for reading the input files.
-    dataset_config: DatasetConfigTypes
+    dataset_config: DatasetConfigs
     # Settings for the embedder.
-    embedder_config: EmbedderConfigTypes
+    embedder_config: EmbedderConfigs
     # Settings for the parsl compute backend.
     compute_config: ComputeConfigTypes
 

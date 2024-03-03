@@ -4,38 +4,32 @@ from __future__ import annotations
 
 from typing import Any
 
-from embedding_workflow.datasets.base import BaseDataset
-from embedding_workflow.datasets.base import BaseDatasetConfig
+from embedding_workflow.datasets.base import Dataset
 from embedding_workflow.datasets.fasta import FastaDataset
 from embedding_workflow.datasets.fasta import FastaDatasetConfig
+from embedding_workflow.datasets.single_line import SequencePerLineDataset
 from embedding_workflow.datasets.single_line import (
-    SingleSequencePerLineDataset,
+    SequencePerLineDatasetConfig,
 )
-from embedding_workflow.datasets.single_line import (
-    SingleSequencePerLineDatasetConfig,
-)
+from embedding_workflow.utils import BaseConfig
 
-DatasetConfigTypes = FastaDatasetConfig | SingleSequencePerLineDatasetConfig
-DatasetTypes = FastaDataset | SingleSequencePerLineDataset
+DatasetConfigs = FastaDatasetConfig | SequencePerLineDatasetConfig
 
-STRATEGIES: dict[
-    str,
-    tuple[type[DatasetConfigTypes], type[DatasetTypes]],
-] = {
+STRATEGIES: dict[str, tuple[type[BaseConfig], type[Dataset]]] = {
     'fasta': (FastaDatasetConfig, FastaDataset),
-    'single_sequence_per_line': (
-        SingleSequencePerLineDatasetConfig,
-        SingleSequencePerLineDataset,
+    'sequence_per_line': (
+        SequencePerLineDatasetConfig,
+        SequencePerLineDataset,
     ),
 }
 
 
-def get_dataset(kwargs: dict[str, Any]) -> DatasetTypes:
-    """Get the instance based on the name and kwargs.
+def get_dataset(kwargs: dict[str, Any]) -> Dataset:
+    """Get the instance based on the kwargs.
 
     Currently supports the following strategies:
     - fasta
-    - single_sequence_per_line
+    - sequence_per_line
 
     Parameters
     ----------
@@ -45,8 +39,8 @@ def get_dataset(kwargs: dict[str, Any]) -> DatasetTypes:
 
     Returns
     -------
-    DatasetTypes
-        The dataset instance.
+    Dataset
+        The instance.
 
     Raises
     ------
@@ -56,13 +50,12 @@ def get_dataset(kwargs: dict[str, Any]) -> DatasetTypes:
     name = kwargs.get('name', '')
     strategy = STRATEGIES.get(name)
     if not strategy:
-        raise ValueError(f'Unknown dataset name: {name}')
+        raise ValueError(
+            f'Unknown embedder name: {name}.'
+            f' Available: {set(STRATEGIES.keys())}',
+        )
 
     # Get the config and classes
     config_cls, cls = strategy
 
-    # Initialize the config
-    config = config_cls(**kwargs)
-
-    # Return the instance
-    return cls(config)
+    return cls(config_cls(**kwargs))

@@ -8,11 +8,10 @@ import torch
 from transformers import BatchEncoding
 from transformers import PreTrainedTokenizer
 
-from embedding_workflow.embedders.base import BaseEmbedder
-from embedding_workflow.embedders.base import BaseEmbedderConfig
+from embedding_workflow.utils import BaseConfig
 
 
-class AutoEmbedderConfig(BaseEmbedderConfig):
+class AutoEmbedderConfig(BaseConfig):
     """Config for the transformers AutoModel embedder."""
 
     # The name of the embedder
@@ -27,7 +26,7 @@ class AutoEmbedderConfig(BaseEmbedderConfig):
     compile_model: bool = True
 
 
-class AutoEmbedder(BaseEmbedder):
+class AutoEmbedder:
     """Embedder for the transformers AutoModel."""
 
     def __init__(self, config: AutoEmbedderConfig):

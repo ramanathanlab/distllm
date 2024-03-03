@@ -1,4 +1,4 @@
-"""Embedder module for embedding sequences."""
+"""Embedder module."""
 
 from __future__ import annotations
 
@@ -6,27 +6,42 @@ from typing import Any
 
 from embedding_workflow.embedders.auto import AutoEmbedder
 from embedding_workflow.embedders.auto import AutoEmbedderConfig
-from embedding_workflow.embedders.base import BaseEmbedder
-from embedding_workflow.embedders.base import BaseEmbedderConfig
+from embedding_workflow.embedders.base import Embedder
 from embedding_workflow.embedders.esm2 import Esm2Embedder
 from embedding_workflow.embedders.esm2 import Esm2EmbedderConfig
 from embedding_workflow.registry import registry
+from embedding_workflow.utils import BaseConfig
 
-EmbedderConfigTypes = Esm2EmbedderConfig | AutoEmbedderConfig
-EmbedderTypes = Esm2Embedder | AutoEmbedder
+EmbedderConfigs = Esm2EmbedderConfig | AutoEmbedderConfig
 
-_EmbedderTypes = tuple[type[EmbedderConfigTypes], type[EmbedderTypes]]
-
-STRATEGIES: dict[str, _EmbedderTypes] = {
+STRATEGIES: dict[str, tuple[type[BaseConfig], type[Embedder]]] = {
     'esm2': (Esm2EmbedderConfig, Esm2Embedder),
     'auto': (AutoEmbedderConfig, AutoEmbedder),
 }
 
 
+# This is a workaround to support optional registration.
+# Make a function to combine the config and instance initialization
+# since the registry only accepts functions with hashable arguments.
+def _factory_fn(**kwargs: dict[str, Any]) -> Embedder:
+    name = kwargs.get('name', '')
+    strategy = STRATEGIES.get(name)  # type: ignore[arg-type]
+    if not strategy:
+        raise ValueError(
+            f'Unknown embedder name: {name}.'
+            f' Available: {set(STRATEGIES.keys())}',
+        )
+
+    # Get the config and classes
+    config_cls, cls = strategy
+
+    return cls(config_cls(**kwargs))
+
+
 def get_embedder(
     kwargs: dict[str, Any],
     register: bool = False,
-) -> EmbedderTypes:
+) -> Embedder:
     """Get the instance based on the kwargs.
 
     Currently supports the following strategies:
@@ -44,7 +59,7 @@ def get_embedder(
 
     Returns
     -------
-    EmbedderTypes
+    Embedder
         The embedder instance.
 
     Raises
@@ -52,27 +67,9 @@ def get_embedder(
     ValueError
         If the `name` is unknown.
     """
-    name = kwargs.get('name', '')
-    strategy = STRATEGIES.get(name)
-    if not strategy:
-        raise ValueError(f'Unknown embedder name: {name}')
-
-    # Get the config and classes
-    config_cls, cls = strategy
-
-    # Make a function to combine the config and instance initialization
-    # since the registry only accepts functions with hashable arguments.
-    def factory_fn(**kwargs: dict[str, Any]) -> EmbedderTypes:
-        # Create the config
-        config = config_cls(**kwargs)
-        # Create the instance
-        return cls(config)
-
-    # Register and create the embedder instance
+    # Create and register the instance
     if register:
-        registry.register(factory_fn)
-        embedder = registry.get(factory_fn, **kwargs)
-    else:
-        embedder = factory_fn(**kwargs)
+        registry.register(_factory_fn)
+        return registry.get(_factory_fn, **kwargs)
 
-    return embedder
+    return _factory_fn(**kwargs)

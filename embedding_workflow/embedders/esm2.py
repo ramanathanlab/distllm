@@ -8,11 +8,10 @@ import torch
 from transformers import BatchEncoding
 from transformers import PreTrainedTokenizer
 
-from embedding_workflow.embedders.base import BaseEmbedder
-from embedding_workflow.embedders.base import BaseEmbedderConfig
+from embedding_workflow.utils import BaseConfig
 
 
-class Esm2EmbedderConfig(BaseEmbedderConfig):
+class Esm2EmbedderConfig(BaseConfig):
     """Config for the ESM-2 embedder."""
 
     # The name of the embedder
@@ -27,7 +26,7 @@ class Esm2EmbedderConfig(BaseEmbedderConfig):
     compile_model: bool = True
 
 
-class Esm2Embedder(BaseEmbedder):
+class Esm2Embedder:
     """Embedder for the ESM-2 model."""
 
     def __init__(self, config: Esm2EmbedderConfig):
