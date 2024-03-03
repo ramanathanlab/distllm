@@ -42,7 +42,7 @@ def get_prompt(kwargs: dict[str, Any]) -> Prompt:
     strategy = STRATEGIES.get(name)
     if not strategy:
         raise ValueError(
-            f'Unknown generator name: {name}.'
+            f'Unknown prompt name: {name}.'
             f' Available: {set(STRATEGIES.keys())}',
         )
 

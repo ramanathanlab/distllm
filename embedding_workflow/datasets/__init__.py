@@ -51,7 +51,7 @@ def get_dataset(kwargs: dict[str, Any]) -> Dataset:
     strategy = STRATEGIES.get(name)
     if not strategy:
         raise ValueError(
-            f'Unknown embedder name: {name}.'
+            f'Unknown dataset name: {name}.'
             f' Available: {set(STRATEGIES.keys())}',
         )
 
