@@ -21,8 +21,8 @@ from parsl.launchers import MpiExecLauncher
 from parsl.providers import LocalProvider
 from parsl.providers import PBSProProvider
 
-from embedding_workflow.utils import BaseConfig
-from embedding_workflow.utils import PathLike
+from distllm.utils import BaseConfig
+from distllm.utils import PathLike
 
 
 class BaseComputeConfig(BaseConfig, ABC):

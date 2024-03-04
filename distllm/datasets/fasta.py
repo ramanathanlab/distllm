@@ -9,11 +9,11 @@ from typing import Literal
 
 from torch.utils.data import DataLoader
 
-from embedding_workflow.datasets.utils import DataCollator
-from embedding_workflow.datasets.utils import InMemoryDataset
-from embedding_workflow.embedders import Embedder
-from embedding_workflow.utils import BaseConfig
-from embedding_workflow.utils import PathLike
+from distllm.datasets.utils import DataCollator
+from distllm.datasets.utils import InMemoryDataset
+from distllm.embedders import Embedder
+from distllm.utils import BaseConfig
+from distllm.utils import PathLike
 
 
 @dataclass

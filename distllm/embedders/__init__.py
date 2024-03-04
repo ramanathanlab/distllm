@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from embedding_workflow.embedders.auto import AutoEmbedder
-from embedding_workflow.embedders.auto import AutoEmbedderConfig
-from embedding_workflow.embedders.base import Embedder
-from embedding_workflow.embedders.esm2 import Esm2Embedder
-from embedding_workflow.embedders.esm2 import Esm2EmbedderConfig
-from embedding_workflow.registry import registry
-from embedding_workflow.utils import BaseConfig
+from distllm.embedders.auto import AutoEmbedder
+from distllm.embedders.auto import AutoEmbedderConfig
+from distllm.embedders.base import Embedder
+from distllm.embedders.esm2 import Esm2Embedder
+from distllm.embedders.esm2 import Esm2EmbedderConfig
+from distllm.registry import registry
+from distllm.utils import BaseConfig
 
 EmbedderConfigs = Esm2EmbedderConfig | AutoEmbedderConfig
 

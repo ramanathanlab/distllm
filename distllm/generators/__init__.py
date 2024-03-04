@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from embedding_workflow.generators.base import LLMGenerator
-from embedding_workflow.generators.base import LLMResponse
-from embedding_workflow.generators.vllm_backend import VLLMGenerator
-from embedding_workflow.generators.vllm_backend import VLLMGeneratorConfig
-from embedding_workflow.registry import registry
-from embedding_workflow.utils import BaseConfig
+from distllm.generators.base import LLMGenerator
+from distllm.generators.base import LLMResponse
+from distllm.generators.vllm_backend import VLLMGenerator
+from distllm.generators.vllm_backend import VLLMGeneratorConfig
+from distllm.registry import registry
+from distllm.utils import BaseConfig
 
 LLMGeneratorConfigs = VLLMGeneratorConfig
 

@@ -1,4 +1,4 @@
-"""Utilities for embedding_workflow."""
+"""Utilities for distllm."""
 
 from __future__ import annotations
 

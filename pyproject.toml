@@ -3,13 +3,13 @@ requires = ["setuptools>=64.0", "setuptools_scm"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "embedding_workflow"
+name = "distllm"
 version = "0.1.0"
 authors = [
     {name = "Alexander Brace", email = "abrace@anl.gov"},
     {name = "Ozan Gokdemir", email = "ogokdemir@uchicago.edu"},
 ]
-description = "Generate language model embeddings at scale."
+description = "Distributed Inference for Large Language Models."
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
@@ -27,12 +27,12 @@ dependencies = [
 ]
 
 [project.urls]
-homepage = "https://github.com/ramanathanlab/embedding-workflow"
-documentation = "https://github.com/ramanathanlab/embedding-workflow"
-repository = "https://github.com/ramanathanlab/embedding-workflow"
+homepage = "https://github.com/ramanathanlab/distllm"
+documentation = "https://github.com/ramanathanlab/distllm"
+repository = "https://github.com/ramanathanlab/distllm"
 
 [project.scripts]
-embedding-workflow = "embedding_workflow.cli:main"
+distllm = "distllm.cli:main"
 
 [project.optional-dependencies]
 dev = [
@@ -152,7 +152,7 @@ quote-style = "single"
 
 [tool.ruff.isort]
 force-single-line = true
-known-first-party = ["embedding_workflow", "test", "testing"]
+known-first-party = ["distllm", "test", "testing"]
 order-by-type = false
 required-imports = ["from __future__ import annotations"]
 

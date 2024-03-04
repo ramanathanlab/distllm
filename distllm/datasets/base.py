@@ -7,8 +7,8 @@ from typing import Protocol
 
 from torch.utils.data import DataLoader
 
-from embedding_workflow.embedders import Embedder
-from embedding_workflow.utils import BaseConfig
+from distllm.embedders import Embedder
+from distllm.utils import BaseConfig
 
 
 class Dataset(Protocol):

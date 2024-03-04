@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import Literal
 
-from embedding_workflow.generators import LLMResponse
-from embedding_workflow.utils import BaseConfig
+from distllm.generators import LLMResponse
+from distllm.utils import BaseConfig
 
 
 class QuestionPromptConfig(BaseConfig):

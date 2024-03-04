@@ -8,7 +8,7 @@ import torch
 from transformers import BatchEncoding
 from transformers import PreTrainedTokenizer
 
-from embedding_workflow.utils import BaseConfig
+from distllm.utils import BaseConfig
 
 
 class Esm2EmbedderConfig(BaseConfig):

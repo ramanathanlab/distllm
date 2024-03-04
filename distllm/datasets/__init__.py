@@ -4,14 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from embedding_workflow.datasets.base import Dataset
-from embedding_workflow.datasets.fasta import FastaDataset
-from embedding_workflow.datasets.fasta import FastaDatasetConfig
-from embedding_workflow.datasets.single_line import SequencePerLineDataset
-from embedding_workflow.datasets.single_line import (
-    SequencePerLineDatasetConfig,
-)
-from embedding_workflow.utils import BaseConfig
+from distllm.datasets.base import Dataset
+from distllm.datasets.fasta import FastaDataset
+from distllm.datasets.fasta import FastaDatasetConfig
+from distllm.datasets.single_line import SequencePerLineDataset
+from distllm.datasets.single_line import SequencePerLineDatasetConfig
+from distllm.utils import BaseConfig
 
 DatasetConfigs = FastaDatasetConfig | SequencePerLineDatasetConfig
 

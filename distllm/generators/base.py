@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from embedding_workflow.utils import BaseConfig
+from distllm.utils import BaseConfig
 
 
 class LLMResponse(BaseConfig):

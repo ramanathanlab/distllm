@@ -1,19 +1,21 @@
-# embedding-workflow
-Generate language model embeddings.
+# distllm
+Distributed Inference for Large Language Models.
+- Create embeddings for large datasets at scale.
+- Generate text using language models at scale.
 
 ## Installation
 
 To install the package, run the following command:
 ```bash
-git clone git@github.com:ramanathanlab/embedding-workflow.git
-cd embedding-workflow
+git clone git@github.com:ramanathanlab/distllm.git
+cd distllm
 pip install -e .
 ```
 
 ## Usage
 Then to create embeddings, run the following command:
 ```bash
-nohup python -m embedding_workflow.distributed_inference --config examples/your-config.yaml &> nohup.out &
+nohup python -m distllm.distributed_inference --config examples/your-config.yaml &> nohup.out &
 ```
 
 ## Contributing

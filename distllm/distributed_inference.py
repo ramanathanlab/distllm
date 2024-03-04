@@ -14,11 +14,11 @@ from pydantic import Field
 from pydantic import field_validator
 from torch.utils.data import DataLoader
 
-from embedding_workflow.datasets import DatasetConfigs
-from embedding_workflow.embedders import Embedder
-from embedding_workflow.embedders import EmbedderConfigs
-from embedding_workflow.parsl import ComputeConfigTypes
-from embedding_workflow.utils import BaseConfig
+from distllm.datasets import DatasetConfigs
+from distllm.embedders import Embedder
+from distllm.embedders import EmbedderConfigs
+from distllm.parsl import ComputeConfigTypes
+from distllm.utils import BaseConfig
 
 # TODO: For big models, see here: https://huggingface.co/docs/accelerate/usage_guides/big_modeling
 # Documentation on using accelerate for inference: https://huggingface.co/docs/accelerate/usage_guides/distributed_inference
@@ -85,7 +85,7 @@ def compute_avg_embeddings(
     import torch
     from tqdm import tqdm
 
-    from embedding_workflow.distributed_inference import average_pool
+    from distllm.distributed_inference import average_pool
 
     # Get the number of embeddings and the embedding size
     num_embeddings = len(dataloader.dataset)
@@ -129,9 +129,9 @@ def embed_file(
     """Embed a single file and return a numpy array with embeddings."""
     # Imports are here since this function is called in a parsl process
 
-    from embedding_workflow.datasets import get_dataset
-    from embedding_workflow.distributed_inference import compute_avg_embeddings
-    from embedding_workflow.embedders import get_embedder
+    from distllm.datasets import get_dataset
+    from distllm.distributed_inference import compute_avg_embeddings
+    from distllm.embedders import get_embedder
 
     # Initialize the model and tokenizer
     embedder = get_embedder(embedder_kwargs, register=True)
@@ -156,7 +156,7 @@ def embed_and_save_file(
     # Imports are here since this function is called in a parsl process
     import numpy as np
 
-    from embedding_workflow.distributed_inference import embed_file
+    from distllm.distributed_inference import embed_file
 
     # Embed the file
     embeddings = embed_file(

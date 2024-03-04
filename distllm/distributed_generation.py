@@ -11,10 +11,10 @@ from parsl.concurrent import ParslPoolExecutor
 from pydantic import Field
 from pydantic import field_validator
 
-from embedding_workflow.generators import LLMGeneratorConfigs
-from embedding_workflow.parsl import ComputeConfigTypes
-from embedding_workflow.prompts import PromptConfigs
-from embedding_workflow.utils import BaseConfig
+from distllm.generators import LLMGeneratorConfigs
+from distllm.parsl import ComputeConfigTypes
+from distllm.prompts import PromptConfigs
+from distllm.utils import BaseConfig
 
 
 def generate(
@@ -26,8 +26,8 @@ def generate(
     """Generate text for a file and save to the output directory."""
     import json
 
-    from embedding_workflow.generators import get_generator
-    from embedding_workflow.prompts import get_prompt
+    from distllm.generators import get_generator
+    from distllm.prompts import get_prompt
 
     # Initialize the generator
     generator = get_generator(generator_kwargs, register=True)

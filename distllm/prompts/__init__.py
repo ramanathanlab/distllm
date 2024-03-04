@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from embedding_workflow.prompts.base import Prompt
-from embedding_workflow.prompts.question import QuestionPrompt
-from embedding_workflow.prompts.question import QuestionPromptConfig
-from embedding_workflow.utils import BaseConfig
+from distllm.prompts.base import Prompt
+from distllm.prompts.question import QuestionPrompt
+from distllm.prompts.question import QuestionPromptConfig
+from distllm.utils import BaseConfig
 
 PromptConfigs = QuestionPromptConfig
 

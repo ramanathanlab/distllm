@@ -6,8 +6,8 @@ import os
 from typing import Literal
 from uuid import uuid4
 
-from embedding_workflow.generators.base import LLMResponse
-from embedding_workflow.utils import BaseConfig
+from distllm.generators.base import LLMResponse
+from distllm.utils import BaseConfig
 
 
 class VLLMGeneratorConfig(BaseConfig):

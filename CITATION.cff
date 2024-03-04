@@ -8,6 +8,6 @@ authors:
     given-names: Ozan
     orcid: https://orcid.org/0000-0001-5299-1983
 license: MIT
-repository-code: https://github.com/ramanathanlab/embedding-workflow
-title: embedding-workflow
-url: https://github.com/ramanathanlab/embedding-workflow
+repository-code: https://github.com/ramanathanlab/distllm
+title: distllm
+url: https://github.com/ramanathanlab/distllm
