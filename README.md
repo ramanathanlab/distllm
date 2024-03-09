@@ -13,9 +13,14 @@ pip install -e .
 ```
 
 ## Usage
-Then to create embeddings, run the following command:
+To create embeddings at scale, run the following command:
 ```bash
-nohup python -m distllm.distributed_inference --config examples/your-config.yaml &> nohup.out &
+nohup python -m distllm.distributed_embedding --config examples/your-config.yaml &> nohup.out &
+```
+
+For LLM generation at scale, run the following command:
+```bash
+nohup python -m distllm.distributed_generation --config examples/your-config.yaml &> nohup.out &
 ```
 
 ## Contributing
