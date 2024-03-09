@@ -86,6 +86,8 @@ class FastaDataset:
         ----------
         data_file : Path
             The file to read.
+        embedder : Embedder
+            The embedder instance.
 
         Returns
         -------

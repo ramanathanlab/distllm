@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Literal
 
@@ -13,14 +14,14 @@ from distllm.embedders import Embedder
 from distllm.utils import BaseConfig
 
 
-class SequencePerLineDatasetConfig(BaseConfig):
-    """Configuration for the SequencePerLineDataset."""
+class JsonlDatasetConfig(BaseConfig):
+    """Configuration for the SingleSequencePerLineDataset."""
 
     # The name of the dataset
-    name: Literal['sequence_per_line'] = 'sequence_per_line'  # type: ignore[assignment]
+    name: Literal['jsonl'] = 'jsonl'  # type: ignore[assignment]
 
-    # The number of header lines to skip
-    header_lines: int = 1
+    # The name of the text field in the jsonl file
+    text_field: str = 'text'
     # Number of data workers for batching.
     num_data_workers: int = 4
     # Inference batch size.
@@ -29,10 +30,10 @@ class SequencePerLineDatasetConfig(BaseConfig):
     pin_memory: bool = True
 
 
-class SequencePerLineDataset:
+class JsonlDataset:
     """Sequence per line file dataset."""
 
-    def __init__(self, config: SequencePerLineDatasetConfig):
+    def __init__(self, config: JsonlDatasetConfig):
         """Initialize the dataset."""
         self.config = config
 
@@ -55,8 +56,12 @@ class SequencePerLineDataset:
         DataLoader
             The dataloader instance.
         """
-        # Read the file and skip the header lines
-        data = data_file.read_text().splitlines()[self.config.header_lines :]
+        # Read the jsonl file
+        lines = data_file.read_text().strip().split('\n')
+        content = [json.loads(line) for line in lines]
+
+        # Extract the text data
+        data = [item[self.config.text_field] for item in content]
 
         # Instantiate the dataloader
         return DataLoader(
