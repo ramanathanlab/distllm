@@ -1,4 +1,4 @@
-"""Embedder interface for all embedder to inherit from."""
+"""Embedder interface for all embedders to follow."""
 
 from __future__ import annotations
 

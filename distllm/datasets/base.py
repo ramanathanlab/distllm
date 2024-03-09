@@ -1,4 +1,4 @@
-"""Dataset interface for all datasets to inherit from."""
+"""Dataset interface for all datasets to follow."""
 
 from __future__ import annotations
 

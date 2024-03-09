@@ -18,74 +18,37 @@ from distllm.datasets import DatasetConfigs
 from distllm.embedders import Embedder
 from distllm.embedders import EmbedderConfigs
 from distllm.parsl import ComputeConfigTypes
+from distllm.poolers import Pooler
+from distllm.poolers import PoolerConfigs
 from distllm.utils import BaseConfig
 
 # TODO: For big models, see here: https://huggingface.co/docs/accelerate/usage_guides/big_modeling
-# Documentation on using accelerate for inference: https://huggingface.co/docs/accelerate/usage_guides/distributed_inference
-
-
-def average_pool(
-    embeddings: torch.Tensor,
-    attention_mask: torch.Tensor,
-) -> torch.Tensor:
-    """Average pool the hidden states using the attention mask.
-
-    Parameters
-    ----------
-    embeddings : torch.Tensor
-        The hidden states to pool (B, SeqLen, HiddenDim).
-    attention_mask : torch.Tensor
-        The attention mask for the hidden states (B, SeqLen).
-
-    Returns
-    -------
-    torch.Tensor
-        The pooled embeddings (B, HiddenDim).
-    """
-    # Get the sequence lengths
-    seq_lengths = attention_mask.sum(axis=1)
-
-    # Set the attention mask to 0 for start and end tokens
-    attention_mask[:, 0] = 0
-    attention_mask[:, seq_lengths - 1] = 0
-
-    # Create a mask for the pooling operation (B, SeqLen, HiddenDim)
-    pool_mask = attention_mask.unsqueeze(-1).expand(embeddings.shape)
-
-    # Sum the embeddings over the sequence length (use the mask to avoid
-    # pad, start, and stop tokens)
-    sum_embeds = torch.sum(embeddings * pool_mask, 1)
-
-    # Avoid division by zero for zero length sequences by clamping
-    sum_mask = torch.clamp(pool_mask.sum(1), min=1e-9)
-
-    # Compute mean pooled embeddings for each sequence
-    return sum_embeds / sum_mask
 
 
 @torch.no_grad()
-def compute_avg_embeddings(
-    embedder: Embedder,
+def compute_embeddings(
     dataloader: DataLoader,
+    embedder: Embedder,
+    pooler: Pooler,
 ) -> np.ndarray:
-    """Compute averaged hidden embeddings.
+    """Compute pooled hidden embeddings.
 
     Parameters
     ----------
-    embedder : Embedder
-        The embedder to use for inference.
     dataloader : DataLoader
         The dataloader to use for batching the data.
+    embedder : Embedder
+        The embedder to use for inference.
+    pooler : Pooler
+        The pooler to use for pooling the embeddings.
 
     Returns
     -------
     np.ndarray
-        A numpy array of averaged hidden embeddings.
+        A numpy array of pooled hidden embeddings.
     """
     import torch
     from tqdm import tqdm
-
-    from distllm.distributed_inference import average_pool
 
     # Get the number of embeddings and the embedding size
     num_embeddings = len(dataloader.dataset)
@@ -107,7 +70,7 @@ def compute_avg_embeddings(
         embeddings = embedder.embed(inputs)
 
         # Compute the average pooled embeddings
-        pooled_embeds = average_pool(embeddings, inputs.attention_mask)
+        pooled_embeds = pooler.pool(embeddings, inputs.attention_mask)
 
         # Get the batch size
         batch_size = inputs.attention_mask.shape[0]
@@ -125,16 +88,21 @@ def embed_file(
     file: Path,
     dataset_kwargs: dict[str, Any],
     embedder_kwargs: dict[str, Any],
+    pooler_kwargs: dict[str, Any],
 ) -> np.ndarray:
     """Embed a single file and return a numpy array with embeddings."""
     # Imports are here since this function is called in a parsl process
 
     from distllm.datasets import get_dataset
-    from distllm.distributed_inference import compute_avg_embeddings
+    from distllm.distributed_inference import compute_embeddings
     from distllm.embedders import get_embedder
+    from distllm.poolers import get_pooler
 
     # Initialize the model and tokenizer
     embedder = get_embedder(embedder_kwargs, register=True)
+
+    # Initialize the pooler
+    pooler = get_pooler(pooler_kwargs)
 
     # Initialize the dataset
     dataset = get_dataset(dataset_kwargs)
@@ -143,7 +111,7 @@ def embed_file(
     dataloader = dataset.get_dataloader(file, embedder)
 
     # Compute averaged hidden embeddings
-    return compute_avg_embeddings(embedder, dataloader)
+    return compute_embeddings(dataloader, embedder, pooler)
 
 
 def embed_and_save_file(
@@ -151,6 +119,7 @@ def embed_and_save_file(
     output_dir: Path,
     dataset_kwargs: dict[str, Any],
     embedder_kwargs: dict[str, Any],
+    pooler_kwargs: dict[str, Any],
 ) -> None:
     """Embed a single file and save a numpy array with embeddings."""
     # Imports are here since this function is called in a parsl process
@@ -163,6 +132,7 @@ def embed_and_save_file(
         file=file,
         dataset_kwargs=dataset_kwargs,
         embedder_kwargs=embedder_kwargs,
+        pooler_kwargs=pooler_kwargs,
     )
 
     # Save the embeddings to disk
@@ -182,6 +152,8 @@ class Config(BaseConfig):
     dataset_config: DatasetConfigs
     # Settings for the embedder.
     embedder_config: EmbedderConfigs
+    # Settings for the pooler.
+    pooler_config: PoolerConfigs
     # Settings for the parsl compute backend.
     compute_config: ComputeConfigTypes
 
@@ -221,6 +193,7 @@ if __name__ == '__main__':
         output_dir=embedding_dir,
         dataset_kwargs=config.dataset_config.model_dump(),
         embedder_kwargs=config.embedder_config.model_dump(),
+        pooler_kwargs=config.pooler_config.model_dump(),
     )
 
     # Collect all input files
