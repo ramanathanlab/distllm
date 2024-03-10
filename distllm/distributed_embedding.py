@@ -127,6 +127,9 @@ def embed_and_save_file(
 
     from distllm.distributed_embedding import embed_file
 
+    # Make the output directory
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     # Embed the file
     embeddings = embed_file(
         file=file,
