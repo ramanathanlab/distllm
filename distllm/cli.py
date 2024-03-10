@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import typer
+from tqdm import tqdm
 
 app = typer.Typer()
 
@@ -123,7 +124,7 @@ def embed(  # noqa: PLR0913
         )
 
     # Embed and save the files
-    for data_file in data_files:
+    for data_file in tqdm(data_files):
         embed_and_save_file(
             file=data_file,
             output_dir=output_path,
