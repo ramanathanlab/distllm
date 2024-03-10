@@ -28,7 +28,13 @@ def embed(  # noqa: PLR0913
         ...,
         '--data_path',
         '-d',
-        help='The path to the data file to embed.',
+        help='The directory to the data files to embed.',
+    ),
+    data_extension: str = typer.Option(
+        ...,
+        '--data_extension',
+        '-de',
+        help='The extension of the data files to glob.',
     ),
     output_path: Path = typer.Option(  # noqa: B008
         ...,
@@ -109,13 +115,22 @@ def embed(  # noqa: PLR0913
         'name': pooler_name,
     }
 
-    embed_and_save_file(
-        file=data_path,
-        output_dir=output_path,
-        dataset_kwargs=dataset_kwargs,
-        embedder_kwargs=embedder_kwargs,
-        pooler_kwargs=pooler_kwargs,
-    )
+    # Get the data files
+    data_files = list(data_path.glob(f'*.{data_extension}'))
+    if not data_files:
+        raise ValueError(
+            f'No files found in {data_path} with extension {data_extension}',
+        )
+
+    # Embed and save the files
+    for data_file in data_files:
+        embed_and_save_file(
+            file=data_file,
+            output_dir=output_path,
+            dataset_kwargs=dataset_kwargs,
+            embedder_kwargs=embedder_kwargs,
+            pooler_kwargs=pooler_kwargs,
+        )
 
 
 def main() -> None:
