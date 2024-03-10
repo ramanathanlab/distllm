@@ -94,7 +94,7 @@ def embed_file(
     # Imports are here since this function is called in a parsl process
 
     from distllm.datasets import get_dataset
-    from distllm.distributed_inference import compute_embeddings
+    from distllm.distributed_embedding import compute_embeddings
     from distllm.embedders import get_embedder
     from distllm.poolers import get_pooler
 
@@ -125,7 +125,7 @@ def embed_and_save_file(
     # Imports are here since this function is called in a parsl process
     import numpy as np
 
-    from distllm.distributed_inference import embed_file
+    from distllm.distributed_embedding import embed_file
 
     # Embed the file
     embeddings = embed_file(
