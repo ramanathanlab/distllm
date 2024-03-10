@@ -38,7 +38,6 @@ class AutoEmbedder:
         # Load model and tokenizer
         model = AutoModel.from_pretrained(
             config.pretrained_model_name_or_path,
-            deterministic_eval=True,
             trust_remote_code=True,
         )
         tokenizer = AutoTokenizer.from_pretrained(
