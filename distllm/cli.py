@@ -85,6 +85,14 @@ def embed(  # noqa: PLR0913
     """Generate embeddings for a single file."""
     from distllm.distributed_embedding import embed_and_save_file
 
+    # The dataset kwargs
+    dataset_kwargs = {
+        # The name of the dataset to use
+        'name': dataset_name,
+        # The batch size to use for generating the embeddings
+        'batch_size': batch_size,
+    }
+
     # The embedder kwargs
     embedder_kwargs = {
         # The name of the model architecture to use
@@ -99,14 +107,6 @@ def embed(  # noqa: PLR0913
         # Note: This can actually slow down the inference
         # if the number of queries is small
         'compile_model': compile_model,
-    }
-
-    # The dataset kwargs
-    dataset_kwargs = {
-        # The name of the dataset to use
-        'name': dataset_name,
-        # The batch size to use for generating the embeddings
-        'batch_size': batch_size,
     }
 
     # The pooler kwargs
