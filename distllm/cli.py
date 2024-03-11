@@ -82,6 +82,12 @@ def embed(  # noqa: PLR0913
         '-cm',
         help='Compile the model for faster inference.',
     ),
+    quantization: bool = typer.Option(
+        False,
+        '--quantization',
+        '-q',
+        help='Quantize the model for faster inference.',
+    ),
 ) -> None:
     """Generate embeddings for a single file."""
     from distllm.distributed_embedding import embed_and_save_file
@@ -108,6 +114,8 @@ def embed(  # noqa: PLR0913
         # Note: This can actually slow down the inference
         # if the number of queries is small
         'compile_model': compile_model,
+        # Use quantization
+        'quantization': quantization,
     }
 
     # The pooler kwargs
