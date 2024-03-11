@@ -24,6 +24,8 @@ class AutoEmbedderConfig(BaseConfig):
     eval_mode: bool = True
     # Compile the model for faster inference
     compile_model: bool = True
+    # Use quantization
+    quantization: bool = True
 
 
 class AutoEmbedder:
@@ -35,10 +37,26 @@ class AutoEmbedder:
         from transformers import AutoModel
         from transformers import AutoTokenizer
 
+        model_kwargs = {}
+
+        # Use quantization
+        if config.quantization:
+            from transformers import BitsAndBytesConfig
+
+            nf4_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type='nf4',
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_compute_dtype=torch.bfloat16,
+            )
+
+            model_kwargs['quantization_config'] = nf4_config
+
         # Load model and tokenizer
         model = AutoModel.from_pretrained(
             config.pretrained_model_name_or_path,
             trust_remote_code=True,
+            **model_kwargs,
         )
         tokenizer = AutoTokenizer.from_pretrained(
             config.pretrained_model_name_or_path,
