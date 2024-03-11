@@ -72,8 +72,11 @@ class AutoEmbedder:
             model.eval()
 
         # Load the model onto the device
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        model.to(device)
+        if not config.quantization:
+            device = torch.device(
+                'cuda' if torch.cuda.is_available() else 'cpu',
+            )
+            model.to(device)
 
         # Compile the model for faster inference
         if config.compile_model:
