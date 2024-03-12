@@ -86,11 +86,6 @@ class AutoEmbedder:
         self.model = model
         self._tokenizer = tokenizer
 
-        # Set the maximum sequence length
-        self.model.config.max_length = (
-            self.model.config.max_position_embeddings
-        )
-
     @property
     def dtype(self) -> torch.dtype:
         """Get the data type of the embedder."""
