@@ -87,7 +87,9 @@ class AutoEmbedder:
         self._tokenizer = tokenizer
 
         # Set the maximum sequence length
-        self.model.max_length = self.model.config.max_position_embeddings
+        self.model.config.max_length = (
+            self.model.config.max_position_embeddings
+        )
 
     @property
     def dtype(self) -> torch.dtype:
