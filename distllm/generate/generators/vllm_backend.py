@@ -6,7 +6,7 @@ import os
 from typing import Literal
 from uuid import uuid4
 
-from distllm.generators.base import LLMResponse
+from distllm.generate.generators.base import LLMResult
 from distllm.utils import BaseConfig
 
 
@@ -60,7 +60,7 @@ class VLLMGenerator:
         # Set the unique id
         self.unique_id = str(uuid4())
 
-    def generate(self, prompts: str | list[str]) -> list[LLMResponse]:
+    def generate(self, prompts: str | list[str]) -> list[LLMResult]:
         """Generate response text from prompts.
 
         Parameters
@@ -70,10 +70,10 @@ class VLLMGenerator:
 
         Returns
         -------
-        list[LLMResponse]
-            A list of LLMResponse with the prompt and response. For example:
+        list[LLMResult]
+            A list of LLMResult with the prompt and response. For example:
             [
-                LLMResponse(prompt='What is two plus two?', response='four'),
+                LLMResult(prompt='What is two plus two?', response='four'),
                 ...
             ]
         """
@@ -88,7 +88,7 @@ class VLLMGenerator:
 
         # Extract the prompt and response from the outputs
         results = [
-            LLMResponse(prompt=output.prompt, response=output.outputs[0].text)
+            LLMResult(prompt=output.prompt, response=output.outputs[0].text)
             for output in outputs
         ]
 

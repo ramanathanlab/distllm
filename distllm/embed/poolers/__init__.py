@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from distllm.poolers.base import Pooler
-from distllm.poolers.last_token import LastTokenPooler
-from distllm.poolers.last_token import LastTokenPoolerConfig
-from distllm.poolers.mean import MeanPooler
-from distllm.poolers.mean import MeanPoolerConfig
+from distllm.embed.poolers.base import Pooler
+from distllm.embed.poolers.last_token import LastTokenPooler
+from distllm.embed.poolers.last_token import LastTokenPoolerConfig
+from distllm.embed.poolers.mean import MeanPooler
+from distllm.embed.poolers.mean import MeanPoolerConfig
 from distllm.utils import BaseConfig
 
 PoolerConfigs = MeanPoolerConfig | LastTokenPoolerConfig

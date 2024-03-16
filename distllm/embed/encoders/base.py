@@ -1,4 +1,4 @@
-"""Embedder interface for all embedders to follow."""
+"""Encoder interface for all encoders to follow."""
 
 from __future__ import annotations
 
@@ -11,35 +11,35 @@ from transformers import PreTrainedTokenizer
 from distllm.utils import BaseConfig
 
 
-class Embedder(Protocol):
-    """Embedder protocol for all embedders to follow."""
+class Encoder(Protocol):
+    """Encoder protocol for all encoders to follow."""
 
     def __init__(self, config: BaseConfig) -> None:
-        """Initialize the embedder with the configuration."""
+        """Initialize the encoder with the configuration."""
         ...
 
     @property
     def dtype(self) -> torch.dtype:
-        """Get the data type of the embedder."""
+        """Get the data type of the encoder."""
         ...
 
     @property
     def device(self) -> torch.device:
-        """Get the device of the embedder."""
+        """Get the device of the encoder."""
         ...
 
     @property
     def embedding_size(self) -> int:
-        """Get the embedding size of the embedder."""
+        """Get the embedding size of the encoder."""
         ...
 
     @property
     def tokenizer(self) -> PreTrainedTokenizer:
-        """Get the tokenizer of the embedder."""
+        """Get the tokenizer of the encoder."""
         ...
 
-    def embed(self, batch_encoding: BatchEncoding) -> torch.Tensor:
-        """Embed the sequence.
+    def encode(self, batch_encoding: BatchEncoding) -> torch.Tensor:
+        """Encode the sequence.
 
         Parameters
         ----------

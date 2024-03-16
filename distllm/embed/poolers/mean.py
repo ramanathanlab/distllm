@@ -9,6 +9,7 @@ import torch
 from distllm.utils import BaseConfig
 
 
+# TODO: We might want to configure whether to include the start and end tokens
 def average_pool(
     embeddings: torch.Tensor,
     attention_mask: torch.Tensor,

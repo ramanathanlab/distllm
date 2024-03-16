@@ -4,17 +4,26 @@ from __future__ import annotations
 
 from typing import Any
 
-from distllm.datasets.base import Dataset
-from distllm.datasets.fasta import FastaDataset
-from distllm.datasets.fasta import FastaDatasetConfig
-from distllm.datasets.jsonl import JsonlDataset
-from distllm.datasets.jsonl import JsonlDatasetConfig
-from distllm.datasets.single_line import SequencePerLineDataset
-from distllm.datasets.single_line import SequencePerLineDatasetConfig
+from distllm.embed.datasets.base import Dataset
+from distllm.embed.datasets.fasta import FastaDataset
+from distllm.embed.datasets.fasta import FastaDatasetConfig
+from distllm.embed.datasets.jsonl import JsonlDataset
+from distllm.embed.datasets.jsonl import JsonlDatasetConfig
+from distllm.embed.datasets.jsonl_sentence_chunks import (
+    JsonlSentenceChunksDataset,
+)
+from distllm.embed.datasets.jsonl_sentence_chunks import (
+    JsonlSentenceChunksDatasetConfig,
+)
+from distllm.embed.datasets.single_line import SequencePerLineDataset
+from distllm.embed.datasets.single_line import SequencePerLineDatasetConfig
 from distllm.utils import BaseConfig
 
 DatasetConfigs = (
-    FastaDatasetConfig | SequencePerLineDatasetConfig | JsonlDatasetConfig
+    FastaDatasetConfig
+    | SequencePerLineDatasetConfig
+    | JsonlDatasetConfig
+    | JsonlSentenceChunksDatasetConfig
 )
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[Dataset]]] = {
@@ -24,6 +33,10 @@ STRATEGIES: dict[str, tuple[type[BaseConfig], type[Dataset]]] = {
         SequencePerLineDataset,
     ),
     'jsonl': (JsonlDatasetConfig, JsonlDataset),
+    'jsonl_sentence_chunks': (
+        JsonlSentenceChunksDatasetConfig,
+        JsonlSentenceChunksDataset,
+    ),
 }
 
 

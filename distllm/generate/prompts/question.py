@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from distllm.generators import LLMResponse
+from distllm.generate.generators import LLMResult
 from distllm.utils import BaseConfig
 
 
@@ -45,12 +45,12 @@ class QuestionPrompt:
         prompts = [self.prompt.format(document=document) for document in text]
         return prompts
 
-    def postprocess(self, responses: list[LLMResponse]) -> list[str]:
+    def postprocess(self, responses: list[LLMResult]) -> list[str]:
         """Extract the questions from the responses.
 
         Parameters
         ----------
-        responses : list[LLMResponse]
+        responses : list[LLMResult]
             The responses to extract questions from.
 
         Returns

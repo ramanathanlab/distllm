@@ -1,26 +1,30 @@
-"""Prompt module."""
+"""Module for writing embeddings to disk."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from distllm.prompts.base import Prompt
-from distllm.prompts.question import QuestionPrompt
-from distllm.prompts.question import QuestionPromptConfig
+from distllm.embed.writers.base import Writer
+from distllm.embed.writers.huggingface import HuggingFaceWriter
+from distllm.embed.writers.huggingface import HuggingFaceWriterConfig
+from distllm.embed.writers.numpy import NumpyWriter
+from distllm.embed.writers.numpy import NumpyWriterConfig
 from distllm.utils import BaseConfig
 
-PromptConfigs = QuestionPromptConfig
+WriterConfigs = HuggingFaceWriterConfig | NumpyWriterConfig
 
-STRATEGIES: dict[str, tuple[type[BaseConfig], type[Prompt]]] = {
-    'question': (QuestionPromptConfig, QuestionPrompt),
+STRATEGIES: dict[str, tuple[type[BaseConfig], type[Writer]]] = {
+    'huggingface': (HuggingFaceWriterConfig, HuggingFaceWriter),
+    'numpy': (NumpyWriterConfig, NumpyWriter),
 }
 
 
-def get_prompt(kwargs: dict[str, Any]) -> Prompt:
+def get_writer(kwargs: dict[str, Any]) -> Writer:
     """Get the instance based on the kwargs.
 
     Currently supports the following strategies:
-    - question
+    - huggingface
+    - numpy
 
     Parameters
     ----------
@@ -30,7 +34,7 @@ def get_prompt(kwargs: dict[str, Any]) -> Prompt:
 
     Returns
     -------
-    Prompt
+    Writer
         The instance.
 
     Raises
@@ -42,7 +46,7 @@ def get_prompt(kwargs: dict[str, Any]) -> Prompt:
     strategy = STRATEGIES.get(name)
     if not strategy:
         raise ValueError(
-            f'Unknown prompt name: {name}.'
+            f'Unknown writer name: {name}.'
             f' Available: {set(STRATEGIES.keys())}',
         )
 

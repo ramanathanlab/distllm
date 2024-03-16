@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from distllm.generators import LLMResponse
+from distllm.generate.generators import LLMResult
 from distllm.utils import BaseConfig
 
 
@@ -30,12 +30,12 @@ class Prompt(Protocol):
         """
         ...
 
-    def postprocess(self, responses: list[LLMResponse]) -> list[str]:
+    def postprocess(self, responses: list[LLMResult]) -> list[str]:
         """Postprocess the responses.
 
         Parameters
         ----------
-        responses : list[LLMResponse]
+        responses : list[LLMResult]
             The responses to postprocess.
 
         Returns

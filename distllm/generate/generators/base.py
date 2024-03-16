@@ -7,8 +7,8 @@ from typing import Protocol
 from distllm.utils import BaseConfig
 
 
-class LLMResponse(BaseConfig):
-    """Configuration for the LLMResponse."""
+class LLMResult(BaseConfig):
+    """Configuration for the LLMResult."""
 
     # The prompt text
     prompt: str
@@ -28,6 +28,6 @@ class LLMGenerator(Protocol):
         """Get the unique identifier of the generator."""
         ...
 
-    def generate(self, prompts: str | list[str]) -> list[LLMResponse]:
+    def generate(self, prompts: str | list[str]) -> list[LLMResult]:
         """Generate response text from prompts."""
         ...

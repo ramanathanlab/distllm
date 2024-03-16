@@ -8,14 +8,14 @@ from typing import Literal
 
 from torch.utils.data import DataLoader
 
-from distllm.datasets.utils import DataCollator
-from distllm.datasets.utils import InMemoryDataset
-from distllm.embedders import Embedder
+from distllm.embed import Encoder
+from distllm.embed.datasets.utils import DataCollator
+from distllm.embed.datasets.utils import InMemoryDataset
 from distllm.utils import BaseConfig
 
 
 class JsonlDatasetConfig(BaseConfig):
-    """Configuration for the SingleSequencePerLineDataset."""
+    """Configuration for the JsonlDataset."""
 
     # The name of the dataset
     name: Literal['jsonl'] = 'jsonl'  # type: ignore[assignment]
@@ -31,7 +31,7 @@ class JsonlDatasetConfig(BaseConfig):
 
 
 class JsonlDataset:
-    """Sequence per line file dataset."""
+    """Jsonl file dataset."""
 
     def __init__(self, config: JsonlDatasetConfig):
         """Initialize the dataset."""
@@ -40,7 +40,7 @@ class JsonlDataset:
     def get_dataloader(
         self,
         data_file: Path,
-        embedder: Embedder,
+        encoder: Encoder,
     ) -> DataLoader:
         """Instantiate a dataloader for the dataset.
 
@@ -48,8 +48,8 @@ class JsonlDataset:
         ----------
         data_file : Path
             The file to read.
-        embedder : Embedder
-            The embedder instance.
+        encoder : Encoder
+            The encoder instance.
 
         Returns
         -------
@@ -69,5 +69,5 @@ class JsonlDataset:
             batch_size=self.config.batch_size,
             num_workers=self.config.num_data_workers,
             dataset=InMemoryDataset(data),
-            collate_fn=DataCollator(embedder.tokenizer),
+            collate_fn=DataCollator(encoder.tokenizer),
         )

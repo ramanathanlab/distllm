@@ -64,6 +64,20 @@ def embed(  # noqa: PLR0913
         help='The name of the pooler to use for generating the embeddings '
         '[mean, last_token].',
     ),
+    embedder_name: str = typer.Option(
+        'full_sequence',
+        '--embedder_name',
+        '-en',
+        help='The name of the embedder to use for generating the embeddings '
+        '[full_sequence, semantic_chunk].',
+    ),
+    writer_name: str = typer.Option(
+        'huggingface',
+        '--writer_name',
+        '-wn',
+        help='The name of the writer to use for saving the embeddings '
+        '[huggingface, numpy].',
+    ),
     half_precision: bool = typer.Option(
         False,
         '--half_precision',
@@ -90,7 +104,7 @@ def embed(  # noqa: PLR0913
     ),
 ) -> None:
     """Generate embeddings for a single file."""
-    from distllm.distributed_embedding import embed_and_save_file
+    from distllm.distributed_embedding import embedding_worker
 
     # The dataset kwargs
     dataset_kwargs = {
@@ -100,8 +114,8 @@ def embed(  # noqa: PLR0913
         'batch_size': batch_size,
     }
 
-    # The embedder kwargs
-    embedder_kwargs = {
+    # The encoder kwargs
+    encoder_kwargs = {
         # The name of the model architecture to use
         'name': model_name,
         # The model id to use for generating the embeddings
@@ -124,6 +138,18 @@ def embed(  # noqa: PLR0913
         'name': pooler_name,
     }
 
+    # The embedder kwargs
+    embedder_kwargs = {
+        # The name of the embedder to use
+        'name': embedder_name,
+    }
+
+    # The writer kwargs
+    writer_kwargs = {
+        # The name of the writer to use
+        'name': writer_name,
+    }
+
     # Get the data files
     data_files = list(data_path.glob(f'*.{data_extension}'))
     if not data_files:
@@ -133,12 +159,14 @@ def embed(  # noqa: PLR0913
 
     # Embed and save the files
     for data_file in tqdm(data_files):
-        embed_and_save_file(
+        embedding_worker(
             file=data_file,
             output_dir=output_path,
             dataset_kwargs=dataset_kwargs,
-            embedder_kwargs=embedder_kwargs,
+            encoder_kwargs=encoder_kwargs,
             pooler_kwargs=pooler_kwargs,
+            embedder_kwargs=embedder_kwargs,
+            writer_kwargs=writer_kwargs,
         )
 
 

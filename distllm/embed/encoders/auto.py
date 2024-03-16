@@ -1,4 +1,4 @@
-"""Embedder for the auto model."""
+"""Encoder for the auto model."""
 
 from __future__ import annotations
 
@@ -11,10 +11,10 @@ from transformers import PreTrainedTokenizer
 from distllm.utils import BaseConfig
 
 
-class AutoEmbedderConfig(BaseConfig):
-    """Config for the transformers AutoModel embedder."""
+class AutoEncoderConfig(BaseConfig):
+    """Config for the transformers AutoModel encoder."""
 
-    # The name of the embedder
+    # The name of the encoder
     name: Literal['auto'] = 'auto'  # type: ignore[assignment]
     # The model id
     pretrained_model_name_or_path: str
@@ -28,11 +28,11 @@ class AutoEmbedderConfig(BaseConfig):
     quantization: bool = True
 
 
-class AutoEmbedder:
-    """Embedder for the transformers AutoModel."""
+class AutoEncoder:
+    """Encoder for the transformers AutoModel."""
 
-    def __init__(self, config: AutoEmbedderConfig):
-        """Initialize the embedder."""
+    def __init__(self, config: AutoEncoderConfig):
+        """Initialize the encoder."""
         import torch
         from transformers import AutoModel
         from transformers import AutoTokenizer
@@ -88,26 +88,26 @@ class AutoEmbedder:
 
     @property
     def dtype(self) -> torch.dtype:
-        """Get the data type of the embedder."""
+        """Get the data type of the encoder."""
         return self.model.dtype
 
     @property
     def device(self) -> torch.device:
-        """Get the device of the embedder."""
+        """Get the device of the encoder."""
         return self.model.device
 
     @property
     def embedding_size(self) -> int:
-        """Get the embedding size of the embedder."""
+        """Get the embedding size of the encoder."""
         return self.model.config.hidden_size
 
     @property
     def tokenizer(self) -> PreTrainedTokenizer:
-        """Get the tokenizer of the embedder."""
+        """Get the tokenizer of the encoder."""
         return self._tokenizer
 
-    def embed(self, batch_encoding: BatchEncoding) -> torch.Tensor:
-        """Embed the sequence.
+    def encode(self, batch_encoding: BatchEncoding) -> torch.Tensor:
+        """Encode the sequence.
 
         Parameters
         ----------

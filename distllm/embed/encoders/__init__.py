@@ -1,34 +1,34 @@
-"""Embedder module."""
+"""Encoder module."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from distllm.embedders.auto import AutoEmbedder
-from distllm.embedders.auto import AutoEmbedderConfig
-from distllm.embedders.base import Embedder
-from distllm.embedders.esm2 import Esm2Embedder
-from distllm.embedders.esm2 import Esm2EmbedderConfig
+from distllm.embed.encoders.auto import AutoEncoder
+from distllm.embed.encoders.auto import AutoEncoderConfig
+from distllm.embed.encoders.base import Encoder
+from distllm.embed.encoders.esm2 import Esm2Encoder
+from distllm.embed.encoders.esm2 import Esm2EncoderConfig
 from distllm.registry import registry
 from distllm.utils import BaseConfig
 
-EmbedderConfigs = Esm2EmbedderConfig | AutoEmbedderConfig
+EncoderConfigs = Esm2EncoderConfig | AutoEncoderConfig
 
-STRATEGIES: dict[str, tuple[type[BaseConfig], type[Embedder]]] = {
-    'esm2': (Esm2EmbedderConfig, Esm2Embedder),
-    'auto': (AutoEmbedderConfig, AutoEmbedder),
+STRATEGIES: dict[str, tuple[type[BaseConfig], type[Encoder]]] = {
+    'esm2': (Esm2EncoderConfig, Esm2Encoder),
+    'auto': (AutoEncoderConfig, AutoEncoder),
 }
 
 
 # This is a workaround to support optional registration.
 # Make a function to combine the config and instance initialization
 # since the registry only accepts functions with hashable arguments.
-def _factory_fn(**kwargs: dict[str, Any]) -> Embedder:
+def _factory_fn(**kwargs: dict[str, Any]) -> Encoder:
     name = kwargs.get('name', '')
     strategy = STRATEGIES.get(name)  # type: ignore[arg-type]
     if not strategy:
         raise ValueError(
-            f'Unknown embedder name: {name}.'
+            f'Unknown encoder name: {name}.'
             f' Available: {set(STRATEGIES.keys())}',
         )
 
@@ -38,10 +38,10 @@ def _factory_fn(**kwargs: dict[str, Any]) -> Embedder:
     return cls(config_cls(**kwargs))
 
 
-def get_embedder(
+def get_encoder(
     kwargs: dict[str, Any],
     register: bool = False,
-) -> Embedder:
+) -> Encoder:
     """Get the instance based on the kwargs.
 
     Currently supports the following strategies:
@@ -59,7 +59,7 @@ def get_embedder(
 
     Returns
     -------
-    Embedder
+    Encoder
         The instance.
 
     Raises

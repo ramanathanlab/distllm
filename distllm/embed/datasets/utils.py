@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from torch.utils.data import Dataset
 from transformers import BatchEncoding
 from transformers import PreTrainedTokenizer
@@ -10,8 +12,17 @@ from transformers import PreTrainedTokenizer
 class InMemoryDataset(Dataset):
     """Holds the data in memory for efficient batching."""
 
-    def __init__(self, data: list[str]) -> None:
+    def __init__(
+        self,
+        data: list[str],
+        metadata: list[dict[str, Any]] | None = None,
+    ) -> None:
         self.data = data
+        self.metadata = metadata
+
+        # Ensure that the metadata is the same length as the data
+        if metadata is not None:
+            assert len(data) == len(metadata)
 
     def __len__(self) -> int:
         """Length of the dataset."""

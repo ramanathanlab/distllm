@@ -9,9 +9,9 @@ from typing import Literal
 
 from torch.utils.data import DataLoader
 
-from distllm.datasets.utils import DataCollator
-from distllm.datasets.utils import InMemoryDataset
-from distllm.embedders import Embedder
+from distllm.embed import Encoder
+from distllm.embed.datasets.utils import DataCollator
+from distllm.embed.datasets.utils import InMemoryDataset
 from distllm.utils import BaseConfig
 from distllm.utils import PathLike
 
@@ -78,7 +78,7 @@ class FastaDataset:
     def get_dataloader(
         self,
         data_file: Path,
-        embedder: Embedder,
+        encoder: Encoder,
     ) -> DataLoader:
         """Instantiate a dataloader for the dataset.
 
@@ -86,8 +86,8 @@ class FastaDataset:
         ----------
         data_file : Path
             The file to read.
-        embedder : Embedder
-            The embedder instance.
+        encoder : Encoder
+            The encoder instance.
 
         Returns
         -------
@@ -105,5 +105,5 @@ class FastaDataset:
             batch_size=self.config.batch_size,
             num_workers=self.config.num_data_workers,
             dataset=InMemoryDataset(data),
-            collate_fn=DataCollator(embedder.tokenizer),
+            collate_fn=DataCollator(encoder.tokenizer),
         )

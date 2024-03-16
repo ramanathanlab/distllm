@@ -7,7 +7,7 @@ from typing import Protocol
 
 from torch.utils.data import DataLoader
 
-from distllm.embedders import Embedder
+from distllm.embed import Encoder
 from distllm.utils import BaseConfig
 
 
@@ -21,7 +21,7 @@ class Dataset(Protocol):
     def get_dataloader(
         self,
         data_file: Path,
-        embedder: Embedder,
+        encoder: Encoder,
     ) -> DataLoader:
         """Instantiate a dataloader for the dataset.
 
@@ -29,8 +29,8 @@ class Dataset(Protocol):
         ----------
         data_file : Path
             The file to read.
-        embedder : Embedder
-            The embedder to use.
+        encoder : Encoder
+            The encoder to use.
 
         Returns
         -------
