@@ -141,6 +141,6 @@ class JsonlSentenceChunksDataset:
             pin_memory=self.config.pin_memory,
             batch_size=self.config.batch_size,
             num_workers=self.config.num_data_workers,
-            dataset=InMemoryDataset(data, metadata),
+            dataset=InMemoryDataset(buffers, metadata),
             collate_fn=DataCollator(encoder.tokenizer),
         )
