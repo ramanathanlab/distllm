@@ -10,7 +10,7 @@ from typing import Literal
 import numpy as np
 from torch.utils.data import Dataset
 
-from distllm.embed.embedders.base import EmbedderResult
+from distllm.embed import EmbedderResult
 from distllm.utils import BaseConfig
 
 

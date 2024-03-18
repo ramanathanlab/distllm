@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Protocol
 
-from distllm.embed.embedders.base import EmbedderResult
+from distllm.embed import EmbedderResult
 from distllm.utils import BaseConfig
 
 

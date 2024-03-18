@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-# from typing import TypeAlias
 from distllm.embed.writers.base import Writer
 from distllm.embed.writers.huggingface import HuggingFaceWriter
 from distllm.embed.writers.huggingface import HuggingFaceWriterConfig
