@@ -15,8 +15,7 @@ from distllm.embed import DatasetConfigs
 from distllm.embed import EmbedderConfigs
 from distllm.embed import EncoderConfigs
 from distllm.embed import PoolerConfigs
-from distllm.embed import WriterConfigs
-from distllm.parsl import ComputeConfigTypes
+from distllm.parsl import ComputeConfigs
 from distllm.utils import BaseConfig
 
 
@@ -87,9 +86,9 @@ class Config(BaseConfig):
     # Settings for the embedder.
     embedder_config: EmbedderConfigs
     # Settings for the writer.
-    writer_config: WriterConfigs
+    # writer_config: WriterConfigs
     # Settings for the parsl compute backend.
-    compute_config: ComputeConfigTypes
+    compute_config: ComputeConfigs
 
     @field_validator('input_dir', 'output_dir')
     @classmethod
@@ -129,7 +128,7 @@ if __name__ == '__main__':
         encoder_kwargs=config.encoder_config.model_dump(),
         pooler_kwargs=config.pooler_config.model_dump(),
         embedder_kwargs=config.embedder_config.model_dump(),
-        writer_kwargs=config.writer_config.model_dump(),
+        writer_kwargs={},  # config.writer_config.model_dump(),
     )
 
     # Collect all input files

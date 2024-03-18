@@ -13,7 +13,7 @@ from pydantic import field_validator
 
 from distllm.generate import LLMGeneratorConfigs
 from distllm.generate import PromptConfigs
-from distllm.parsl import ComputeConfigTypes
+from distllm.parsl import ComputeConfigs
 from distllm.utils import BaseConfig
 
 
@@ -75,7 +75,7 @@ class Config(BaseConfig):
     # Settings for the generator.
     generator_config: LLMGeneratorConfigs
     # Settings for the parsl compute backend.
-    compute_config: ComputeConfigTypes
+    compute_config: ComputeConfigs
 
     @field_validator('input_dir', 'output_dir')
     @classmethod

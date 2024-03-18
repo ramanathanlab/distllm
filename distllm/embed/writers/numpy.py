@@ -7,7 +7,7 @@ from typing import Literal
 
 import numpy as np
 
-from distllm.embed import EmbedderResult
+from distllm.embed.embedders.base import EmbedderResult
 from distllm.utils import BaseConfig
 
 
@@ -20,7 +20,7 @@ class NumpyWriterConfig(BaseConfig):
 class NumpyWriter:
     """Numpy writer for saving embeddings to disk."""
 
-    def __init__(self, config: EmbedderResult) -> None:
+    def __init__(self, config: NumpyWriterConfig) -> None:
         """Initialize the writer with the configuration."""
         self.config = config
 
