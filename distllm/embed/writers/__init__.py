@@ -11,7 +11,7 @@ from distllm.embed.writers.numpy import NumpyWriter
 from distllm.embed.writers.numpy import NumpyWriterConfig
 from distllm.utils import BaseConfig
 
-WriterConfigs = HuggingFaceWriterConfig | NumpyWriterConfig
+WriterConfigs = HuggingFaceWriterConfig | NumpyWriterConfig | None
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[Writer]]] = {
     'huggingface': (HuggingFaceWriterConfig, HuggingFaceWriter),
