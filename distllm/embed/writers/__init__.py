@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from typing import Any
-from typing import TypeAlias
 
+# from typing import TypeAlias
 from distllm.embed.writers.base import Writer
 from distllm.embed.writers.huggingface import HuggingFaceWriter
 from distllm.embed.writers.huggingface import HuggingFaceWriterConfig
@@ -12,7 +12,7 @@ from distllm.embed.writers.numpy import NumpyWriter
 from distllm.embed.writers.numpy import NumpyWriterConfig
 from distllm.utils import BaseConfig
 
-WriterConfigs: TypeAlias = HuggingFaceWriterConfig | NumpyWriterConfig
+WriterConfigs = HuggingFaceWriterConfig | NumpyWriterConfig
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[Writer]]] = {
     'huggingface': (HuggingFaceWriterConfig, HuggingFaceWriter),
