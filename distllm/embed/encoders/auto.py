@@ -23,7 +23,7 @@ class AutoEncoderConfig(BaseConfig):
     # Set the model to evaluation mode
     eval_mode: bool = True
     # Compile the model for faster inference
-    compile_model: bool = True
+    compile_model: bool = False
     # Use quantization
     quantization: bool = True
 
