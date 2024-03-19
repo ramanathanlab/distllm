@@ -28,7 +28,7 @@ writer_config:
   name: huggingface
 
 # Settings for the parsl compute backend.
-compute_settings:
+compute_config:
   # The name of the compute platform to use
   name: polaris
   # The number of compute nodes to use
