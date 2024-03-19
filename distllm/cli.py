@@ -57,6 +57,12 @@ def embed(  # noqa: PLR0913
         '-b',
         help='The batch size to use for generating the embeddings.',
     ),
+    buffer_size: int = typer.Option(
+        1,
+        '--buffer_size',
+        '-bs',
+        help='The buffer size to use for semantic chunking.',
+    ),
     pooler_name: str = typer.Option(
         'mean',
         '--pooler_name',
@@ -113,6 +119,10 @@ def embed(  # noqa: PLR0913
         # The batch size to use for generating the embeddings
         'batch_size': batch_size,
     }
+
+    # If the dataset is jsonl_chunk, set the buffer size
+    if dataset_name == 'jsonl_chunk':
+        dataset_kwargs['buffer_size'] = buffer_size
 
     # The encoder kwargs
     encoder_kwargs = {
