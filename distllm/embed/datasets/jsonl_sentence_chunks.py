@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 from typing import Callable
 from typing import Literal
 
@@ -114,10 +115,10 @@ class JsonlSemanticChunksDataset:
         """
         # Read the jsonl file
         lines = data_file.read_text().strip().split('\n')
-        content = [json.loads(line) for line in lines]
+        content: list[dict[str, Any]] = [json.loads(line) for line in lines]
 
         # Extract the text data
-        data = [item[self.config.text_field].pop() for item in content]
+        data = [item.pop(self.config.text_field) for item in content]
 
         # Extract the metadata if needed, note that the metadata is
         # is a dictionary of all the other fields in the jsonl file
