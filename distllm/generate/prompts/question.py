@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from distllm.generate.generators import LLMResult
+from distllm.generate.generators.base import LLMResult
 from distllm.utils import BaseConfig
 
 

@@ -9,9 +9,9 @@ import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from distllm.embed import EmbedderResult
-from distllm.embed import Encoder
-from distllm.embed import Pooler
+from distllm.embed.embedders.base import EmbedderResult
+from distllm.embed.encoders.base import Encoder
+from distllm.embed.poolers.base import Pooler
 from distllm.utils import BaseConfig
 
 

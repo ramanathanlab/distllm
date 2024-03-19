@@ -7,7 +7,7 @@ from typing import Protocol
 
 from torch.utils.data import DataLoader
 
-from distllm.embed import Encoder
+from distllm.embed.encoders.base import Encoder
 from distllm.utils import BaseConfig
 
 

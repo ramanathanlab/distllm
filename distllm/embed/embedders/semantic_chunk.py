@@ -8,12 +8,12 @@ import numpy as np
 from pydantic import Field
 from torch.utils.data import DataLoader
 
-from distllm.embed import EmbedderResult
-from distllm.embed import Encoder
-from distllm.embed import Pooler
 from distllm.embed.datasets.utils import DataCollator
 from distllm.embed.datasets.utils import InMemoryDataset
+from distllm.embed.embedders.base import EmbedderResult
 from distllm.embed.embedders.full_sequence import compute_embeddings
+from distllm.embed.encoders.base import Encoder
+from distllm.embed.poolers.base import Pooler
 from distllm.utils import BaseConfig
 
 
