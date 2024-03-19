@@ -49,7 +49,7 @@ def embed(  # noqa: PLR0913
         '--dataset_name',
         '-dn',
         help='The name of the dataset to use for generating the embeddings '
-        '[jsonl, fasta, sequence_per_line].',
+        '[jsonl, jsonl_chunk, fasta, sequence_per_line].',
     ),
     batch_size: int = typer.Option(
         1,
