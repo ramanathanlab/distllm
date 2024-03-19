@@ -3,7 +3,7 @@ input_dir: /lus/eagle/projects/FoundEpidem/braceal/projects/metric-rag/data/pars
 # An output directory to save the embeddings.
 output_dir: /lus/eagle/projects/FoundEpidem/braceal/projects/metric-rag/data/semantic_chunks/LUCID.small.test
 # A set of glob patterns to match the input files.
-glob_patterns: ['*.json']
+glob_patterns: ['*.jsonl']
 
 # Settings for reading the input files.
 dataset_config:
