@@ -12,11 +12,11 @@ app = typer.Typer()
 
 @app.command()
 def embed(  # noqa: PLR0913
-    model_name: str = typer.Option(
+    encoder_name: str = typer.Option(
         ...,
-        '--model_name',
+        '--encoder_name',
         '-mn',
-        help='The name of the model architecture to use for '
+        help='The name of the encoder architecture to use for '
         ' generating the embeddings [auto, esm2].',
     ),
     pretrained_model_name_or_path: str = typer.Option(
@@ -127,7 +127,7 @@ def embed(  # noqa: PLR0913
     # The encoder kwargs
     encoder_kwargs = {
         # The name of the model architecture to use
-        'name': model_name,
+        'name': encoder_name,
         # The model id to use for generating the embeddings
         'pretrained_model_name_or_path': pretrained_model_name_or_path,
         # Use the model in half precision
