@@ -53,16 +53,14 @@ def sentences_to_buffers(split: list[str], buffer_size: int) -> list[str]:
     return buffers
 
 
-class JsonlSentenceChunksDatasetConfig(BaseConfig):
-    """Configuration for the JsonlSentenceChunksDatasetConfig."""
+class JsonlSemanticChunksDatasetConfig(BaseConfig):
+    """Configuration for the JsonlSemanticChunksDatasetConfig."""
 
     # The name of the dataset
-    name: Literal['jsonl'] = 'jsonl'  # type: ignore[assignment]
+    name: Literal['jsonl_chunk'] = 'jsonl_chunk'  # type: ignore[assignment]
 
     # The name of the text field in the jsonl file
     text_field: str = 'text'
-    # Whether the jsonl file contains metadata
-    use_metadata: bool = False
     # Number of data workers for batching.
     num_data_workers: int = 4
     # Inference batch size.
@@ -80,10 +78,10 @@ class JsonlSentenceChunksDatasetConfig(BaseConfig):
     )
 
 
-class JsonlSentenceChunksDataset:
+class JsonlSemanticChunksDataset:
     """Sequence per line file dataset with sentence chunking."""
 
-    def __init__(self, config: JsonlSentenceChunksDatasetConfig):
+    def __init__(self, config: JsonlSemanticChunksDatasetConfig):
         """Initialize the dataset."""
         self.config = config
 
@@ -108,6 +106,11 @@ class JsonlSentenceChunksDataset:
         -------
         DataLoader
             The dataloader instance.
+
+        Raises
+        ------
+        ValueError
+            If the metadata is empty.
         """
         # Read the jsonl file
         lines = data_file.read_text().strip().split('\n')
@@ -119,7 +122,11 @@ class JsonlSentenceChunksDataset:
         # Extract the metadata if needed, note that the metadata is
         # is a dictionary of all the other fields in the jsonl file
         # except for the text field since that is already extracted.
-        metadata = content if self.config.use_metadata else None
+        metadata = content
+
+        # Check if metadata is empty
+        if any(not item for item in metadata):
+            raise ValueError('Metadata is empty. Please check the jsonl file.')
 
         # Split the data based on the split criteria
         # Each input text is split into a list of str.

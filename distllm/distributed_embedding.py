@@ -78,7 +78,7 @@ class Config(BaseConfig):
     output_dir: Path
     # A set of glob patterns to match the input files.
     glob_patterns: list[str] = Field(default=['*'])
-    # Strategy for reading the input files.
+    # Settings for reading the input files.
     dataset_config: DatasetConfigs
     # Settings for the encoder.
     encoder_config: EncoderConfigs
