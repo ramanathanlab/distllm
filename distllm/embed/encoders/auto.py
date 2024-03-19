@@ -19,7 +19,7 @@ class AutoEncoderConfig(BaseConfig):
     # The model id
     pretrained_model_name_or_path: str
     # Use the model in half precision
-    half_precision: bool = True
+    half_precision: bool = False
     # Set the model to evaluation mode
     eval_mode: bool = True
     # Compile the model for faster inference
