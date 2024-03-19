@@ -33,7 +33,7 @@ STRATEGIES: dict[str, tuple[type[BaseConfig], type[Dataset]]] = {
         SequencePerLineDataset,
     ),
     'jsonl': (JsonlDatasetConfig, JsonlDataset),
-    'jsonl_sentence_chunks': (
+    'jsonl_chunks': (
         JsonlSemanticChunksDatasetConfig,
         JsonlSemanticChunksDataset,
     ),
