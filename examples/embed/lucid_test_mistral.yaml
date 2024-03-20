@@ -8,7 +8,7 @@ glob_patterns: ['*.jsonl']
 # Settings for reading the input files.
 dataset_config:
   name: jsonl_chunk
-  buffer_size: 4
+  buffer_size: 16
 
 # Settings for the encoder.
 encoder_config:
@@ -22,6 +22,7 @@ pooler_config:
 # Settings for the embedder.
 embedder_config:
   name: semantic_chunk
+  chunk_batch_size: 2
 
 # Settings for the writer.
 writer_config:
