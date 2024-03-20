@@ -9,12 +9,8 @@ from distllm.embed.datasets.fasta import FastaDataset
 from distllm.embed.datasets.fasta import FastaDatasetConfig
 from distllm.embed.datasets.jsonl import JsonlDataset
 from distllm.embed.datasets.jsonl import JsonlDatasetConfig
-from distllm.embed.datasets.jsonl_sentence_chunks import (
-    JsonlSemanticChunksDataset,
-)
-from distllm.embed.datasets.jsonl_sentence_chunks import (
-    JsonlSemanticChunksDatasetConfig,
-)
+from distllm.embed.datasets.jsonl_chunk import JsonlChunkDataset
+from distllm.embed.datasets.jsonl_chunk import JsonlChunkDatasetConfig
 from distllm.embed.datasets.single_line import SequencePerLineDataset
 from distllm.embed.datasets.single_line import SequencePerLineDatasetConfig
 from distllm.utils import BaseConfig
@@ -23,7 +19,7 @@ DatasetConfigs = (
     FastaDatasetConfig
     | SequencePerLineDatasetConfig
     | JsonlDatasetConfig
-    | JsonlSemanticChunksDatasetConfig
+    | JsonlChunkDatasetConfig
 )
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[Dataset]]] = {
@@ -33,10 +29,7 @@ STRATEGIES: dict[str, tuple[type[BaseConfig], type[Dataset]]] = {
         SequencePerLineDataset,
     ),
     'jsonl': (JsonlDatasetConfig, JsonlDataset),
-    'jsonl_chunk': (
-        JsonlSemanticChunksDatasetConfig,
-        JsonlSemanticChunksDataset,
-    ),
+    'jsonl_chunk': (JsonlChunkDatasetConfig, JsonlChunkDataset),
 }
 
 

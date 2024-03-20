@@ -54,8 +54,8 @@ def sentences_to_buffers(split: list[str], buffer_size: int) -> list[str]:
     return buffers
 
 
-class JsonlSemanticChunksDatasetConfig(BaseConfig):
-    """Configuration for the JsonlSemanticChunksDatasetConfig."""
+class JsonlChunkDatasetConfig(BaseConfig):
+    """Configuration for the JsonlChunkDatasetConfig."""
 
     # The name of the dataset
     name: Literal['jsonl_chunk'] = 'jsonl_chunk'  # type: ignore[assignment]
@@ -79,10 +79,10 @@ class JsonlSemanticChunksDatasetConfig(BaseConfig):
     )
 
 
-class JsonlSemanticChunksDataset:
+class JsonlChunkDataset:
     """Sequence per line file dataset with sentence chunking."""
 
-    def __init__(self, config: JsonlSemanticChunksDatasetConfig):
+    def __init__(self, config: JsonlChunkDatasetConfig):
         """Initialize the dataset."""
         self.config = config
 

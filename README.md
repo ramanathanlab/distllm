@@ -28,6 +28,17 @@ For LLM generation at scale, run the following command:
 nohup python -m distllm.distributed_generation --config examples/your-config.yaml &> nohup.out &
 ```
 
+To run smaller datasets on a single GPU, you can use the following command:
+```bash
+distllm embed --encoder_name auto --pretrained_model_name_or_path pritamdeka/S-PubMedBert-MS-MARCO --data_path /lus/eagle/projects/FoundEpidem/braceal/projects/metric-rag/data/parsed_pdfs/LUCID.small.test/parsed_pdfs --data_extension jsonl --output_path cli_test_lucid --dataset_name jsonl_chunk --batch_size 512 --chunk_batch_size 512 --buffer_size 4 --pooler_name mean --embedder_name semantic_chunk --writer_name huggingface --quantization --eval_mode
+```
+
+Or using a larger model on a single GPU, such as Salesforce/SFR-Embedding-Mistral:
+```bash
+distllm embed --encoder_name auto --pretrained_model_name_or_path Salesforce/SFR-Embedding-Mistral --data_path /lus/eagle/projects/FoundEpidem/braceal/projects/metric-rag/data/parsed_pdfs/LUCID.small.test/parsed_pdfs --data_extension jsonl --output_path cli_test_lucid_sfr_mistral --dataset_name jsonl_chunk --batch_size 16 --chunk_batch_size 2 --buffer_size 4 --pooler_name last_token --embedder_name semantic_chunk --writer_name huggingface --quantization --eval_mode
+```
+
+
 ## Contributing
 
 For development, it is recommended to use a virtual environment. The following commands will create a virtual environment, install the package in editable mode, and install the pre-commit hooks.
