@@ -32,8 +32,6 @@ def _generate_dataset(
         yield item
 
 
-# TODO: Test this function. If we can't yield directly from the dataset, we
-#       we can load each column entry one by one and yield the dictionary.
 def _generate_merged_dataset(
     dataset_dirs: list[Path],
 ) -> Iterator[dict[str, str | np.ndarray | Any]]:
