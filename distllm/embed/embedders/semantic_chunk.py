@@ -168,7 +168,7 @@ def compute_semantic_chunks(
         # within the document.
         dataset_indices.extend(
             [
-                (doc_start + start_idx, doc_end + end_idx)
+                (doc_start + start_idx, doc_start + end_idx)
                 for start_idx, end_idx in index_groups
             ],
         )
