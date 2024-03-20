@@ -92,6 +92,9 @@ def build_chunks(
         index_groups.append((start_index, index + 1))
         start_index = index + 1
 
+    # Add the last group
+    index_groups.append((start_index, len(distances) + 1))
+
     return index_groups
 
 
