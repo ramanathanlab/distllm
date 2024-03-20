@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import typer
 from tqdm import tqdm
@@ -56,6 +57,13 @@ def embed(  # noqa: PLR0913
         '--batch_size',
         '-b',
         help='The batch size to use for generating the embeddings.',
+    ),
+    chunk_batch_size: int = typer.Option(
+        1,
+        '--chunk_batch_size',
+        '-cb',
+        help='The batch size to use for chunked text within semantic '
+        'chunking.',
     ),
     buffer_size: int = typer.Option(
         1,
@@ -149,10 +157,14 @@ def embed(  # noqa: PLR0913
     }
 
     # The embedder kwargs
-    embedder_kwargs = {
+    embedder_kwargs: dict[str, Any] = {
         # The name of the embedder to use
         'name': embedder_name,
     }
+
+    if embedder_name == 'semantic_chunk':
+        # Set the batch size to use for chunked text within semantic chunking
+        embedder_kwargs['chunk_batch_size'] = chunk_batch_size
 
     # The writer kwargs
     writer_kwargs = {

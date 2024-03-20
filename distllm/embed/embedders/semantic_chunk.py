@@ -197,6 +197,10 @@ class SemanticChunkEmbedderConfig(BaseConfig):
         'exceeded between a group of sentences and the next to form a chunk. '
         'The smaller this number is, the more chunks will be generated.',
     )
+    chunk_batch_size: int = Field(
+        8,
+        description='The batch size for the chunked text.',
+    )
 
 
 class SemanticChunkEmbedder:
@@ -238,7 +242,7 @@ class SemanticChunkEmbedder:
         # Make a new dataloader with the chunked data
         chunked_dataloader = DataLoader(
             pin_memory=dataloader.pin_memory,
-            batch_size=dataloader.batch_size,
+            batch_size=self.config.chunk_batch_size,
             num_workers=dataloader.num_workers,
             dataset=dataset,
             collate_fn=DataCollator(encoder.tokenizer),
