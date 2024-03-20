@@ -1,7 +1,7 @@
 # An input directory containing the files to embed.
 input_dir: /lus/eagle/projects/FoundEpidem/braceal/projects/metric-rag/data/parsed_pdfs/LUCID.small.test/parsed_pdfs
 # An output directory to save the embeddings.
-output_dir: /lus/eagle/projects/FoundEpidem/braceal/projects/metric-rag/data/semantic_chunks/LUCID.small.test
+output_dir: /lus/eagle/projects/FoundEpidem/braceal/projects/metric-rag/data/semantic_chunks/LUCID.small.test.SFRmistral
 # A set of glob patterns to match the input files.
 glob_patterns: ['*.jsonl']
 
