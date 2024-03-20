@@ -32,10 +32,15 @@ def calculate_distances_between_buffer(
     np.ndarray
         The distances between the embeddings.
     """
-    distances = np.zeros(len(buffer_embeds) - 1)
-    for i in range(len(buffer_embeds) - 1):
-        embedding_current = buffer_embeds[i]
-        embedding_next = buffer_embeds[i + 1]
+    # We need to convert the buffer embeddings to float32
+    # to avoid overflow errors when computing the dot product and norm
+    embeddings = buffer_embeds.astype(np.float32)
+
+    # Compute the embedding distances using a sliding window
+    distances = np.zeros(len(embeddings) - 1)
+    for i in range(len(embeddings) - 1):
+        embedding_current = embeddings[i]
+        embedding_next = embeddings[i + 1]
 
         similarity = np.dot(embedding_current, embedding_next) / (
             np.linalg.norm(embedding_current) * np.linalg.norm(embedding_next)

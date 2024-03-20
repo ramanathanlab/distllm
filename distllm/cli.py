@@ -7,7 +7,7 @@ from pathlib import Path
 import typer
 from tqdm import tqdm
 
-app = typer.Typer()
+app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
 
 
 @app.command()
@@ -178,6 +178,48 @@ def embed(  # noqa: PLR0913
             embedder_kwargs=embedder_kwargs,
             writer_kwargs=writer_kwargs,
         )
+
+
+@app.command()
+def merge(
+    writer_name: str = typer.Option(
+        'huggingface',
+        '--writer_name',
+        '-wn',
+        help='The name of the writer to use for saving datasets '
+        '[huggingface, numpy].',
+    ),
+    dataset_dir: Path = typer.Option(  # noqa: B008
+        ...,
+        '--dataset_dir',
+        '-d',
+        help='The directory containing the dataset subdirectories '
+        'to merge (will glob * this directory).',
+    ),
+    output_dir: Path = typer.Option(  # noqa: B008
+        ...,
+        '--output_dir',
+        '-o',
+        help='The dataset directory to save the merged datasets to.',
+    ),
+) -> None:
+    """Merge datasets from multiple directories output by `embed` command."""
+    from distllm.embed import get_writer
+
+    # The writer kwargs
+    writer_kwargs = {
+        # The name of the writer to use
+        'name': writer_name,
+    }
+
+    # Initialize the writer
+    writer = get_writer(writer_kwargs)
+
+    # Get the dataset directories
+    dataset_dirs = list(dataset_dir.glob('*'))
+
+    # Merge the datasets
+    writer.merge(dataset_dirs, output_dir)
 
 
 def main() -> None:

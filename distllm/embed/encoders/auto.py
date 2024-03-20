@@ -63,6 +63,9 @@ class AutoEncoder:
             trust_remote_code=True,
         )
 
+        # Set the model max length for proper truncation
+        tokenizer.model_max_length = model.config.max_position_embeddings
+
         # Convert the model to half precision
         if config.half_precision:
             model.half()
