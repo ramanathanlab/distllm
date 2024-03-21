@@ -32,6 +32,9 @@ def _generate_dataset(
         yield item
 
 
+# TODO: Can copy dataset_dir to RAM disk before loading
+# TODO: We could try using datasets concatenate to merge the datasets
+# TODO: Perhaps multiprocessing could be used to speed up the merge
 def _generate_merged_dataset(
     dataset_dirs: list[Path],
 ) -> Iterator[dict[str, str | np.ndarray | Any]]:
