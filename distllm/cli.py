@@ -380,7 +380,7 @@ def generate(  # noqa: PLR0913
     # Get the dataset directories
     input_paths = list(input_dir.glob('*'))
 
-    for input_path in input_paths:
+    for input_path in tqdm(input_paths):
         generate_worker(
             input_path=input_path,
             output_dir=output_dir,
