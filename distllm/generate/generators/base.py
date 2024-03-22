@@ -7,15 +7,6 @@ from typing import Protocol
 from distllm.utils import BaseConfig
 
 
-class LLMResult(BaseConfig):
-    """Configuration for the LLMResult."""
-
-    # The prompt text
-    prompt: str
-    # The response text
-    response: str
-
-
 class LLMGenerator(Protocol):
     """Generator protocol for all generators to follow."""
 
@@ -23,11 +14,11 @@ class LLMGenerator(Protocol):
         """Initialize the generator with the configuration."""
         ...
 
-    @property
-    def unique_id(self) -> str:
-        """Get the unique identifier of the generator."""
-        ...
+    def generate(self, prompts: str | list[str]) -> list[str]:
+        """Generate response text from prompts.
 
-    def generate(self, prompts: str | list[str]) -> list[LLMResult]:
-        """Generate response text from prompts."""
+        list[str]
+            A list of responses generated from the prompts
+            (one response per prompt).
+        """
         ...

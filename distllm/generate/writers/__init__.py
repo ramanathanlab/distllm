@@ -1,26 +1,26 @@
-"""Prompt module."""
+"""Module for writer."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from distllm.generate.prompts.base import Prompt
-from distllm.generate.prompts.question_chunk import QuestionChunkPrompt
-from distllm.generate.prompts.question_chunk import QuestionChunkPromptConfig
+from distllm.generate.writers.base import Writer
+from distllm.generate.writers.huggingface import HuggingFaceWriter
+from distllm.generate.writers.huggingface import HuggingFaceWriterConfig
 from distllm.utils import BaseConfig
 
-PromptConfigs = QuestionChunkPromptConfig
+WriterConfigs = HuggingFaceWriterConfig
 
-STRATEGIES: dict[str, tuple[type[BaseConfig], type[Prompt]]] = {
-    'question_chunk': (QuestionChunkPromptConfig, QuestionChunkPrompt),
+STRATEGIES: dict[str, tuple[type[BaseConfig], type[Writer]]] = {
+    'huggingface': (HuggingFaceWriterConfig, HuggingFaceWriter),
 }
 
 
-def get_prompt(kwargs: dict[str, Any]) -> Prompt:
+def get_writer(kwargs: dict[str, Any]) -> Writer:
     """Get the instance based on the kwargs.
 
     Currently supports the following strategies:
-    - question_chunk
+    - huggingface
 
     Parameters
     ----------
@@ -30,7 +30,7 @@ def get_prompt(kwargs: dict[str, Any]) -> Prompt:
 
     Returns
     -------
-    Prompt
+    Writer
         The instance.
 
     Raises
@@ -42,7 +42,7 @@ def get_prompt(kwargs: dict[str, Any]) -> Prompt:
     strategy = STRATEGIES.get(name)
     if not strategy:
         raise ValueError(
-            f'Unknown prompt name: {name}.'
+            f'Unknown writer name: {name}.'
             f' Available: {set(STRATEGIES.keys())}',
         )
 

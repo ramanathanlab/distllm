@@ -12,11 +12,6 @@ cd distllm
 pip install -e .
 ```
 
-If you'd like to use the semantic chunking option, you need to install nltk:
-```bash
-pip install nltk==3.8.1
-```
-
 ## Usage
 To create embeddings at scale, run the following command:
 ```bash
