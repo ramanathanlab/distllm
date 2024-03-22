@@ -3,20 +3,21 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import typer
 from tqdm import tqdm
 
-app = typer.Typer()
+app = typer.Typer(add_completion=False, pretty_exceptions_show_locals=False)
 
 
 @app.command()
 def embed(  # noqa: PLR0913
-    model_name: str = typer.Option(
+    encoder_name: str = typer.Option(
         ...,
-        '--model_name',
+        '--encoder_name',
         '-mn',
-        help='The name of the model architecture to use for '
+        help='The name of the encoder architecture to use for '
         ' generating the embeddings [auto, esm2].',
     ),
     pretrained_model_name_or_path: str = typer.Option(
@@ -49,7 +50,7 @@ def embed(  # noqa: PLR0913
         '--dataset_name',
         '-dn',
         help='The name of the dataset to use for generating the embeddings '
-        '[jsonl, fasta, sequence_per_line].',
+        '[jsonl, jsonl_chunk, fasta, sequence_per_line].',
     ),
     batch_size: int = typer.Option(
         1,
@@ -57,12 +58,39 @@ def embed(  # noqa: PLR0913
         '-b',
         help='The batch size to use for generating the embeddings.',
     ),
+    chunk_batch_size: int = typer.Option(
+        1,
+        '--chunk_batch_size',
+        '-cb',
+        help='The batch size to use for chunked text within semantic '
+        'chunking.',
+    ),
+    buffer_size: int = typer.Option(
+        1,
+        '--buffer_size',
+        '-bs',
+        help='The buffer size to use for semantic chunking.',
+    ),
     pooler_name: str = typer.Option(
         'mean',
         '--pooler_name',
         '-pn',
         help='The name of the pooler to use for generating the embeddings '
         '[mean, last_token].',
+    ),
+    embedder_name: str = typer.Option(
+        'full_sequence',
+        '--embedder_name',
+        '-en',
+        help='The name of the embedder to use for generating the embeddings '
+        '[full_sequence, semantic_chunk].',
+    ),
+    writer_name: str = typer.Option(
+        'huggingface',
+        '--writer_name',
+        '-wn',
+        help='The name of the writer to use for saving the embeddings '
+        '[huggingface, numpy].',
     ),
     half_precision: bool = typer.Option(
         False,
@@ -90,7 +118,7 @@ def embed(  # noqa: PLR0913
     ),
 ) -> None:
     """Generate embeddings for a single file."""
-    from distllm.distributed_embedding import embed_and_save_file
+    from distllm.distributed_embedding import embedding_worker
 
     # The dataset kwargs
     dataset_kwargs = {
@@ -100,10 +128,14 @@ def embed(  # noqa: PLR0913
         'batch_size': batch_size,
     }
 
-    # The embedder kwargs
-    embedder_kwargs = {
+    # If the dataset is jsonl_chunk, set the buffer size
+    if dataset_name == 'jsonl_chunk':
+        dataset_kwargs['buffer_size'] = buffer_size
+
+    # The encoder kwargs
+    encoder_kwargs = {
         # The name of the model architecture to use
-        'name': model_name,
+        'name': encoder_name,
         # The model id to use for generating the embeddings
         'pretrained_model_name_or_path': pretrained_model_name_or_path,
         # Use the model in half precision
@@ -124,6 +156,22 @@ def embed(  # noqa: PLR0913
         'name': pooler_name,
     }
 
+    # The embedder kwargs
+    embedder_kwargs: dict[str, Any] = {
+        # The name of the embedder to use
+        'name': embedder_name,
+    }
+
+    if embedder_name == 'semantic_chunk':
+        # Set the batch size to use for chunked text within semantic chunking
+        embedder_kwargs['chunk_batch_size'] = chunk_batch_size
+
+    # The writer kwargs
+    writer_kwargs = {
+        # The name of the writer to use
+        'name': writer_name,
+    }
+
     # Get the data files
     data_files = list(data_path.glob(f'*.{data_extension}'))
     if not data_files:
@@ -133,13 +181,57 @@ def embed(  # noqa: PLR0913
 
     # Embed and save the files
     for data_file in tqdm(data_files):
-        embed_and_save_file(
+        embedding_worker(
             file=data_file,
             output_dir=output_path,
             dataset_kwargs=dataset_kwargs,
-            embedder_kwargs=embedder_kwargs,
+            encoder_kwargs=encoder_kwargs,
             pooler_kwargs=pooler_kwargs,
+            embedder_kwargs=embedder_kwargs,
+            writer_kwargs=writer_kwargs,
         )
+
+
+@app.command()
+def merge(
+    writer_name: str = typer.Option(
+        'huggingface',
+        '--writer_name',
+        '-wn',
+        help='The name of the writer to use for saving datasets '
+        '[huggingface, numpy].',
+    ),
+    dataset_dir: Path = typer.Option(  # noqa: B008
+        ...,
+        '--dataset_dir',
+        '-d',
+        help='The directory containing the dataset subdirectories '
+        'to merge (will glob * this directory).',
+    ),
+    output_dir: Path = typer.Option(  # noqa: B008
+        ...,
+        '--output_dir',
+        '-o',
+        help='The dataset directory to save the merged datasets to.',
+    ),
+) -> None:
+    """Merge datasets from multiple directories output by `embed` command."""
+    from distllm.embed import get_writer
+
+    # The writer kwargs
+    writer_kwargs = {
+        # The name of the writer to use
+        'name': writer_name,
+    }
+
+    # Initialize the writer
+    writer = get_writer(writer_kwargs)
+
+    # Get the dataset directories
+    dataset_dirs = list(dataset_dir.glob('*'))
+
+    # Merge the datasets
+    writer.merge(dataset_dirs, output_dir)
 
 
 def main() -> None:

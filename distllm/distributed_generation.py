@@ -11,9 +11,9 @@ from parsl.concurrent import ParslPoolExecutor
 from pydantic import Field
 from pydantic import field_validator
 
-from distllm.generators import LLMGeneratorConfigs
-from distllm.parsl import ComputeConfigTypes
-from distllm.prompts import PromptConfigs
+from distllm.generate import LLMGeneratorConfigs
+from distllm.generate import PromptConfigs
+from distllm.parsl import ComputeConfigs
 from distllm.utils import BaseConfig
 
 
@@ -26,8 +26,8 @@ def generate(
     """Generate text for a file and save to the output directory."""
     import json
 
-    from distllm.generators import get_generator
-    from distllm.prompts import get_prompt
+    from distllm.generate import get_generator
+    from distllm.generate import get_prompt
 
     # Initialize the generator
     generator = get_generator(generator_kwargs, register=True)
@@ -75,7 +75,7 @@ class Config(BaseConfig):
     # Settings for the generator.
     generator_config: LLMGeneratorConfigs
     # Settings for the parsl compute backend.
-    compute_config: ComputeConfigTypes
+    compute_config: ComputeConfigs
 
     @field_validator('input_dir', 'output_dir')
     @classmethod

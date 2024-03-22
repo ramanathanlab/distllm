@@ -183,7 +183,7 @@ class PolarisConfig(BaseComputeConfig):
         )
 
 
-ComputeConfigTypes = Union[
+ComputeConfigs = Union[
     LocalConfig,
     WorkstationConfig,
     PolarisConfig,
