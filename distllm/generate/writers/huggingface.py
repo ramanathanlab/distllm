@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Literal
+from typing import Optional
 
 from datasets import concatenate_datasets
 from datasets import Dataset
@@ -17,7 +18,7 @@ class HuggingFaceWriterConfig(BaseConfig):
     name: Literal['huggingface'] = 'huggingface'  # type: ignore[assignment]
 
     # The number of processes to use for writing the dataset
-    num_proc: int | None = None
+    num_proc: Optional[int] = None  # noqa: UP007
 
 
 class HuggingFaceWriter:
