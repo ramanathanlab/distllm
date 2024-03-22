@@ -8,6 +8,7 @@ from typing import Iterator
 from typing import Literal
 
 import numpy as np
+from datasets import concatenate_datasets
 from datasets import Dataset
 
 from distllm.embed.embedders.base import EmbedderResult
@@ -32,21 +33,13 @@ def _generate_dataset(
         yield item
 
 
-# TODO: Can copy dataset_dir to RAM disk before loading
-# TODO: We could try using datasets concatenate to merge the datasets
-# TODO: Perhaps multiprocessing could be used to speed up the merge
-def _generate_merged_dataset(
-    dataset_dirs: list[Path],
-) -> Iterator[dict[str, str | np.ndarray | Any]]:
-    """Generate a merged dataset from multiple directories."""
-    for dataset_dir in dataset_dirs:
-        yield from Dataset.load_from_disk(dataset_dir)
-
-
 class HuggingFaceWriterConfig(BaseConfig):
     """Configuration for the hugging face writer."""
 
     name: Literal['huggingface'] = 'huggingface'  # type: ignore[assignment]
+
+    # The number of processes to use for writing the dataset
+    num_proc: int | None = None
 
 
 class HuggingFaceWriter:
@@ -75,7 +68,7 @@ class HuggingFaceWriter:
         )
 
         # Write the dataset to disk
-        dataset.save_to_disk(output_dir)
+        dataset.save_to_disk(output_dir, num_proc=self.config.num_proc)
 
     def merge(self, dataset_dirs: list[Path], output_dir: Path) -> None:
         """Merge the datasets from multiple directories.
@@ -87,11 +80,11 @@ class HuggingFaceWriter:
         output_dir : Path
             The output directory to write the merged dataset to.
         """
-        # Create a dataset from the generator
-        dataset = Dataset.from_generator(
-            _generate_merged_dataset,
-            gen_kwargs={'dataset_dirs': dataset_dirs},
-        )
+        # Load all the datasets
+        all_datasets = [Dataset.load_from_disk(p) for p in dataset_dirs]
+
+        # Concatenate the datasets
+        dataset = concatenate_datasets(all_datasets)
 
         # Write the dataset to disk
-        dataset.save_to_disk(output_dir)
+        dataset.save_to_disk(output_dir, num_proc=self.config.num_proc)
