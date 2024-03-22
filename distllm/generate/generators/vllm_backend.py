@@ -39,6 +39,7 @@ class VLLMGenerator:
         config : vLLMGeneratorConfig
             The configuration for the LLMGenerator.
         """
+        import torch
         from vllm import LLM
         from vllm import SamplingParams
 
@@ -61,6 +62,7 @@ class VLLMGenerator:
         self.llm = LLM(
             model=config.llm_name,
             trust_remote_code=config.trust_remote_code,
+            dtype=torch.bfloat16,
         )
 
     def generate(self, prompts: str | list[str]) -> list[str]:
