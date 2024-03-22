@@ -245,6 +245,152 @@ def merge(
     writer.merge(dataset_dirs, output_dir)
 
 
+@app.command()
+def generate(  # noqa: PLR0913
+    input_dir: Path = typer.Option(  # noqa: B008
+        ...,
+        '--input_dir',
+        '-i',
+        help='The directory containing the input sub-files/directories '
+        'containing inputs for generation (will glob * this directory).',
+    ),
+    output_dir: Path = typer.Option(  # noqa: B008
+        ...,
+        '--output_dir',
+        '-o',
+        help='The dataset directory to save the merged datasets to.',
+    ),
+    prompt_name: str = typer.Option(
+        'question_chunk',
+        '--prompt_name',
+        '-pn',
+        help='The name of the prompt to use for generating the text '
+        '[question_chunk].',
+    ),
+    reader_name: str = typer.Option(
+        'huggingface',
+        '--reader_name',
+        '-rn',
+        help='The name of the reader to use for reading the input files '
+        '[huggingface].',
+    ),
+    writer_name: str = typer.Option(
+        'huggingface',
+        '--writer_name',
+        '-wn',
+        help='The name of the writer to use for saving datasets '
+        '[huggingface].',
+    ),
+    num_proc: int = typer.Option(
+        None,
+        '--num_proc',
+        '-np',
+        help='The number of processes to use for merging the datasets. '
+        'Only works with huggingface writer.',
+    ),
+    generator_name: str = typer.Option(
+        'vllm',
+        '--generator_name',
+        '-gn',
+        help='The name of the generator to use for generating the text '
+        '[vllm].',
+    ),
+    llm_name: str = typer.Option(
+        'mistralai/Mistral-7B-Instruct-v0.2',
+        '--llm_name',
+        '-vmn',
+        help='The name of the VLLM model to use for generating the text '
+        '[mistralai/Mistral-7B-Instruct-v0.2]. '
+        'See: https://docs.vllm.ai/en/latest/models/supported_models.html',
+    ),
+    temperature: float = typer.Option(
+        0.5,
+        '--temperature',
+        '-t',
+        help='Temperature for sampling.',
+    ),
+    min_p: float = typer.Option(
+        0.1,
+        '--min_p',
+        '-mp',
+        help='Min p for sampling.',
+    ),
+    top_p: float = typer.Option(
+        0.0,
+        '--top_p',
+        '-tp',
+        help='Top p for sampling (off by default).',
+    ),
+    max_tokens: int = typer.Option(
+        2000,
+        '--max_tokens',
+        '-mt',
+        help='Max tokens to generate.',
+    ),
+    use_beam_search: bool = typer.Option(
+        False,
+        '--use_beam_search',
+        '-bs',
+        help='Whether to use beam search.',
+    ),
+) -> None:
+    """Merge datasets from multiple directories output by `embed` command."""
+    from distllm.distributed_generation import generate_worker
+
+    # The prompt kwargs
+    prompt_kwargs: dict[str, Any] = {
+        # The name of the prompt to use
+        'name': prompt_name,
+    }
+
+    # The reader kwargs
+    reader_kwargs: dict[str, Any] = {
+        # The name of the reader to use
+        'name': reader_name,
+    }
+
+    # The writer kwargs
+    writer_kwargs: dict[str, Any] = {
+        # The name of the writer to use
+        'name': writer_name,
+    }
+
+    # If the writer is huggingface, set the number of processes
+    if writer_name == 'huggingface':
+        writer_kwargs['num_proc'] = num_proc
+
+    # The generator kwargs
+    generator_kwargs: dict[str, Any] = {
+        # The name of the generator to use
+        'name': generator_name,
+        # The name of the VLLM model to use
+        'llm_name': llm_name,
+        # Temperature for sampling
+        'temperature': temperature,
+        # Min p for sampling
+        'min_p': min_p,
+        # Top p for sampling (off by default)
+        'top_p': top_p,
+        # Max tokens to generate
+        'max_tokens': max_tokens,
+        # Whether to use beam search
+        'use_beam_search': use_beam_search,
+    }
+
+    # Get the dataset directories
+    input_paths = list(input_dir.glob('*'))
+
+    for input_path in input_paths:
+        generate_worker(
+            input_path=input_path,
+            output_dir=output_dir,
+            prompt_kwargs=prompt_kwargs,
+            reader_kwargs=reader_kwargs,
+            writer_kwargs=writer_kwargs,
+            generator_kwargs=generator_kwargs,
+        )
+
+
 def main() -> None:
     """Entry point for CLI."""
     app()

@@ -14,12 +14,12 @@ class Reader(Protocol):
         """Initialize the reader with the configuration."""
         ...
 
-    def read(self, dataset_path: Path) -> tuple[list[str], list[str]]:
+    def read(self, input_path: Path) -> tuple[list[str], list[str]]:
         """Read the dataset.
 
         Parameters
         ----------
-        dataset_path : Path
+        input_path : Path
             The path to the dataset.
 
         Returns

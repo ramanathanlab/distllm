@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from typing import Literal
 
 from distllm.utils import BaseConfig
@@ -12,8 +11,6 @@ class VLLMGeneratorConfig(BaseConfig):
     """Configuration for the LLMGenerator."""
 
     name: Literal['vllm'] = 'vllm'  # type: ignore[assignment]
-    # Path to the hugingface cache (by default it uses the home directory)
-    hf_cache_path: str = ''
     # The name of the vllm LLM model, see
     # https://docs.vllm.ai/en/latest/models/supported_models.html
     llm_name: str
@@ -44,10 +41,6 @@ class VLLMGenerator:
         """
         from vllm import LLM
         from vllm import SamplingParams
-
-        # Specify the huggingface cache path
-        if config.hf_cache_path:
-            os.environ['HF_HOME'] = config.hf_cache_path
 
         # Create the sampling params to use
         sampling_kwargs = {}

@@ -22,12 +22,12 @@ class HuggingFaceReader:
         """Initialize the reader with the configuration."""
         self.config = config
 
-    def read(self, dataset_path: Path) -> tuple[list[str], list[str]]:
+    def read(self, input_path: Path) -> tuple[list[str], list[str]]:
         """Read the dataset.
 
         Parameters
         ----------
-        dataset_path : Path
+        input_path : Path
             The path to the dataset.
 
         Returns
@@ -36,7 +36,7 @@ class HuggingFaceReader:
             The text and paths from the dataset.
         """
         # Load the dataset from disk
-        dataset = Dataset.load_from_disk(dataset_path)
+        dataset = Dataset.load_from_disk(input_path)
 
         # Load the text and paths from the dataset
         text: list[str] = dataset['text']

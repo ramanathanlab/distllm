@@ -19,8 +19,8 @@ from distllm.parsl import ComputeConfigs
 from distllm.utils import BaseConfig
 
 
-def generate(  # noqa: PLR0913
-    file: Path,
+def generate_worker(  # noqa: PLR0913
+    input_path: Path,
     output_dir: Path,
     prompt_kwargs: dict[str, Any],
     reader_kwargs: dict[str, Any],
@@ -48,7 +48,7 @@ def generate(  # noqa: PLR0913
     prompt = get_prompt(prompt_kwargs)
 
     # Read the text from the file
-    text, paths = reader.read(file)
+    text, paths = reader.read(input_path)
 
     # Preprocess the text
     prompts = prompt.preprocess(text)
@@ -75,9 +75,9 @@ def generate(  # noqa: PLR0913
 class Config(BaseConfig):
     """Configuration for distributed inference."""
 
-    # An input directory containing .fasta files.
+    # An input directory containing the files/directory to generate text for.
     input_dir: Path
-    # An output directory to save the embeddings.
+    # An output directory to save the results.
     output_dir: Path
     # A set of glob patterns to match the input files.
     glob_patterns: list[str] = Field(default=['*'])
@@ -132,7 +132,7 @@ if __name__ == '__main__':
 
     # Set the static arguments of the worker function
     worker_fn = functools.partial(
-        generate,
+        generate_worker,
         output_dir=output_dir,
         prompt_kwargs=config.prompt_config.model_dump(),
         reader_kwargs=config.reader_config.model_dump(),
@@ -141,9 +141,9 @@ if __name__ == '__main__':
     )
 
     # Collect all input files
-    input_files = []
+    input_paths = []
     for pattern in config.glob_patterns:
-        input_files.extend(list(config.input_dir.glob(pattern)))
+        input_paths.extend(list(config.input_dir.glob(pattern)))
 
     # Set the parsl compute settings
     parsl_config = config.compute_config.get_config(
@@ -152,4 +152,4 @@ if __name__ == '__main__':
 
     # Distribute the input files across processes
     with ParslPoolExecutor(parsl_config) as pool:
-        pool.map(worker_fn, input_files)
+        pool.map(worker_fn, input_paths)
