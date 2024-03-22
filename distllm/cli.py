@@ -201,10 +201,10 @@ def merge(
         help='The name of the writer to use for saving datasets '
         '[huggingface, numpy].',
     ),
-    merge_num_proc: int = typer.Option(
+    num_proc: int = typer.Option(
         None,
-        '--merge_num_proc',
-        '-mnp',
+        '--num_proc',
+        '-np',
         help='The number of processes to use for merging the datasets. '
         'Only works with huggingface writer.',
     ),
@@ -233,7 +233,7 @@ def merge(
 
     # If the writer is huggingface, set the number of processes
     if writer_name == 'huggingface':
-        writer_kwargs['num_proc'] = merge_num_proc
+        writer_kwargs['num_proc'] = num_proc
 
     # Initialize the writer
     writer = get_writer(writer_kwargs)
