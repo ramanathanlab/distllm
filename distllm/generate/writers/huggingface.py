@@ -51,9 +51,9 @@ class HuggingFaceWriter:
         # Create a dataset
         dataset = Dataset.from_dict(
             mapping={
-                'paths': paths,
+                'path': paths,
                 'text': text,
-                'responses': responses,
+                'response': responses,
             },
         )
 
