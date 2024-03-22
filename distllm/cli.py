@@ -201,6 +201,13 @@ def merge(
         help='The name of the writer to use for saving datasets '
         '[huggingface, numpy].',
     ),
+    merge_num_proc: int = typer.Option(
+        None,
+        '--merge_num_proc',
+        '-mnp',
+        help='The number of processes to use for merging the datasets. '
+        'Only works with huggingface writer.',
+    ),
     dataset_dir: Path = typer.Option(  # noqa: B008
         ...,
         '--dataset_dir',
@@ -219,10 +226,14 @@ def merge(
     from distllm.embed import get_writer
 
     # The writer kwargs
-    writer_kwargs = {
+    writer_kwargs: dict[str, Any] = {
         # The name of the writer to use
         'name': writer_name,
     }
+
+    # If the writer is huggingface, set the number of processes
+    if writer_name == 'huggingface':
+        writer_kwargs['num_proc'] = merge_num_proc
 
     # Initialize the writer
     writer = get_writer(writer_kwargs)
