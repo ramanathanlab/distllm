@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from typing import Union
 
 from distllm.embed.embedders.base import Embedder
 from distllm.embed.embedders.base import EmbedderResult
@@ -12,7 +13,10 @@ from distllm.embed.embedders.semantic_chunk import SemanticChunkEmbedder
 from distllm.embed.embedders.semantic_chunk import SemanticChunkEmbedderConfig
 from distllm.utils import BaseConfig
 
-EmbedderConfigs = FullSequenceEmbedderConfig | SemanticChunkEmbedderConfig
+EmbedderConfigs = Union[
+    FullSequenceEmbedderConfig,
+    SemanticChunkEmbedderConfig,
+]
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[Embedder]]] = {
     'full_sequence': (FullSequenceEmbedderConfig, FullSequenceEmbedder),

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from typing import Union
 
 from distllm.embed.encoders.auto import AutoEncoder
 from distllm.embed.encoders.auto import AutoEncoderConfig
@@ -12,7 +13,7 @@ from distllm.embed.encoders.esm2 import Esm2EncoderConfig
 from distllm.registry import registry
 from distllm.utils import BaseConfig
 
-EncoderConfigs = Esm2EncoderConfig | AutoEncoderConfig
+EncoderConfigs = Union[Esm2EncoderConfig, AutoEncoderConfig]
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[Encoder]]] = {
     'esm2': (Esm2EncoderConfig, Esm2Encoder),
