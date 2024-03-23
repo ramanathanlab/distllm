@@ -153,7 +153,6 @@ class JsonlChunkDataset:
         for idx, split in enumerate(splits):
             bufs = sentences_to_buffers(split, self.config.buffer_size)
             buffers.extend(bufs)
-            #breakpoint()
             # Add the split to the metadata to be able to unpack the
             # semantic chunks properly
             for sentence in split:

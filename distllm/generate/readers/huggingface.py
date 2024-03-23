@@ -41,5 +41,4 @@ class HuggingFaceReader:
         # Load the text and paths from the dataset
         text: list[str] = dataset['text']
         paths: list[str] = dataset['path']
-        breakpoint()
         return text, paths

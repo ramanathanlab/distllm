@@ -46,7 +46,7 @@ class QuestionChunkPrompt:
         """
         if isinstance(text, str):
             text = [text]
-        
+
         prompts = [self.prompt.format(chunk=chunk) for chunk in text]
         return prompts
 

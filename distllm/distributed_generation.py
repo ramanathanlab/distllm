@@ -73,15 +73,13 @@ def generate_worker(  # noqa: PLR0913
     prompts = prompt.preprocess(text)
 
     import numpy as np
-    seq_lens = [len(x) for x in prompts]
-    #inputs = tokenizer.batch_encode(prompts)
-    #breakpoint()
-    print("Mean prompt length", np.mean(seq_lens))
-    print("Max prompt length", np.max(seq_lens))
-    print("Min prompt length", np.min(seq_lens))
-    print("Median prompt length", np.quantile(seq_lens, q=0.5))
-    print("Stdev prompt length", np.std(seq_lens))
 
+    seq_lens = [len(x) for x in prompts]
+    print('Mean prompt length', np.mean(seq_lens))
+    print('Max prompt length', np.max(seq_lens))
+    print('Min prompt length', np.min(seq_lens))
+    print('Median prompt length', np.quantile(seq_lens, q=0.5))
+    print('Stdev prompt length', np.std(seq_lens))
 
     print(f'Preprocessed text in {time.time() - start:.2f} seconds')
     start = time.time()
