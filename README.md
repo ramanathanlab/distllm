@@ -10,6 +10,19 @@ To install the package, run the following command:
 git clone git@github.com:ramanathanlab/distllm.git
 cd distllm
 pip install -e .
+python -m nltk.downloader punkt
+```
+
+To install the package on Polaris, run the following command:
+```bash
+module load conda/2023-10-04
+conda create -n vllm-v0.2.1.post1 python=3.9
+conda activate vllm-v0.2.1.post1
+pip install vllm==v0.2.1.post1
+git clone git@github.com:ramanathanlab/distllm.git
+cd distllm
+pip install -e .
+python -m nltk.downloader punkt
 ```
 
 ## Usage
@@ -38,6 +51,10 @@ To merge the HF dataset files, you can use the following command:
 distllm merge --writer_name huggingface --dataset_dir /lus/eagle/projects/FoundEpidem/braceal/projects/metric-rag/data/semantic_chunks/lit_covid_part2.PubMedBERT/embeddings --output_dir lit_covid_part2.PubMedBERT.merge
 ```
 
+To generate text using a language model, you can use the following command:
+```bash
+distllm generate --input_dir cli_test_lucid/ --output_dir cli_test_generate --top_p 0.95
+```
 
 ## Contributing
 

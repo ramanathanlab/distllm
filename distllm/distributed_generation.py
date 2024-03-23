@@ -36,73 +36,41 @@ def generate_worker(  # noqa: PLR0913
     from distllm.generate import get_reader
     from distllm.generate import get_writer
 
-    print(f'Generating text for {input_path}')
-    start = time.time()
-
     # Initialize the generator
     generator = get_generator(generator_kwargs, register=True)
-
-    print(f'Generator initialized in {time.time() - start:.2f} seconds')
-    start = time.time()
 
     # Initialize the reader
     reader = get_reader(reader_kwargs)
 
-    print(f'Reader initialized in {time.time() - start:.2f} seconds')
-    start = time.time()
-
     # Initialize the writer
     writer = get_writer(writer_kwargs)
-
-    print(f'Writer initialized in {time.time() - start:.2f} seconds')
-    start = time.time()
 
     # Initialize the prompt
     prompt = get_prompt(prompt_kwargs)
 
-    print(f'Prompt initialized in {time.time() - start:.2f} seconds')
     start = time.time()
 
     # Read the text from the file
     text, paths = reader.read(input_path)
 
-    print(f'Read text in {time.time() - start:.2f} seconds')
-    start = time.time()
-
     # Preprocess the text
     prompts = prompt.preprocess(text)
 
-    import numpy as np
-
-    seq_lens = [len(x) for x in prompts]
-    print('Mean prompt length', np.mean(seq_lens))
-    print('Max prompt length', np.max(seq_lens))
-    print('Min prompt length', np.min(seq_lens))
-    print('Median prompt length', np.quantile(seq_lens, q=0.5))
-    print('Stdev prompt length', np.std(seq_lens))
-
-    print(f'Preprocessed text in {time.time() - start:.2f} seconds')
+    # Time the generation
     start = time.time()
 
     # Generate response for each text
     responses = generator.generate(prompts)
 
     print(f'Generated responses in {time.time() - start:.2f} seconds')
-    start = time.time()
 
     # Postprocess the responses
     results = prompt.postprocess(responses)
-
-    print(f'Postprocessed responses in {time.time() - start:.2f} seconds')
-    start = time.time()
 
     # Filter out any empty responses (e.g., empty strings)
     text = [t for t, r in zip(text, results) if r]
     paths = [p for p, r in zip(paths, results) if r]
     results = [r for r in results if r]
-
-    print(f'Filtered responses in {time.time() - start:.2f} seconds')
-    start = time.time()
 
     # Create the output directory for the dataset
     dataset_dir = output_dir / f'{uuid4()}'
@@ -110,8 +78,6 @@ def generate_worker(  # noqa: PLR0913
 
     # Write the responses to disk
     writer.write(dataset_dir, paths, text, results)
-
-    print(f'Wrote responses in {time.time() - start:.2f} seconds')
 
 
 class Config(BaseConfig):

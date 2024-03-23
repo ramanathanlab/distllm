@@ -78,6 +78,5 @@ class QuestionChunkPrompt:
         list[str]
             The questions extracted from the results.
         """
-        # TODO: We could use a process pool here.
         questions = [self._parse_response(response) for response in responses]
         return questions
