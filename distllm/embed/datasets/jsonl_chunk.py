@@ -145,8 +145,9 @@ class JsonlChunkDataset:
             # Add the split to the metadata to be able to unpack the
             # semantic chunks properly
             for sentence in split:
-                metadata[idx]['sentence'] = sentence
-                metadatas.append(metadata[idx])
+                mdata = metadata[idx].copy()
+                mdata['sentence'] = sentence
+                metadatas.append(mdata)
 
         # Instantiate the dataloader
         return DataLoader(
