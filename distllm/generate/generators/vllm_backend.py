@@ -62,7 +62,7 @@ class VLLMGenerator:
         self.llm = LLM(
             model=config.llm_name,
             trust_remote_code=config.trust_remote_code,
-            dtype=torch.bfloat16,
+            dtype="bfloat16"#torch.bfloat16,
         )
 
     def generate(self, prompts: str | list[str]) -> list[str]:

@@ -191,7 +191,7 @@ def compute_semantic_chunks(
 
     # Drop the splits from the metadata
     for meta in metadata:
-        meta.pop('split')
+        meta.pop('sentence')
 
     return InMemoryDataset(data, metadata)
 
