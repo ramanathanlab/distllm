@@ -73,6 +73,17 @@ class JsonlChunkDatasetConfig(BaseConfig):
     # Whether to pin memory for the dataloader.
     pin_memory: bool = True
 
+    # The length threshold to filter out small buffers
+    # (number of characters in the buffer)
+    min_buffer_length: int = Field(
+        default=750,
+        description=(
+            'The minimum number of characters to consider a buffer. '
+            'Buffers with fewer characters will be filtered out.'
+            'This helps remove citations, etc from the text.'
+        ),
+    )
+
     buffer_size: int = Field(
         default=1,
         description=(
@@ -149,6 +160,16 @@ class JsonlChunkDataset:
                 mdata = metadata[idx].copy()
                 mdata['sentence'] = sentence
                 metadatas.append(mdata)
+
+        # Apply a length filter to remove any small buffers
+        buffers = [
+            buf for buf in buffers if len(buf) > self.config.min_buffer_length
+        ]
+        metadatas = [
+            meta
+            for meta, buf in zip(metadatas, buffers)
+            if len(buf) > self.config.min_buffer_length
+        ]
 
         # Instantiate the dataloader
         return DataLoader(
