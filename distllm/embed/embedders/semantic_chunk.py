@@ -1,4 +1,8 @@
-"""Semantic Chunk Embedder."""
+"""Semantic Chunk Embedder.
+
+Note: Our semantic chunking implementation is adapted from:
+https://github.com/run-llama/llama_index/blob/main/llama-index-core/llama_index/core/node_parser/text/semantic_splitter.py
+"""
 
 from __future__ import annotations
 
@@ -174,15 +178,20 @@ def compute_semantic_chunks(
         )
 
     # Group the data by the index groups
-    data = [
-        ''.join(dataloader.dataset[start:end])
-        for start, end in dataset_indices
-    ]
+    data = []
+    for start, end in dataset_indices:
+        group = dataloader.dataset.metadata[start:end]
+        chunk = ''.join(g['split'] for g in group)
+        data.append(chunk)
 
     # Get the metadata for the chunks
     metadata = [
         dataloader.dataset.metadata[start] for start, _ in dataset_indices
     ]
+
+    # Drop the splits from the metadata
+    for meta in metadata:
+        meta.pop('split')
 
     return InMemoryDataset(data, metadata)
 
