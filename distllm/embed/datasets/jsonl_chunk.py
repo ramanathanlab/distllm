@@ -144,8 +144,9 @@ class JsonlChunkDataset:
             buffers.extend(bufs)
             # Add the split to the metadata to be able to unpack the
             # semantic chunks properly
-            metadata[idx]['split'] = split
-            metadatas.extend([metadata[idx]] * len(bufs))
+            for sentence in split:
+                metadata[idx]['sentence'] = sentence
+                metadatas.append(metadata[idx])
 
         # Instantiate the dataloader
         return DataLoader(

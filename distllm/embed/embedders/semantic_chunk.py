@@ -181,7 +181,7 @@ def compute_semantic_chunks(
     data = []
     for start, end in dataset_indices:
         group = dataloader.dataset.metadata[start:end]
-        chunk = ''.join(g['split'] for g in group)
+        chunk = ''.join(g['sentence'] for g in group)
         data.append(chunk)
 
     # Get the metadata for the chunks
