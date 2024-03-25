@@ -161,14 +161,13 @@ class JsonlChunkDataset:
                 metadatas.append(mdata)
 
         # Apply a length filter to remove any small buffers
-        buffers = [
-            buf for buf in buffers if len(buf) > self.config.min_buffer_length
-        ]
-        metadatas = [
-            meta
-            for meta, buf in zip(metadatas, buffers)
+        filter_indices = [
+            i
+            for i, buf in enumerate(buffers)
             if len(buf) > self.config.min_buffer_length
         ]
+        buffers = [buffers[i] for i in filter_indices]
+        metadatas = [metadatas[i] for i in filter_indices]
 
         # Instantiate the dataloader
         return DataLoader(

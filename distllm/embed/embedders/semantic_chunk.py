@@ -107,6 +107,7 @@ def compute_semantic_chunks(
     encoder: Encoder,
     pooler: Pooler,
     breakpoint_percentile_threshold: int,
+    min_chunk_length: int,
 ) -> InMemoryDataset:
     """Compute semantic chunked embeddings.
 
@@ -122,6 +123,9 @@ def compute_semantic_chunks(
         The percentile of cosine dissimilarity that must be exceeded
         between a group of sentences and the next to form a chunk. The
         smaller this number is, the more chunks will be generated.
+    min_chunk_length : int
+        The minimum length of a chunk (number of characters) to
+        filter out any small chunks.
 
     Returns
     -------
@@ -189,6 +193,14 @@ def compute_semantic_chunks(
         dataloader.dataset.metadata[start] for start, _ in dataset_indices
     ]
 
+    # Apply a length filter to remove small chunks
+    # filter_indices = [
+    #     i for i, x in enumerate(data)
+    #     if len(x) > min_chunk_length
+    # ]
+    # data = [data[i] for i in filter_indices]
+    # metadata = [metadata[i] for i in filter_indices]
+
     # Drop the splits from the metadata
     for meta in metadata:
         meta.pop('sentence')
@@ -209,6 +221,11 @@ class SemanticChunkEmbedderConfig(BaseConfig):
     chunk_batch_size: int = Field(
         8,
         description='The batch size for the chunked text.',
+    )
+    min_chunk_length: int = Field(
+        750,
+        description='The minimum length of a chunk (number of characters) to '
+        'filter out any small chunks.',
     )
 
 
@@ -246,6 +263,7 @@ class SemanticChunkEmbedder:
             encoder=encoder,
             pooler=pooler,
             breakpoint_percentile_threshold=self.config.breakpoint_percentile_threshold,
+            min_chunk_length=self.config.min_chunk_length,
         )
 
         # Make a new dataloader with the chunked data
