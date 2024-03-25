@@ -194,12 +194,11 @@ def compute_semantic_chunks(
     ]
 
     # Apply a length filter to remove small chunks
-    # filter_indices = [
-    #     i for i, x in enumerate(data)
-    #     if len(x) > min_chunk_length
-    # ]
-    # data = [data[i] for i in filter_indices]
-    # metadata = [metadata[i] for i in filter_indices]
+    filter_indices = [
+        i for i, x in enumerate(data) if len(x) > min_chunk_length
+    ]
+    data = [data[i] for i in filter_indices]
+    metadata = [metadata[i] for i in filter_indices]
 
     # Drop the splits from the metadata
     for meta in metadata:
