@@ -37,6 +37,6 @@ compute_config:
   # Make sure to change the account to the account you want to charge
   account: FoundEpidem
   # The HPC queue to submit to
-  queue: debug-scaling
+  queue: run_next
   # The amount of time to request for your job
   walltime: 01:00:00
