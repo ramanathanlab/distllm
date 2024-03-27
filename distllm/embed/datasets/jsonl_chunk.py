@@ -1,4 +1,8 @@
-"""Jsonl file dataset with sentence chunking."""
+"""Jsonl file dataset with sentence chunking.
+
+Note: Our semantic chunking implementation is adapted from:
+https://github.com/run-llama/llama_index/blob/main/llama-index-core/llama_index/core/node_parser/text/semantic_splitter.py
+"""
 
 from __future__ import annotations
 
@@ -69,6 +73,17 @@ class JsonlChunkDatasetConfig(BaseConfig):
     # Whether to pin memory for the dataloader.
     pin_memory: bool = True
 
+    # The length threshold to filter out small buffers
+    # (number of characters in the buffer)
+    min_buffer_length: int = Field(
+        default=750,
+        description=(
+            'The minimum number of characters to consider a buffer. '
+            'Buffers with fewer characters will be filtered out.'
+            'This helps remove citations, etc from the text.'
+        ),
+    )
+
     buffer_size: int = Field(
         default=1,
         description=(
@@ -126,7 +141,7 @@ class JsonlChunkDataset:
         metadata = content
 
         # Check if metadata is empty
-        if any(not item for item in metadata):
+        if not metadata or any(not item for item in metadata):
             raise ValueError('Metadata is empty. Please check the jsonl file.')
 
         # Split the data based on the split criteria
@@ -138,17 +153,27 @@ class JsonlChunkDataset:
         for idx, split in enumerate(splits):
             bufs = sentences_to_buffers(split, self.config.buffer_size)
             buffers.extend(bufs)
-            if metadata is not None:
-                metadatas.extend([metadata[idx]] * len(bufs))
+            # Add the split to the metadata to be able to unpack the
+            # semantic chunks properly
+            for sentence in split:
+                mdata = metadata[idx].copy()
+                mdata['sentence'] = sentence
+                metadatas.append(mdata)
 
-        # Metadata should be None if not used
-        metadata = metadatas if metadata is not None else None
+        # Apply a length filter to remove any small buffers
+        filter_indices = [
+            i
+            for i, buf in enumerate(buffers)
+            if len(buf) > self.config.min_buffer_length
+        ]
+        buffers = [buffers[i] for i in filter_indices]
+        metadatas = [metadatas[i] for i in filter_indices]
 
         # Instantiate the dataloader
         return DataLoader(
             pin_memory=self.config.pin_memory,
             batch_size=self.config.batch_size,
             num_workers=self.config.num_data_workers,
-            dataset=InMemoryDataset(buffers, metadata),
+            dataset=InMemoryDataset(buffers, metadatas),
             collate_fn=DataCollator(encoder.tokenizer),
         )

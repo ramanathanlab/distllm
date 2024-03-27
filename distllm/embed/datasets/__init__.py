@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from typing import Union
 
 from distllm.embed.datasets.base import Dataset
 from distllm.embed.datasets.fasta import FastaDataset
@@ -15,12 +16,12 @@ from distllm.embed.datasets.single_line import SequencePerLineDataset
 from distllm.embed.datasets.single_line import SequencePerLineDatasetConfig
 from distllm.utils import BaseConfig
 
-DatasetConfigs = (
-    FastaDatasetConfig
-    | SequencePerLineDatasetConfig
-    | JsonlDatasetConfig
-    | JsonlChunkDatasetConfig
-)
+DatasetConfigs = Union[
+    FastaDatasetConfig,
+    SequencePerLineDatasetConfig,
+    JsonlDatasetConfig,
+    JsonlChunkDatasetConfig,
+]
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[Dataset]]] = {
     'fasta': (FastaDatasetConfig, FastaDataset),

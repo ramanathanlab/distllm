@@ -3,35 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
-from typing import Iterator
 from typing import Literal
 from typing import Optional
 
-import numpy as np
 from datasets import concatenate_datasets
 from datasets import Dataset
 
-from distllm.embed.embedders.base import EmbedderResult
 from distllm.utils import BaseConfig
-
-
-def _generate_dataset(
-    embeddings: np.ndarray,
-    text: list[str],
-    metadata: list[dict[str, Any]] | None,
-) -> Iterator[dict[str, str | np.ndarray | Any]]:
-    """Generate a dataset from the embeddings, text, and metadata."""
-    for idx, (text_, embedding) in enumerate(zip(text, embeddings)):
-        # Always include the text and the embeddings
-        item = {'text': text_, 'embeddings': embedding}
-
-        # Add metadata if available
-        if metadata is not None:
-            for key, value in metadata[idx].items():
-                item[key] = value
-
-        yield item
 
 
 class HuggingFaceWriterConfig(BaseConfig):
@@ -50,22 +28,32 @@ class HuggingFaceWriter:
         """Initialize the writer with the configuration."""
         self.config = config
 
-    def write(self, output_dir: Path, result: EmbedderResult) -> None:
+    def write(
+        self,
+        output_dir: Path,
+        paths: list[str],
+        text: list[str],
+        responses: list[str],
+    ) -> None:
         """Write the embeddings to disk.
 
         Parameters
         ----------
-        result : EmbedderResult
-            The result to write to disk.
+        output_dir : Path
+            The output directory to write the dataset to.
+        paths : list[str]
+            The paths for the dataset.
+        text : list[str]
+            The text for the dataset.
+        responses : list[str]
+            The responses for the dataset.
         """
-        # TODO: Use Dataset.from_dict instead of Dataset.from_generator
-        # Create a dataset from the generator
-        dataset = Dataset.from_generator(
-            _generate_dataset,
-            gen_kwargs={
-                'embeddings': result.embeddings,
-                'text': result.text,
-                'metadata': result.metadata,
+        # Create a dataset
+        dataset = Dataset.from_dict(
+            mapping={
+                'path': paths,
+                'text': text,
+                'response': responses,
             },
         )
 

@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 from distllm.generate.generators.base import LLMGenerator
-from distllm.generate.generators.base import LLMResult
 from distllm.generate.generators.vllm_backend import VLLMGenerator
 from distllm.generate.generators.vllm_backend import VLLMGeneratorConfig
 from distllm.registry import registry

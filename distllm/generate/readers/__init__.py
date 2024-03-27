@@ -1,31 +1,26 @@
-"""Module for writing embeddings to disk."""
+"""Module for readers."""
 
 from __future__ import annotations
 
 from typing import Any
-from typing import Union
 
-from distllm.embed.writers.base import Writer
-from distllm.embed.writers.huggingface import HuggingFaceWriter
-from distllm.embed.writers.huggingface import HuggingFaceWriterConfig
-from distllm.embed.writers.numpy import NumpyWriter
-from distllm.embed.writers.numpy import NumpyWriterConfig
+from distllm.generate.readers.base import Reader
+from distllm.generate.readers.huggingface import HuggingFaceReader
+from distllm.generate.readers.huggingface import HuggingFaceReaderConfig
 from distllm.utils import BaseConfig
 
-WriterConfigs = Union[HuggingFaceWriterConfig, NumpyWriterConfig]
+ReaderConfigs = HuggingFaceReaderConfig
 
-STRATEGIES: dict[str, tuple[type[BaseConfig], type[Writer]]] = {
-    'huggingface': (HuggingFaceWriterConfig, HuggingFaceWriter),
-    'numpy': (NumpyWriterConfig, NumpyWriter),
+STRATEGIES: dict[str, tuple[type[BaseConfig], type[Reader]]] = {
+    'huggingface': (HuggingFaceReaderConfig, HuggingFaceReader),
 }
 
 
-def get_writer(kwargs: dict[str, Any]) -> Writer:
+def get_reader(kwargs: dict[str, Any]) -> Reader:
     """Get the instance based on the kwargs.
 
     Currently supports the following strategies:
     - huggingface
-    - numpy
 
     Parameters
     ----------
@@ -35,7 +30,7 @@ def get_writer(kwargs: dict[str, Any]) -> Writer:
 
     Returns
     -------
-    Writer
+    Reader
         The instance.
 
     Raises
@@ -47,7 +42,7 @@ def get_writer(kwargs: dict[str, Any]) -> Writer:
     strategy = STRATEGIES.get(name)
     if not strategy:
         raise ValueError(
-            f'Unknown writer name: {name}.'
+            f'Unknown reader name: {name}.'
             f' Available: {set(STRATEGIES.keys())}',
         )
 

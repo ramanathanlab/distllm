@@ -5,14 +5,14 @@ from __future__ import annotations
 from typing import Any
 
 from distllm.generate.prompts.base import Prompt
-from distllm.generate.prompts.question import QuestionPrompt
-from distllm.generate.prompts.question import QuestionPromptConfig
+from distllm.generate.prompts.question_chunk import QuestionChunkPrompt
+from distllm.generate.prompts.question_chunk import QuestionChunkPromptConfig
 from distllm.utils import BaseConfig
 
-PromptConfigs = QuestionPromptConfig
+PromptConfigs = QuestionChunkPromptConfig
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[Prompt]]] = {
-    'question': (QuestionPromptConfig, QuestionPrompt),
+    'question_chunk': (QuestionChunkPromptConfig, QuestionChunkPrompt),
 }
 
 
@@ -20,7 +20,7 @@ def get_prompt(kwargs: dict[str, Any]) -> Prompt:
     """Get the instance based on the kwargs.
 
     Currently supports the following strategies:
-    - question
+    - question_chunk
 
     Parameters
     ----------

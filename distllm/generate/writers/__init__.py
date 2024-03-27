@@ -1,22 +1,18 @@
-"""Module for writing embeddings to disk."""
+"""Module for writer."""
 
 from __future__ import annotations
 
 from typing import Any
-from typing import Union
 
-from distllm.embed.writers.base import Writer
-from distllm.embed.writers.huggingface import HuggingFaceWriter
-from distllm.embed.writers.huggingface import HuggingFaceWriterConfig
-from distllm.embed.writers.numpy import NumpyWriter
-from distllm.embed.writers.numpy import NumpyWriterConfig
+from distllm.generate.writers.base import Writer
+from distllm.generate.writers.huggingface import HuggingFaceWriter
+from distllm.generate.writers.huggingface import HuggingFaceWriterConfig
 from distllm.utils import BaseConfig
 
-WriterConfigs = Union[HuggingFaceWriterConfig, NumpyWriterConfig]
+WriterConfigs = HuggingFaceWriterConfig
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[Writer]]] = {
     'huggingface': (HuggingFaceWriterConfig, HuggingFaceWriter),
-    'numpy': (NumpyWriterConfig, NumpyWriter),
 }
 
 
@@ -25,7 +21,6 @@ def get_writer(kwargs: dict[str, Any]) -> Writer:
 
     Currently supports the following strategies:
     - huggingface
-    - numpy
 
     Parameters
     ----------
