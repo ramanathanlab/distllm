@@ -23,7 +23,7 @@ pooler_config:
 # Settings for the embedder.
 embedder_config:
   name: semantic_chunk
-  chunk_batch_size: 4
+  chunk_batch_size: 2
   normalize_embeddings: true
 
 # Settings for the writer.
