@@ -35,7 +35,7 @@ compute_config:
   # The name of the compute platform to use
   name: polaris
   # The number of compute nodes to use
-  num_nodes: 10
+  num_nodes: 20
   # Make sure to update the path to your conda environment and HF cache
   worker_init: "module load conda/2023-10-04; conda activate distllm; export HF_HOME=/lus/eagle/projects/CVD-Mol-AI/braceal/.cache"
   # The scheduler options to use when submitting jobs
