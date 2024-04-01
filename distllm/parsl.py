@@ -14,7 +14,6 @@ from typing import Sequence
 from typing import Union
 
 from parsl.addresses import address_by_hostname
-from parsl.addresses import address_by_interface
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import MpiExecLauncher
@@ -127,8 +126,10 @@ class PolarisConfig(BaseComputeConfig):
     """Up to 64 with multithreading."""
     cores_per_worker: float = 8
     """Number of cores per worker. Evenly distributed between GPUs."""
-    retries: int = 1
+    retries: int = 0
     """Number of retries upon failure."""
+    worker_debug: bool = False
+    """Enable worker debug."""
 
     def get_config(self, run_dir: PathLike) -> Config:
         """Create a parsl configuration for running on Polaris@ALCF.
@@ -146,12 +147,12 @@ class PolarisConfig(BaseComputeConfig):
                     label=self.label,
                     heartbeat_period=15,
                     heartbeat_threshold=120,
-                    worker_debug=True,
+                    worker_debug=self.worker_debug,
                     # available_accelerators will override settings
                     # for max_workers
                     available_accelerators=4,
                     cores_per_worker=self.cores_per_worker,
-                    address=address_by_interface('bond0'),
+                    # address=address_by_interface('bond0'),
                     cpu_affinity='block-reverse',
                     prefetch_capacity=0,
                     provider=PBSProProvider(
