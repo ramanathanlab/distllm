@@ -18,7 +18,7 @@ encoder_config:
 
 # Settings for the pooler.
 pooler_config:
-  name: mean
+  name: last_token
 
 # Settings for the embedder.
 embedder_config:
