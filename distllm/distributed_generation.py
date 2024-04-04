@@ -189,6 +189,9 @@ if __name__ == '__main__':
     for pattern in config.glob_patterns:
         input_paths.extend(list(config.input_dir.glob(pattern)))
 
+    # Log the input files to stdout
+    print(f'Found {len(input_paths)} input files.')
+
     # Set the parsl compute settings
     parsl_config = config.compute_config.get_config(
         config.output_dir / 'parsl',
