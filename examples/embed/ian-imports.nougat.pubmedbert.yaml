@@ -45,4 +45,4 @@ compute_config:
   # The HPC queue to submit to
   queue: R1819640
   # The amount of time to request for your job
-  walltime: 24:00:00
+  walltime: "24:00:00"
