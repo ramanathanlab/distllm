@@ -36,8 +36,18 @@ def generate_worker(  # noqa: PLR0913
     from distllm.generate import get_reader
     from distllm.generate import get_writer
 
+    # Time the worker function
+    start = time.time()
+
     # Initialize the generator
     generator = get_generator(generator_kwargs, register=True)
+
+    print(
+        f'[timer] [Loaded generator] [{input_path}]'
+        f' in [{time.time() - start:.2f}] seconds',
+    )
+
+    t_start = time.time()
 
     # Initialize the reader
     reader = get_reader(reader_kwargs)
@@ -48,21 +58,32 @@ def generate_worker(  # noqa: PLR0913
     # Initialize the prompt
     prompt = get_prompt(prompt_kwargs)
 
-    start = time.time()
-
     # Read the text from the file
     text, paths = reader.read(input_path)
+
+    print(
+        f'[timer] [Loaded dataset] [{input_path}]'
+        f' in [{time.time() - t_start:.2f}] seconds',
+    )
+    t_start = time.time()
 
     # Preprocess the text
     prompts = prompt.preprocess(text)
 
-    # Time the generation
-    start = time.time()
+    print(
+        f'[timer] [Preprocessed text] [{input_path}]'
+        f' in [{time.time() - t_start:.2f}] seconds',
+    )
+    t_start = time.time()
 
     # Generate response for each text
     responses = generator.generate(prompts)
 
-    print(f'Generated responses in {time.time() - start:.2f} seconds')
+    print(
+        f'[timer] [Generated responses] [{input_path}]'
+        f' in [{time.time() - t_start:.2f}] seconds',
+    )
+    t_start = time.time()
 
     # Postprocess the responses
     results = prompt.postprocess(responses)
@@ -72,12 +93,27 @@ def generate_worker(  # noqa: PLR0913
     paths = [p for p, r in zip(paths, results) if r]
     results = [r for r in results if r]
 
+    print(
+        f'[timer] [Postprocessed responses] [{input_path}]'
+        f' in [{time.time() - t_start:.2f}] seconds',
+    )
+    t_start = time.time()
+
     # Create the output directory for the dataset
     dataset_dir = output_dir / f'{uuid4()}'
     dataset_dir.mkdir(parents=True, exist_ok=True)
 
     # Write the responses to disk
     writer.write(dataset_dir, paths, text, results)
+
+    print(
+        f'[timer] [Wrote responses] [{input_path}]'
+        f' in [{time.time() - t_start:.2f}] seconds',
+    )
+    print(
+        f'[timer] [Finished generation] [{input_path}]'
+        f' in [{time.time() - start:.2f}] seconds',
+    )
 
 
 class Config(BaseConfig):

@@ -21,7 +21,7 @@ from distllm.utils import BaseConfig
 
 
 def embedding_worker(  # noqa: PLR0913
-    file: Path,
+    input_path: Path,
     output_dir: Path,
     dataset_kwargs: dict[str, Any],
     encoder_kwargs: dict[str, Any],
@@ -41,13 +41,14 @@ def embedding_worker(  # noqa: PLR0913
     from distllm.embed import get_pooler
     from distllm.embed import get_writer
 
+    # Time the worker function
     start = time.time()
 
     # Initialize the model and tokenizer
     encoder = get_encoder(encoder_kwargs, register=True)
 
     print(
-        f'[timer] [Loaded encoder] [{file}]'
+        f'[timer] [Loaded encoder] [{input_path}]'
         f' in [{time.time() - start:.2f}] seconds',
     )
 
@@ -66,10 +67,10 @@ def embedding_worker(  # noqa: PLR0913
     t_start = time.time()
 
     # Initialize the dataloader
-    dataloader = dataset.get_dataloader(file, encoder)
+    dataloader = dataset.get_dataloader(input_path, encoder)
 
     print(
-        f'[timer] [Loaded dataset] [{file}]'
+        f'[timer] [Loaded dataset] [{input_path}]'
         f' in [{time.time() - t_start:.2f}] seconds',
     )
 
@@ -79,7 +80,7 @@ def embedding_worker(  # noqa: PLR0913
     result = embedder.embed(dataloader, encoder, pooler)
 
     print(
-        f'[timer] [Computed embeddings] [{file}]'
+        f'[timer] [Computed embeddings] [{input_path}]'
         f' in [{time.time() - t_start:.2f}] seconds',
     )
 
@@ -93,11 +94,11 @@ def embedding_worker(  # noqa: PLR0913
     writer.write(dataset_dir, result)
 
     print(
-        f'[timer] [Wrote embeddings] [{file}]'
+        f'[timer] [Wrote embeddings] [{input_path}]'
         f' in [{time.time() - t_start:.2f}] seconds',
     )
     print(
-        f'[timer] [Finished embedding] [{file}]'
+        f'[timer] [Finished embedding] [{input_path}]'
         f' in [{time.time() - start:.2f}] seconds',
     )
 
