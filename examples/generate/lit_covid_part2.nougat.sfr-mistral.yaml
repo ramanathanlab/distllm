@@ -1,7 +1,7 @@
 # An input directory containing the files to embed.
-input_dir: /lus/eagle/projects/tpc/braceal/metric-rag/data/semantic_chunks/lit_covid_part2.sfr-mistral/embeddings
+input_dir: /lus/eagle/projects/tpc/braceal/metric-rag/data/semantic_chunks/lit_covid_part2.nougat.sfr-mistral/embeddings
 # An output directory to save the embeddings.
-output_dir: /lus/eagle/projects/tpc/braceal/metric-rag/data/question_samples/lit_covid_part2.sfr-mistral
+output_dir: /lus/eagle/projects/tpc/braceal/metric-rag/data/question_samples/lit_covid_part2.nougat.sfr-mistral
 # A set of glob patterns to match the input files.
 glob_patterns: ['*']
 
