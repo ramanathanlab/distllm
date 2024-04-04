@@ -48,7 +48,7 @@ def embedding_worker(  # noqa: PLR0913
 
     print(
         f'[timer] [Loaded encoder] [{file}]'
-        f' in {time.time() - start:.2f} seconds',
+        f' in [{time.time() - start:.2f}] seconds',
     )
 
     # Initialize the dataset
@@ -70,7 +70,7 @@ def embedding_worker(  # noqa: PLR0913
 
     print(
         f'[timer] [Loaded dataset] [{file}]'
-        f' in {time.time() - t_start:.2f} seconds',
+        f' in [{time.time() - t_start:.2f}] seconds',
     )
 
     t_start = time.time()
