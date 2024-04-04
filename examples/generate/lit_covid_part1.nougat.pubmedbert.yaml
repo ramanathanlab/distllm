@@ -1,5 +1,5 @@
 # An input directory containing the files to embed.
-input_dir: /lus/eagle/projects/tpc/braceal/metric-rag/data/semantic_chunks/lit_covid_part1.nougat.pubmedbert
+input_dir: /lus/eagle/projects/tpc/braceal/metric-rag/data/semantic_chunks/lit_covid_part1.nougat.pubmedbert/embeddings
 # An output directory to save the embeddings.
 output_dir: /lus/eagle/projects/tpc/braceal/metric-rag/data/question_samples/lit_covid_part1.nougat.pubmedbert
 # A set of glob patterns to match the input files.
