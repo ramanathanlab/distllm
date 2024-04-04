@@ -46,7 +46,10 @@ def embedding_worker(  # noqa: PLR0913
     # Initialize the model and tokenizer
     encoder = get_encoder(encoder_kwargs, register=True)
 
-    print(f'Loaded encoder in {time.time() - start:.2f} seconds')
+    print(
+        f'[timer] [Loaded encoder] [{file}]'
+        f' in {time.time() - start:.2f} seconds',
+    )
 
     # Initialize the dataset
     dataset = get_dataset(dataset_kwargs)
@@ -65,14 +68,20 @@ def embedding_worker(  # noqa: PLR0913
     # Initialize the dataloader
     dataloader = dataset.get_dataloader(file, encoder)
 
-    print(f'Loaded dataset in {time.time() - t_start:.2f} seconds')
+    print(
+        f'[timer] [Loaded dataset] [{file}]'
+        f' in {time.time() - t_start:.2f} seconds',
+    )
 
     t_start = time.time()
 
     # Compute the embeddings
     result = embedder.embed(dataloader, encoder, pooler)
 
-    print(f'Computed embeddings in {time.time() - t_start:.2f} seconds')
+    print(
+        f'[timer] [Computed embeddings] [{file}]'
+        f' in [{time.time() - t_start:.2f}] seconds',
+    )
 
     t_start = time.time()
 
@@ -83,8 +92,14 @@ def embedding_worker(  # noqa: PLR0913
     # Write the result to disk
     writer.write(dataset_dir, result)
 
-    print(f'Wrote embeddings in {time.time() - t_start:.2f} seconds')
-    print(f'Finished embedding {file} in {time.time() - start:.2f} seconds')
+    print(
+        f'[timer] [Wrote embeddings] [{file}]'
+        f' in [{time.time() - t_start:.2f}] seconds',
+    )
+    print(
+        f'[timer] [Finished embedding] [{file}]'
+        f' in [{time.time() - start:.2f}] seconds',
+    )
 
 
 class Config(BaseConfig):
