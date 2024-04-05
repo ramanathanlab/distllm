@@ -46,3 +46,5 @@ compute_config:
   queue: R1819640
   # The amount of time to request for your job
   walltime: "24:00:00"
+  # The number of retries if a task fails
+  retries: 1
