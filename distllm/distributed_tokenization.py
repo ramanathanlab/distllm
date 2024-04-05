@@ -39,7 +39,7 @@ class TokenizerConfig(BaseConfig):
     @classmethod
     def resolve_path(cls, value: Path) -> Path:
         """Resolve the path to an absolute path."""
-        return value.resolve()
+        return value.expanduser().resolve()
 
 
 def tokenizer_worker(
