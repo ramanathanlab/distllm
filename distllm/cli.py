@@ -391,6 +391,64 @@ def generate(  # noqa: PLR0913
         )
 
 
+@app.command()
+def tokenize(
+    input_dir: Path = typer.Option(  # noqa: B008
+        ...,
+        '--input_dir',
+        '-i',
+        help='The directory containing the input sub-files/directories '
+        'containing inputs for tokenization (will glob * this directory).',
+    ),
+    output_dir: Path = typer.Option(  # noqa: B008
+        ...,
+        '--output_dir',
+        '-o',
+        help='The directory to save the tokenized text to.',
+    ),
+    text_field: str = typer.Option(
+        'text',
+        '--text_field',
+        '-tf',
+        help='The name of the text field in the jsonl file.',
+    ),
+    tokenizer_name: str = typer.Option(
+        'meta-llama/Llama-2-70b-chat-hf',
+        '--tokenizer_name',
+        '-tn',
+        help='The name of the tokenizer to use.',
+    ),
+    num_proc: int = typer.Option(
+        4,
+        '--num_proc',
+        '-np',
+        help='Number of processes to use for tokenization.',
+    ),
+) -> None:
+    """Tokenize a jsonl file and save the dataset to disk."""
+    from distllm.distributed_tokenization import tokenizer_worker
+
+    # The tokenizer kwargs
+    tokenizer_kwargs: dict[str, Any] = {
+        # The name of the text field in the jsonl file
+        'text_field': text_field,
+        # The name of the tokenizer to use
+        'tokenizer_name': tokenizer_name,
+        # Number of processes to use for writing the embeddings
+        'num_proc': num_proc,
+    }
+
+    # Get the dataset directories
+    input_paths = list(input_dir.glob('*'))
+
+    for input_path in tqdm(input_paths):
+        tokenizer_worker(
+            input_path=input_path,
+            output_dir=output_dir,
+            tokenizer_kwargs=tokenizer_kwargs,
+        )
+
+
 def main() -> None:
     """Entry point for CLI."""
     app()
