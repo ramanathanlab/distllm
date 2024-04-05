@@ -8,6 +8,7 @@ from typing import Optional
 
 from datasets import concatenate_datasets
 from datasets import Dataset
+from tqdm import tqdm
 
 from distllm.utils import BaseConfig
 
@@ -72,7 +73,7 @@ class HuggingFaceWriter:
         """
         # Load all the datasets
         all_datasets = []
-        for p in dataset_dirs:
+        for p in tqdm(dataset_dirs):
             # TODO: Debug why for some datasets, we have missing data
             try:
                 dset = Dataset.load_from_disk(p)
