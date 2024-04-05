@@ -30,6 +30,16 @@ class TokenizerConfig(BaseConfig):
         default=4,
         description='Number of processes to use for tokenization',
     )
+    dotenv_path: Path = Field(
+        default=Path('~/.env'),
+        description='Path to the .env file',
+    )
+
+    @field_validator('dotenv_path')
+    @classmethod
+    def resolve_path(cls, value: Path) -> Path:
+        """Resolve the path to an absolute path."""
+        return value.resolve()
 
 
 def tokenizer_worker(
@@ -41,10 +51,13 @@ def tokenizer_worker(
     # Imports are here since this function is called in a parsl process
 
     import json
+    import os
     import time
     from uuid import uuid4
 
     from datasets import Dataset
+    from dotenv import load_dotenv
+    from huggingface_hub import login
     from transformers import AutoTokenizer
 
     from distllm.distributed_tokenization import TokenizerConfig
@@ -54,6 +67,12 @@ def tokenizer_worker(
 
     # Initialize the tokenizer configuration
     config = TokenizerConfig(**tokenizer_kwargs)
+
+    # Load environment variables from .env file
+    load_dotenv(config.dotenv_path)
+
+    # Login to the huggingface hub
+    login(os.getenv('HF_TOKEN'))
 
     # Read the jsonl file
     lines = input_path.read_text().strip().split('\n')

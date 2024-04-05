@@ -392,7 +392,7 @@ def generate(  # noqa: PLR0913
 
 
 @app.command()
-def tokenize(
+def tokenize(  # noqa: PLR0913
     input_dir: Path = typer.Option(  # noqa: B008
         ...,
         '--input_dir',
@@ -424,6 +424,12 @@ def tokenize(
         '-np',
         help='Number of processes to use for tokenization.',
     ),
+    dotenv_path: Path = typer.Option(  # noqa: B008
+        Path('~/.env'),
+        '--dotenv_path',
+        '-dp',
+        help='Path to the .env file with HF_TOKEN for huggingface hub.',
+    ),
 ) -> None:
     """Tokenize a directory of jsonl files and save the datasets to disk."""
     from distllm.distributed_tokenization import tokenizer_worker
@@ -436,6 +442,8 @@ def tokenize(
         'tokenizer_name': tokenizer_name,
         # Number of processes to use for writing the embeddings
         'num_proc': num_proc,
+        # Path to the .env file
+        'dotenv_path': dotenv_path,
     }
 
     # Get the dataset directories
