@@ -104,7 +104,6 @@ def tokenizer_worker(
         mapping={
             'input_ids': result.input_ids,
             'attention_mask': result.attention_mask,
-            'labels': result.labels,
         },
     )
 
