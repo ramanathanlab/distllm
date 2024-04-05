@@ -182,7 +182,7 @@ def embed(  # noqa: PLR0913
     # Embed and save the files
     for data_file in tqdm(data_files):
         embedding_worker(
-            file=data_file,
+            input_path=data_file,
             output_dir=output_path,
             dataset_kwargs=dataset_kwargs,
             encoder_kwargs=encoder_kwargs,
@@ -222,8 +222,8 @@ def merge(
         help='The dataset directory to save the merged datasets to.',
     ),
 ) -> None:
-    """Merge datasets from multiple directories output by `embed` command."""
-    from distllm.embed import get_writer
+    """Merge datasets from multiple directories output by `generate`."""
+    from distllm.generate import get_writer
 
     # The writer kwargs
     writer_kwargs: dict[str, Any] = {
