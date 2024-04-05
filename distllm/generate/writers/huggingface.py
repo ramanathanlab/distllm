@@ -71,7 +71,15 @@ class HuggingFaceWriter:
             The output directory to write the merged dataset to.
         """
         # Load all the datasets
-        all_datasets = [Dataset.load_from_disk(p) for p in dataset_dirs]
+        all_datasets = []
+        for p in dataset_dirs:
+            # TODO: Debug why for some datasets, we have missing data
+            try:
+                dset = Dataset.load_from_disk(p)
+            except FileNotFoundError:
+                print(f'Skipping dataset {p} as it is missing.')
+                continue
+            all_datasets.append(dset)
 
         # Concatenate the datasets
         dataset = concatenate_datasets(all_datasets)
