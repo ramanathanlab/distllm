@@ -425,7 +425,7 @@ def tokenize(
         help='Number of processes to use for tokenization.',
     ),
 ) -> None:
-    """Tokenize a jsonl file and save the dataset to disk."""
+    """Tokenize a directory of jsonl files and save the datasets to disk."""
     from distllm.distributed_tokenization import tokenizer_worker
 
     # The tokenizer kwargs
