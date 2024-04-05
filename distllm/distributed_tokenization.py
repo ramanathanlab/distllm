@@ -89,7 +89,7 @@ def tokenizer_worker(
         },
     )
 
-    # Create the output directory for the embedding dataset
+    # Create the output directory for the dataset
     dataset_dir = output_dir / f'{uuid4()}'
     dataset_dir.mkdir(parents=True, exist_ok=True)
 
@@ -107,11 +107,11 @@ def tokenizer_worker(
 
 
 class Config(BaseConfig):
-    """Configuration for distributed inference."""
+    """Configuration for distributed tokenization."""
 
-    # An input directory containing the files to embed.
+    # An input directory containing the files to tokenize.
     input_dir: Path
-    # An output directory to save the embeddings.
+    # An output directory to save the tokenized text.
     output_dir: Path
     # A set of glob patterns to match the input files.
     glob_patterns: list[str] = Field(default=['*'])
@@ -129,7 +129,7 @@ class Config(BaseConfig):
 
 if __name__ == '__main__':
     # Parse arguments from the command line
-    parser = ArgumentParser(description='Embed text')
+    parser = ArgumentParser(description='Tokenize text')
     parser.add_argument(
         '--config',
         type=Path,
