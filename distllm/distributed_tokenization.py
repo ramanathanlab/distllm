@@ -82,7 +82,7 @@ def tokenizer_worker(
 
     # Login to the huggingface hub
     login(os.getenv('HF_TOKEN'))
-    os.environ['TOKENIZERS_PARALLELISM'] = '0'
+
     # Read the jsonl file
     lines = input_path.read_text().strip().split('\n')
     content = [json.loads(line) for line in lines]
@@ -96,7 +96,8 @@ def tokenizer_worker(
     )
     t_start = time.time()
 
-    # Tokenize the text data
+    # Initialize the tokenizer
+    os.environ['TOKENIZERS_PARALLELISM'] = '0'
     tokenizer = AutoTokenizer.from_pretrained(config.tokenizer_name)
 
     # Tokenize the text data
