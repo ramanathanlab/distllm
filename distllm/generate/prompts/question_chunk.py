@@ -18,14 +18,14 @@ class QuestionChunkPromptTemplateConfig(BaseConfig):
 class QuestionChunkPromptTemplate:
     """Question chunk prompt."""
 
-    prompt = """
+    template = """
     You are a scientific researcher. Given the following chunk of text,
      generate a high-quality question that requires deep understanding of
      the concepts presented in the text. Do not include questions that refer
      to specific aspects of the paper, like results, findings, or references.
     \n\n
 
-    Text: {chunk}\nQuestion: '
+    Text: {chunk}\nQuestion:
     """
 
     def __init__(self, config: QuestionChunkPromptTemplateConfig) -> None:
@@ -35,7 +35,7 @@ class QuestionChunkPromptTemplate:
     def preprocess(
         self,
         text: str | list[str],
-        context: list[str] | None = None,
+        contexts: list[list[str]] | None = None,
     ) -> list[str]:
         """Preprocess the text into prompts.
 
@@ -43,8 +43,8 @@ class QuestionChunkPromptTemplate:
         ----------
         text : str
             The text to format.
-        context : list[str], optional
-            The context to include in the prompt, by default None.
+        contexts : list[list[str]], optional
+            The contexts to include for each text, by default None.
 
         Returns
         -------
@@ -54,7 +54,7 @@ class QuestionChunkPromptTemplate:
         if isinstance(text, str):
             text = [text]
 
-        prompts = [self.prompt.format(chunk=chunk) for chunk in text]
+        prompts = [self.template.format(chunk=chunk) for chunk in text]
         return prompts
 
     def _parse_response(self, response: str) -> str:

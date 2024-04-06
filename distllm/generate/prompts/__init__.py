@@ -24,7 +24,7 @@ STRATEGIES: dict[str, tuple[type[BaseConfig], type[PromptTemplate]]] = {
 }
 
 
-def get_prompt(kwargs: dict[str, Any]) -> PromptTemplate:
+def get_prompt_template(kwargs: dict[str, Any]) -> PromptTemplate:
     """Get the instance based on the kwargs.
 
     Currently supports the following strategies:

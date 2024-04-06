@@ -32,7 +32,7 @@ def generate_worker(  # noqa: PLR0913
     from uuid import uuid4
 
     from distllm.generate import get_generator
-    from distllm.generate import get_prompt
+    from distllm.generate import get_prompt_template
     from distllm.generate import get_reader
     from distllm.generate import get_writer
 
@@ -56,7 +56,7 @@ def generate_worker(  # noqa: PLR0913
     writer = get_writer(writer_kwargs)
 
     # Initialize the prompt
-    prompt = get_prompt(prompt_kwargs)
+    prompt = get_prompt_template(prompt_kwargs)
 
     # Read the text from the file
     text, paths = reader.read(input_path)

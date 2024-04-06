@@ -23,7 +23,7 @@ class IdentityPromptTemplate:
     def preprocess(
         self,
         text: str | list[str],
-        context: list[str] | None = None,
+        contexts: list[list[str]] | None = None,
     ) -> list[str]:
         """Preprocess the text into prompts.
 
@@ -31,8 +31,8 @@ class IdentityPromptTemplate:
         ----------
         text : str
             The text to format.
-        context : list[str], optional
-            The context to include in the prompt, by default None.
+        contexts : list[list[str]], optional
+            The contexts to include for each text, by default None.
 
         Returns
         -------
