@@ -281,13 +281,6 @@ def generate(  # noqa: PLR0913
         help='The name of the writer to use for saving datasets '
         '[huggingface].',
     ),
-    num_proc: int = typer.Option(
-        None,
-        '--num_proc',
-        '-np',
-        help='The number of processes to use for merging the datasets. '
-        'Only works with huggingface writer.',
-    ),
     generator_name: str = typer.Option(
         'vllm',
         '--generator_name',
@@ -355,10 +348,6 @@ def generate(  # noqa: PLR0913
         'name': writer_name,
     }
 
-    # If the writer is huggingface, set the number of processes
-    if writer_name == 'huggingface':
-        writer_kwargs['num_proc'] = num_proc
-
     # The generator kwargs
     generator_kwargs: dict[str, Any] = {
         # The name of the generator to use
@@ -388,6 +377,72 @@ def generate(  # noqa: PLR0913
             reader_kwargs=reader_kwargs,
             writer_kwargs=writer_kwargs,
             generator_kwargs=generator_kwargs,
+        )
+
+
+@app.command()
+def tokenize(  # noqa: PLR0913
+    input_dir: Path = typer.Option(  # noqa: B008
+        ...,
+        '--input_dir',
+        '-i',
+        help='The directory containing the input sub-files/directories '
+        'containing inputs for tokenization (will glob * this directory).',
+    ),
+    output_dir: Path = typer.Option(  # noqa: B008
+        ...,
+        '--output_dir',
+        '-o',
+        help='The directory to save the tokenized text to.',
+    ),
+    text_field: str = typer.Option(
+        'text',
+        '--text_field',
+        '-tf',
+        help='The name of the text field in the jsonl file.',
+    ),
+    tokenizer_name: str = typer.Option(
+        'meta-llama/Llama-2-70b-chat-hf',
+        '--tokenizer_name',
+        '-tn',
+        help='The name of the tokenizer to use.',
+    ),
+    dotenv_path: Path = typer.Option(  # noqa: B008
+        Path('~/.env'),
+        '--dotenv_path',
+        '-dp',
+        help='Path to the .env file with HF_TOKEN for huggingface hub.',
+    ),
+    save_labels: bool = typer.Option(
+        False,
+        '--save_labels',
+        '-sl',
+        help='Whether to store a separate labels field in the dataset.',
+    ),
+) -> None:
+    """Tokenize a directory of jsonl files and save the datasets to disk."""
+    from distllm.distributed_tokenization import tokenizer_worker
+
+    # The tokenizer kwargs
+    tokenizer_kwargs: dict[str, Any] = {
+        # The name of the text field in the jsonl file
+        'text_field': text_field,
+        # The name of the tokenizer to use
+        'tokenizer_name': tokenizer_name,
+        # Path to the .env file
+        'dotenv_path': dotenv_path,
+        # Whether to save labels
+        'save_labels': save_labels,
+    }
+
+    # Get the dataset directories
+    input_paths = list(input_dir.glob('*'))
+
+    for input_path in tqdm(input_paths):
+        tokenizer_worker(
+            input_path=input_path,
+            output_dir=output_dir,
+            tokenizer_kwargs=tokenizer_kwargs,
         )
 
 
