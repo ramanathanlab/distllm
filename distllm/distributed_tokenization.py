@@ -26,10 +26,6 @@ class TokenizerConfig(BaseConfig):
         default='meta-llama/Llama-2-70b-chat-hf',
         description='The name of the tokenizer to use',
     )
-    num_proc: int = Field(
-        default=4,
-        description='Number of processes to use for tokenization',
-    )
     dotenv_path: Path = Field(
         default=Path('~/.env'),
         description='Path to the .env file',
@@ -129,7 +125,7 @@ def tokenizer_worker(
     dataset_dir.mkdir(parents=True, exist_ok=True)
 
     # Write the dataset to disk
-    dataset.save_to_disk(dataset_dir, num_proc=config.num_proc)
+    dataset.save_to_disk(dataset_dir)
 
     print(
         f'[timer] [Saved dataset] [{input_path}]'

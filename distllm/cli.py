@@ -418,12 +418,6 @@ def tokenize(  # noqa: PLR0913
         '-tn',
         help='The name of the tokenizer to use.',
     ),
-    num_proc: int = typer.Option(
-        4,
-        '--num_proc',
-        '-np',
-        help='Number of processes to use for tokenization.',
-    ),
     dotenv_path: Path = typer.Option(  # noqa: B008
         Path('~/.env'),
         '--dotenv_path',
@@ -446,8 +440,6 @@ def tokenize(  # noqa: PLR0913
         'text_field': text_field,
         # The name of the tokenizer to use
         'tokenizer_name': tokenizer_name,
-        # Number of processes to use for writing the embeddings
-        'num_proc': num_proc,
         # Path to the .env file
         'dotenv_path': dotenv_path,
         # Whether to save labels
