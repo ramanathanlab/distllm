@@ -281,13 +281,6 @@ def generate(  # noqa: PLR0913
         help='The name of the writer to use for saving datasets '
         '[huggingface].',
     ),
-    num_proc: int = typer.Option(
-        None,
-        '--num_proc',
-        '-np',
-        help='The number of processes to use for merging the datasets. '
-        'Only works with huggingface writer.',
-    ),
     generator_name: str = typer.Option(
         'vllm',
         '--generator_name',
@@ -354,10 +347,6 @@ def generate(  # noqa: PLR0913
         # The name of the writer to use
         'name': writer_name,
     }
-
-    # If the writer is huggingface, set the number of processes
-    if writer_name == 'huggingface':
-        writer_kwargs['num_proc'] = num_proc
 
     # The generator kwargs
     generator_kwargs: dict[str, Any] = {

@@ -16,7 +16,6 @@ reader_config:
 # Settings for the writer.
 writer_config:
   name: huggingface
-  num_proc: 4
 
 # Settings for the generator.
 generator_config:
