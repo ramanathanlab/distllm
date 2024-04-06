@@ -72,7 +72,7 @@ def tokenizer_worker(
 
     # Initialize the tokenizer configuration
     config = TokenizerConfig(**tokenizer_kwargs)
-    
+
     # Silence outputs
     datasets.logging.set_verbosity_warning()
     datasets.disable_progress_bars()
@@ -82,7 +82,7 @@ def tokenizer_worker(
 
     # Login to the huggingface hub
     login(os.getenv('HF_TOKEN'))
-    os.environ["TOKENIZERS_PARALLELISM"] = '0'
+    os.environ['TOKENIZERS_PARALLELISM'] = '0'
     # Read the jsonl file
     lines = input_path.read_text().strip().split('\n')
     content = [json.loads(line) for line in lines]
