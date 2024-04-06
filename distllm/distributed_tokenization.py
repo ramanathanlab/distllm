@@ -120,6 +120,10 @@ def tokenizer_worker(
     # Create a dataset
     dataset = Dataset.from_dict(mapping)
 
+    if not len(dataset):
+        print(f'Empty dataset for {input_path}')
+        return
+
     # Create the output directory for the dataset
     dataset_dir = output_dir / f'{uuid4()}'
     dataset_dir.mkdir(parents=True, exist_ok=True)
