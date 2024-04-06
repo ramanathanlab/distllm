@@ -1,4 +1,4 @@
-"""Module for handling prompts for a language model."""
+"""Question chunk prompt for generating questions from a chunk of text."""
 
 from __future__ import annotations
 
@@ -9,14 +9,14 @@ from nltk.tokenize import sent_tokenize
 from distllm.utils import BaseConfig
 
 
-class QuestionChunkPromptConfig(BaseConfig):
-    """Configuration for the QuestionChunkPrompt."""
+class QuestionChunkPromptTemplateConfig(BaseConfig):
+    """Configuration for the QuestionChunkPromptTemplate."""
 
     name: Literal['question_chunk'] = 'question_chunk'  # type: ignore[assignment]
 
 
-class QuestionChunkPrompt:
-    """Question generator using a language model."""
+class QuestionChunkPromptTemplate:
+    """Question chunk prompt."""
 
     prompt = """
     You are a scientific researcher. Given the following chunk of text,
@@ -28,21 +28,28 @@ class QuestionChunkPrompt:
     Text: {chunk}\nQuestion: '
     """
 
-    def __init__(self, config: QuestionChunkPromptConfig) -> None:
-        """Initialize the LLMGenerator."""
+    def __init__(self, config: QuestionChunkPromptTemplateConfig) -> None:
+        """Initialize the QuestionChunkPromptTemplate."""
         self.config = config
 
-    def preprocess(self, text: str | list[str]) -> list[str]:
-        """Preprocess the text documents into prompts.
+    def preprocess(
+        self,
+        text: str | list[str],
+        context: list[str] | None = None,
+    ) -> list[str]:
+        """Preprocess the text into prompts.
 
         Parameters
         ----------
         text : str
             The text to format.
+        context : list[str], optional
+            The context to include in the prompt, by default None.
 
         Returns
         -------
         list[str]
+            The formatted prompts.
         """
         if isinstance(text, str):
             text = [text]

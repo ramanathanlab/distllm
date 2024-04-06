@@ -12,7 +12,7 @@ from pydantic import Field
 from pydantic import field_validator
 
 from distllm.generate import LLMGeneratorConfigs
-from distllm.generate import PromptConfigs
+from distllm.generate import PromptTemplateConfigs
 from distllm.generate import ReaderConfigs
 from distllm.generate import WriterConfigs
 from distllm.parsl import ComputeConfigs
@@ -126,7 +126,7 @@ class Config(BaseConfig):
     # A set of glob patterns to match the input files.
     glob_patterns: list[str] = Field(default=['*'])
     # Settings for the prompt.
-    prompt_config: PromptConfigs
+    prompt_config: PromptTemplateConfigs
     # Settings for the reader.
     reader_config: ReaderConfigs
     # Settings for the writer.

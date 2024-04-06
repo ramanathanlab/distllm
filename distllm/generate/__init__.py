@@ -6,8 +6,8 @@ from distllm.generate.generators import get_generator
 from distllm.generate.generators import LLMGenerator
 from distllm.generate.generators import LLMGeneratorConfigs
 from distllm.generate.prompts import get_prompt
-from distllm.generate.prompts import Prompt
-from distllm.generate.prompts import PromptConfigs
+from distllm.generate.prompts import PromptTemplate
+from distllm.generate.prompts import PromptTemplateConfigs
 from distllm.generate.readers import get_reader
 from distllm.generate.readers import Reader
 from distllm.generate.readers import ReaderConfigs

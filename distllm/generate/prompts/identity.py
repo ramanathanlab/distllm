@@ -1,18 +1,24 @@
-"""Interface for all prompts to follow."""
+"""Identity prompt to skip any processing."""
 
 from __future__ import annotations
 
-from typing import Protocol
+from typing import Literal
 
 from distllm.utils import BaseConfig
 
 
-class PromptTemplate(Protocol):
-    """PromptTemplate protocol for all prompts to follow."""
+class IdentityPromptTemplateConfig(BaseConfig):
+    """Configuration for the IdentityPromptTemplate."""
 
-    def __init__(self, config: BaseConfig) -> None:
-        """Initialize the prompt with the configuration."""
-        ...
+    name: Literal['identity'] = 'identity'  # type: ignore[assignment]
+
+
+class IdentityPromptTemplate:
+    """Identity prompt."""
+
+    def __init__(self, config: IdentityPromptTemplateConfig) -> None:
+        """Initialize the IdentityPromptTemplate."""
+        self.config = config
 
     def preprocess(
         self,
@@ -24,16 +30,19 @@ class PromptTemplate(Protocol):
         Parameters
         ----------
         text : str
-            The text to preprocess.
+            The text to format.
         context : list[str], optional
             The context to include in the prompt, by default None.
 
         Returns
         -------
         list[str]
-            The preprocessed prompts.
+            The formatted prompts.
         """
-        ...
+        if isinstance(text, str):
+            text = [text]
+
+        return text
 
     def postprocess(self, responses: list[str]) -> list[str]:
         """Postprocess the responses.
@@ -48,4 +57,4 @@ class PromptTemplate(Protocol):
         list[str]
             The postprocessed responses.
         """
-        ...
+        return responses

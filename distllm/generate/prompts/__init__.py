@@ -1,26 +1,35 @@
-"""Prompt module."""
+"""PromptTemplate module."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from distllm.generate.prompts.base import Prompt
-from distllm.generate.prompts.question_chunk import QuestionChunkPrompt
-from distllm.generate.prompts.question_chunk import QuestionChunkPromptConfig
+from distllm.generate.prompts.base import PromptTemplate
+from distllm.generate.prompts.identity import IdentityPromptTemplate
+from distllm.generate.prompts.identity import IdentityPromptTemplateConfig
+from distllm.generate.prompts.question_chunk import QuestionChunkPromptTemplate
+from distllm.generate.prompts.question_chunk import (
+    QuestionChunkPromptTemplateConfig,
+)
 from distllm.utils import BaseConfig
 
-PromptConfigs = QuestionChunkPromptConfig
+PromptTemplateConfigs = QuestionChunkPromptTemplateConfig
 
-STRATEGIES: dict[str, tuple[type[BaseConfig], type[Prompt]]] = {
-    'question_chunk': (QuestionChunkPromptConfig, QuestionChunkPrompt),
+STRATEGIES: dict[str, tuple[type[BaseConfig], type[PromptTemplate]]] = {
+    'question_chunk': (
+        QuestionChunkPromptTemplateConfig,
+        QuestionChunkPromptTemplate,
+    ),
+    'identity': (IdentityPromptTemplateConfig, IdentityPromptTemplate),
 }
 
 
-def get_prompt(kwargs: dict[str, Any]) -> Prompt:
+def get_prompt(kwargs: dict[str, Any]) -> PromptTemplate:
     """Get the instance based on the kwargs.
 
     Currently supports the following strategies:
     - question_chunk
+    - identity
 
     Parameters
     ----------
@@ -30,7 +39,7 @@ def get_prompt(kwargs: dict[str, Any]) -> Prompt:
 
     Returns
     -------
-    Prompt
+    PromptTemplate
         The instance.
 
     Raises
