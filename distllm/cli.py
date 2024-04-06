@@ -430,6 +430,12 @@ def tokenize(  # noqa: PLR0913
         '-dp',
         help='Path to the .env file with HF_TOKEN for huggingface hub.',
     ),
+    save_labels: bool = typer.Option(
+        False,
+        '--save_labels',
+        '-sl',
+        help='Whether to store a separate labels field in the dataset.',
+    ),
 ) -> None:
     """Tokenize a directory of jsonl files and save the datasets to disk."""
     from distllm.distributed_tokenization import tokenizer_worker
@@ -444,6 +450,8 @@ def tokenize(  # noqa: PLR0913
         'num_proc': num_proc,
         # Path to the .env file
         'dotenv_path': dotenv_path,
+        # Whether to save labels
+        'save_labels': save_labels,
     }
 
     # Get the dataset directories

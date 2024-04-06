@@ -34,6 +34,10 @@ class TokenizerConfig(BaseConfig):
         default=Path('~/.env'),
         description='Path to the .env file',
     )
+    save_labels: bool = Field(
+        default=False,
+        description='Whether to store a separate labels field in the dataset',
+    )
 
     @field_validator('dotenv_path')
     @classmethod
@@ -55,6 +59,7 @@ def tokenizer_worker(
     import time
     from uuid import uuid4
 
+    import datasets
     from datasets import Dataset
     from dotenv import load_dotenv
     from huggingface_hub import login
@@ -67,13 +72,17 @@ def tokenizer_worker(
 
     # Initialize the tokenizer configuration
     config = TokenizerConfig(**tokenizer_kwargs)
+    
+    # Silence outputs
+    datasets.logging.set_verbosity_warning()
+    datasets.disable_progress_bars()
 
     # Load environment variables from .env file
     load_dotenv(config.dotenv_path)
 
     # Login to the huggingface hub
     login(os.getenv('HF_TOKEN'))
-
+    os.environ["TOKENIZERS_PARALLELISM"] = '0'
     # Read the jsonl file
     lines = input_path.read_text().strip().split('\n')
     content = [json.loads(line) for line in lines]
@@ -99,13 +108,16 @@ def tokenizer_worker(
     )
     t_start = time.time()
 
+    mapping = {
+        'input_ids': result.input_ids,
+        'attention_mask': result.attention_mask,
+    }
+
+    if config.save_labels:
+        mapping['labels'] = result.input_ids
+
     # Create a dataset
-    dataset = Dataset.from_dict(
-        mapping={
-            'input_ids': result.input_ids,
-            'attention_mask': result.attention_mask,
-        },
-    )
+    dataset = Dataset.from_dict(mapping)
 
     # Create the output directory for the dataset
     dataset_dir = output_dir / f'{uuid4()}'
