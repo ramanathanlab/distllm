@@ -20,13 +20,13 @@ classifiers = [
 dependencies = [
     "transformers==4.38.2",
     "datasets==2.18.0",
-    "bitsandbytes",
-    "accelerate",
+    "bitsandbytes==0.43.0",
+    "accelerate==0.28.0",
     "parsl==2024.1.29",
     "pydantic==2.6.0",
     "typer[all]==0.9.0",
     "nltk==3.8.1",
-    "python-dotenv",
+    "python-dotenv==1.0.1",
     "torch",
 ]
 
