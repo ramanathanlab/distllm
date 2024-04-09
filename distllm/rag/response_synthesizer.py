@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from rag.search import Retriever
-
 from distllm.generate import LLMGenerator
 from distllm.generate import PromptTemplate
 from distllm.generate.prompts import IdentityPromptTemplate
 from distllm.generate.prompts import IdentityPromptTemplateConfig
+from distllm.rag.search import Retriever
 
 # TODO: Consider prompt augmentation, e.g., we could make use of other
 # LLM calls to rank the retrieved context according to length constraints
