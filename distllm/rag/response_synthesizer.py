@@ -19,7 +19,11 @@ from distllm.generate.prompts import IdentityPromptTemplateConfig
 class RagGenerator:
     """RAG generator for generating responses to queries."""
 
-    def __init__(self, retriever: Retriever, generator: LLMGenerator) -> None:
+    def __init__(
+        self,
+        generator: LLMGenerator,
+        retriever: Retriever | None = None,
+    ) -> None:
         self.retriever = retriever
         self.generator = generator
 
@@ -53,18 +57,21 @@ class RagGenerator:
             )
         assert prompt_template is not None
 
-        # Retrieve the search results and query embedding
-        results, _ = self.retriever.search(
-            texts,
-            top_k=retrieval_top_k,
-            score_threshold=retrieval_score_threshold,
-        )
+        # contexts are None unless there is a retriever (no-RAG baseline).
+        contexts = None
+        if self.retriever is not None:
+            # Retrieve the search results and query embedding
+            results, _ = self.retriever.search(
+                texts,
+                top_k=retrieval_top_k,
+                score_threshold=retrieval_score_threshold,
+            )
 
-        # Get the text that corresponds to the top indices
-        contexts = [
-            self.retriever.get_texts(indices)
-            for indices in results.total_indices
-        ]
+            # Get the text that corresponds to the top indices
+            contexts = [
+                self.retriever.get_texts(indices)
+                for indices in results.total_indices
+            ]
 
         # Preprocess the text into prompts
         prompts = prompt_template.preprocess(texts, contexts=contexts)

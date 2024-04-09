@@ -20,7 +20,7 @@ classifiers = [
 dependencies = [
     "transformers==4.38.2",
     "datasets==2.18.0",
-    "bitsandbytes==0.43.0",
+    "bitsandbytes",
     "accelerate==0.28.0",
     "parsl==2024.1.29",
     "pydantic==2.6.0",
