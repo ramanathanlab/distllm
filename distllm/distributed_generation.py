@@ -28,26 +28,20 @@ def generate_worker(  # noqa: PLR0913
     generator_kwargs: dict[str, Any],
 ) -> None:
     """Generate text for a file and save to the output directory."""
-    import time
     from uuid import uuid4
 
     from distllm.generate import get_generator
     from distllm.generate import get_prompt_template
     from distllm.generate import get_reader
     from distllm.generate import get_writer
+    from distllm.timer import Timer
 
     # Time the worker function
-    start = time.time()
+    timer = Timer('finished-generation', input_path).start()
 
     # Initialize the generator
-    generator = get_generator(generator_kwargs, register=True)
-
-    print(
-        f'[timer] [Loaded generator] [{input_path}]'
-        f' in [{time.time() - start:.2f}] seconds',
-    )
-
-    t_start = time.time()
+    with Timer('loaded-generator', input_path):
+        generator = get_generator(generator_kwargs, register=True)
 
     # Initialize the reader
     reader = get_reader(reader_kwargs)
@@ -59,61 +53,37 @@ def generate_worker(  # noqa: PLR0913
     prompt = get_prompt_template(prompt_kwargs)
 
     # Read the text from the file
+    with Timer('loaded-dataset', input_path):
+        text, paths = reader.read(input_path)
     text, paths = reader.read(input_path)
 
-    print(
-        f'[timer] [Loaded dataset] [{input_path}]'
-        f' in [{time.time() - t_start:.2f}] seconds',
-    )
-    t_start = time.time()
-
     # Preprocess the text
-    prompts = prompt.preprocess(text)
-
-    print(
-        f'[timer] [Preprocessed text] [{input_path}]'
-        f' in [{time.time() - t_start:.2f}] seconds',
-    )
-    t_start = time.time()
+    with Timer('preprocessed-text', input_path):
+        prompts = prompt.preprocess(text)
 
     # Generate response for each text
-    responses = generator.generate(prompts)
-
-    print(
-        f'[timer] [Generated responses] [{input_path}]'
-        f' in [{time.time() - t_start:.2f}] seconds',
-    )
-    t_start = time.time()
+    with Timer('generated-responses', input_path):
+        responses = generator.generate(prompts)
 
     # Postprocess the responses
-    results = prompt.postprocess(responses)
+    with Timer('postprocessed-responses', input_path):
+        results = prompt.postprocess(responses)
 
-    # Filter out any empty responses (e.g., empty strings)
-    text = [t for t, r in zip(text, results) if r]
-    paths = [p for p, r in zip(paths, results) if r]
-    results = [r for r in results if r]
-
-    print(
-        f'[timer] [Postprocessed responses] [{input_path}]'
-        f' in [{time.time() - t_start:.2f}] seconds',
-    )
-    t_start = time.time()
+        # Filter out any empty responses (e.g., empty strings)
+        text = [t for t, r in zip(text, results) if r]
+        paths = [p for p, r in zip(paths, results) if r]
+        results = [r for r in results if r]
 
     # Create the output directory for the dataset
     dataset_dir = output_dir / f'{uuid4()}'
     dataset_dir.mkdir(parents=True, exist_ok=True)
 
     # Write the responses to disk
-    writer.write(dataset_dir, paths, text, results)
+    with Timer('wrote-responses', input_path):
+        writer.write(dataset_dir, paths, text, results)
 
-    print(
-        f'[timer] [Wrote responses] [{input_path}]'
-        f' in [{time.time() - t_start:.2f}] seconds',
-    )
-    print(
-        f'[timer] [Finished generation] [{input_path}]'
-        f' in [{time.time() - start:.2f}] seconds',
-    )
+    # Stop the timer to log the worker time
+    timer.stop()
 
 
 class Config(BaseConfig):

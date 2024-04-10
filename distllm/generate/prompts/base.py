@@ -6,6 +6,13 @@ from typing import Protocol
 
 from distllm.utils import BaseConfig
 
+# TODO: Refactor strategy protocols so that the configuration is not required
+# for the __init__ method. To do this, add a from_config method to the config
+# objects that returns the instance of the class. Call the arbitrary init
+# method with the parameters of the dataclass config. This removes the need
+# to have the factory functions since pydantic will already handle the specific
+# type lookups.
+
 
 class PromptTemplate(Protocol):
     """PromptTemplate protocol for all prompts to follow."""

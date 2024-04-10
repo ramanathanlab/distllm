@@ -32,7 +32,6 @@ def embedding_worker(  # noqa: PLR0913
     """Embed a single file and save a numpy array with embeddings."""
     # Imports are here since this function is called in a parsl process
 
-    import time
     from uuid import uuid4
 
     from distllm.embed import get_dataset
@@ -40,17 +39,14 @@ def embedding_worker(  # noqa: PLR0913
     from distllm.embed import get_encoder
     from distllm.embed import get_pooler
     from distllm.embed import get_writer
+    from distllm.timer import Timer
 
     # Time the worker function
-    start = time.time()
+    timer = Timer('finished-embedding', input_path).start()
 
     # Initialize the model and tokenizer
-    encoder = get_encoder(encoder_kwargs, register=True)
-
-    print(
-        f'[timer] [Loaded encoder] [{input_path}]'
-        f' in [{time.time() - start:.2f}] seconds',
-    )
+    with Timer('loaded-encoder', input_path):
+        encoder = get_encoder(encoder_kwargs, register=True)
 
     # Initialize the dataset
     dataset = get_dataset(dataset_kwargs)
@@ -64,43 +60,24 @@ def embedding_worker(  # noqa: PLR0913
     # Initialize the writer
     writer = get_writer(writer_kwargs)
 
-    t_start = time.time()
-
     # Initialize the dataloader
-    dataloader = dataset.get_dataloader(input_path, encoder)
-
-    print(
-        f'[timer] [Loaded dataset] [{input_path}]'
-        f' in [{time.time() - t_start:.2f}] seconds',
-    )
-
-    t_start = time.time()
+    with Timer('loaded-dataset', input_path):
+        dataloader = dataset.get_dataloader(input_path, encoder)
 
     # Compute the embeddings
-    result = embedder.embed(dataloader, encoder, pooler)
-
-    print(
-        f'[timer] [Computed embeddings] [{input_path}]'
-        f' in [{time.time() - t_start:.2f}] seconds',
-    )
-
-    t_start = time.time()
+    with Timer('computed-embeddings', input_path):
+        result = embedder.embed(dataloader, encoder, pooler)
 
     # Create the output directory for the embedding dataset
     dataset_dir = output_dir / f'{uuid4()}'
     dataset_dir.mkdir(parents=True, exist_ok=True)
 
     # Write the result to disk
-    writer.write(dataset_dir, result)
+    with Timer('wrote-embeddings', input_path):
+        writer.write(dataset_dir, result)
 
-    print(
-        f'[timer] [Wrote embeddings] [{input_path}]'
-        f' in [{time.time() - t_start:.2f}] seconds',
-    )
-    print(
-        f'[timer] [Finished embedding] [{input_path}]'
-        f' in [{time.time() - start:.2f}] seconds',
-    )
+    # Stop the timer to log the worker time
+    timer.stop()
 
 
 class Config(BaseConfig):
