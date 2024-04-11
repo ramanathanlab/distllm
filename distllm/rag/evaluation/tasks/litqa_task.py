@@ -125,7 +125,7 @@ class LitQAEntry(BaseModel):
         """Build a multiple choice question from the LitQA entry."""
         options = [self.ideal, *self.distractors]
         random.shuffle(options)
-        return f"{self.question}: {','.join(options)}"
+        return f"{self.question}? Choose one of these options: {','.join(options)}"  # noqa E501
 
 
 class LitQATaskConfig(BaseConfig):
@@ -173,6 +173,7 @@ class LitQATask:
         """Compute the precision of the model on the LitQA task."""
         sure_preds = [a for a in preds if a != 'I cannot answer.']
         precision = self._compute_accuracy(ground_truths, sure_preds)
+        # TODO: write the 'not sure' answers to a file to investigate.
         return precision
 
     def evaluate(self, generator: RagGenerator) -> dict[str, Any]:
