@@ -3,24 +3,39 @@
 from __future__ import annotations
 
 from typing import Any
+from typing import Union
 
 from distllm.generate.prompts.base import PromptTemplate
 from distllm.generate.prompts.identity import IdentityPromptTemplate
 from distllm.generate.prompts.identity import IdentityPromptTemplateConfig
+from distllm.generate.prompts.question_answer import (
+    QuestionAnswerPromptTemplate,
+)
+from distllm.generate.prompts.question_answer import (
+    QuestionAnswerPromptTemplateConfig,
+)
 from distllm.generate.prompts.question_chunk import QuestionChunkPromptTemplate
 from distllm.generate.prompts.question_chunk import (
     QuestionChunkPromptTemplateConfig,
 )
 from distllm.utils import BaseConfig
 
-PromptTemplateConfigs = QuestionChunkPromptTemplateConfig
+PromptTemplateConfigs = Union[
+    IdentityPromptTemplateConfig,
+    QuestionChunkPromptTemplateConfig,
+    QuestionAnswerPromptTemplateConfig,
+]
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[PromptTemplate]]] = {
+    'identity': (IdentityPromptTemplateConfig, IdentityPromptTemplate),
     'question_chunk': (
         QuestionChunkPromptTemplateConfig,
         QuestionChunkPromptTemplate,
     ),
-    'identity': (IdentityPromptTemplateConfig, IdentityPromptTemplate),
+    'question_answer': (
+        QuestionAnswerPromptTemplateConfig,
+        QuestionAnswerPromptTemplate,
+    ),
 }
 
 
@@ -28,8 +43,9 @@ def get_prompt_template(kwargs: dict[str, Any]) -> PromptTemplate:
     """Get the instance based on the kwargs.
 
     Currently supports the following strategies:
-    - question_chunk
     - identity
+    - question_chunk
+    - question_answer
 
     Parameters
     ----------

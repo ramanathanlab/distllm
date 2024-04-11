@@ -1,4 +1,4 @@
-"""Response Synthesizer module for RAG4Sci."""
+"""Response Synthesizer module."""
 
 from __future__ import annotations
 
@@ -56,8 +56,8 @@ class RagGenerator:
             )
         assert prompt_template is not None
 
-        # contexts are None unless there is a retriever (no-RAG baseline).
-        contexts = None
+        # Contexts are None unless there is a retriever (no-RAG baseline).
+        contexts, scores = None, None
         if self.retriever is not None:
             # Retrieve the search results and query embedding
             results, _ = self.retriever.search(
@@ -72,12 +72,11 @@ class RagGenerator:
                 for indices in results.total_indices
             ]
 
+            # Get the scores that correspond to the top indices
+            scores = results.total_scores
+
         # Preprocess the text into prompts
-        prompts = prompt_template.preprocess(
-            texts,
-            contexts=contexts,
-            scores=results.total_scores,
-        )
+        prompts = prompt_template.preprocess(texts, contexts, scores)
 
         # Generate a response to the query
         response = self.generator.generate(prompts)
@@ -86,37 +85,3 @@ class RagGenerator:
         response = prompt_template.postprocess(response)
 
         return response
-
-
-if __name__ == '__main__':
-    from argparse import ArgumentParser
-
-    from distllm.embed import get_encoder
-    from distllm.embed import get_pooler
-    from distllm.generate import get_generator
-    from distllm.generate import get_prompt_template
-    from distllm.rag.search import FaissIndex
-
-    parser = ArgumentParser()
-    parser.add_argument('--dataset_dir', type=str, required=True)
-    args = parser.parse_args()
-
-    # Initialize the modules
-    encoder = get_encoder({})
-    pooler = get_pooler({})
-    generator = get_generator({})
-    prompt_template = get_prompt_template({})
-    faiss_index = FaissIndex(args.dataset_dir)
-
-    retriever = Retriever(
-        encoder=encoder,
-        pooler=pooler,
-        faiss_index=faiss_index,
-    )
-    generator = RagGenerator(retriever=retriever, generator=generator)
-
-    text = 'What is the capital of France?'
-
-    responses = generator.generate(texts=text, prompt_template=prompt_template)
-
-    print(f'Question: {text}\nAnswer: {responses}')
