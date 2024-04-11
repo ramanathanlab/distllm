@@ -92,7 +92,12 @@ class LangChainGenerator:
         if isinstance(prompts, str):
             prompts = [prompts]
 
+        # Format the inputs for the chain
         inputs = [{'input': prompt} for prompt in prompts]
+
+        # Generate the outputs
         raw_outputs = self.chain.batch(inputs)
+
+        # Extract the text from the outputs
         outputs = [output['text'] for output in raw_outputs]
         return outputs
