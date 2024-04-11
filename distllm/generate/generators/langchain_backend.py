@@ -6,8 +6,6 @@ from pathlib import Path
 from typing import Literal
 
 from dotenv import load_dotenv
-from langchain.chains import LLMChain
-from langchain_core.prompts import ChatPromptTemplate
 from pydantic import Field
 
 from distllm.utils import BaseConfig
@@ -41,8 +39,10 @@ class LangChainGenerator:
 
     def __init__(self, config: LangChainGeneratorConfig) -> None:
         """Initialize the LangChainGenerator."""
+        from langchain.chains import LLMChain
         from langchain.chat_models import ChatOpenAI
         from langchain_anthropic import ChatAnthropic
+        from langchain_core.prompts import ChatPromptTemplate
         from langchain_google_genai import GoogleGenerativeAI
 
         # Load environment variables from .env file containing
