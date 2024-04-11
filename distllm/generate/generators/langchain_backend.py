@@ -19,19 +19,20 @@ class LangChainGeneratorConfig(BaseConfig):
     name: Literal['langchain'] = 'langchain'  # type: ignore[assignment]
     llm: str = Field(
         'gpt-3.5-turbo',
-        description='The model type to use for the generator',
+        description='The model type to use for the generator.',
     )
     temperature: int = Field(
         0,
-        description='The temperature parameter for the generator',
+        description='The temperature parameter for the generator.',
     )
     verbose: bool = Field(
         True,
-        description='Whether to print verbose output',
+        description='Whether to print verbose output.',
     )
     dotenv_path: Path = Field(
         default=Path('~/.env'),
-        description='Path to the .env file',
+        description='Path to the .env file. Contains API keys: '
+        'OPENAI_API_KEY, GOOGLE_API_KEY, ANTHROPIC_API_KEY',
     )
 
 
