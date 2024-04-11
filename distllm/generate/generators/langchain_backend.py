@@ -64,13 +64,13 @@ class LangChainGenerator:
         # Initialize the language model
         llm = chat_model(model=config.llm, verbose=config.verbose)
 
-        # Create the final prompt
-        final_prompt = ChatPromptTemplate.from_template('{input}')
+        # Create the prompt template (input only)
+        prompt = ChatPromptTemplate.from_template('{input}')
 
         # Initialize the chain
         self.chain = LLMChain(
             llm=llm,
-            prompt=final_prompt,
+            prompt=prompt,
             verbose=config.verbose,
         )
 
