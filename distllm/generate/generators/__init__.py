@@ -3,17 +3,23 @@
 from __future__ import annotations
 
 from typing import Any
+from typing import Union
 
 from distllm.generate.generators.base import LLMGenerator
+from distllm.generate.generators.langchain_backend import LangChainGenerator
+from distllm.generate.generators.langchain_backend import (
+    LangChainGeneratorConfig,
+)
 from distllm.generate.generators.vllm_backend import VLLMGenerator
 from distllm.generate.generators.vllm_backend import VLLMGeneratorConfig
 from distllm.registry import registry
 from distllm.utils import BaseConfig
 
-LLMGeneratorConfigs = VLLMGeneratorConfig
+LLMGeneratorConfigs = Union[VLLMGeneratorConfig, LangChainGeneratorConfig]
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[LLMGenerator]]] = {
     'vllm': (VLLMGeneratorConfig, VLLMGenerator),
+    'langchain': (LangChainGeneratorConfig, LangChainGenerator),
 }
 
 
@@ -43,6 +49,7 @@ def get_generator(
 
     Currently supports the following strategies:
     - vllm
+    - langchain
 
     Parameters
     ----------
