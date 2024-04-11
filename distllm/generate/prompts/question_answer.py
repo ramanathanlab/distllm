@@ -34,6 +34,7 @@ class QuestionAnswerPromptTemplate:
         self,
         text: str | list[str],
         contexts: list[list[str]] | None = None,
+        scores: list[list[float]] | None = None,
     ) -> list[str]:
         """Preprocess the text into prompts.
 
@@ -43,6 +44,9 @@ class QuestionAnswerPromptTemplate:
             The text to format.
         contexts : list[list[str]], optional
             The contexts to include for each text, by default None.
+        scores : list[list[float]], optional
+            The scores for each context, by default None.
+
 
         Returns
         -------

@@ -73,7 +73,11 @@ class RagGenerator:
             ]
 
         # Preprocess the text into prompts
-        prompts = prompt_template.preprocess(texts, contexts=contexts)
+        prompts = prompt_template.preprocess(
+            texts,
+            contexts=contexts,
+            scores=results.total_scores,
+        )
 
         # Generate a response to the query
         response = self.generator.generate(prompts)
