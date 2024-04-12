@@ -14,13 +14,14 @@ from types import TracebackType
 from typing import Any
 from typing import NamedTuple
 from typing import Sequence
+from typing import Union
 
 if sys.version_info >= (3, 11):  # pragma: >=3.11 cover
     from typing import Self
 else:  # pragma: <3.11 cover
     from typing_extensions import Self
 
-PathLike = Path | str
+PathLike = Union[Path, str]
 
 
 class TimeStats(NamedTuple):
