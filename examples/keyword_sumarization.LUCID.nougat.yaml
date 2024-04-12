@@ -7,7 +7,7 @@ glob_patterns: ['*']
 
 # Settings for the prompt.
 prompt_config:
-  name: TODO
+  name: keyword_selection
 
 # Settings for the reader.
 reader_config:

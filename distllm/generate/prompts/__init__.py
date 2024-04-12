@@ -8,6 +8,12 @@ from typing import Union
 from distllm.generate.prompts.base import PromptTemplate
 from distllm.generate.prompts.identity import IdentityPromptTemplate
 from distllm.generate.prompts.identity import IdentityPromptTemplateConfig
+from distllm.generate.prompts.keyword_selection import (
+    KeywordSelectionPromptTemplate,
+)
+from distllm.generate.prompts.keyword_selection import (
+    KeywordSelectionPromptTemplateConfig,
+)
 from distllm.generate.prompts.question_answer import (
     QuestionAnswerPromptTemplate,
 )
@@ -36,6 +42,10 @@ STRATEGIES: dict[str, tuple[type[BaseConfig], type[PromptTemplate]]] = {
         QuestionAnswerPromptTemplateConfig,
         QuestionAnswerPromptTemplate,
     ),
+    'keyword_selection': (
+        KeywordSelectionPromptTemplateConfig,
+        KeywordSelectionPromptTemplate,
+    ),
 }
 
 
@@ -46,6 +56,7 @@ def get_prompt_template(kwargs: dict[str, Any]) -> PromptTemplate:
     - identity
     - question_chunk
     - question_answer
+    - keyword_selection
 
     Parameters
     ----------
