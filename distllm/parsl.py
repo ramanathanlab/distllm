@@ -48,10 +48,13 @@ class LocalConfig(BaseComputeConfig):
     """Configuration for a local machine (mainly for testing purposes)."""
 
     name: Literal['local'] = 'local'  # type: ignore[assignment]
+    label: str = 'htex'
+
     max_workers: int = 1
+    available_accelerators: int = 0
+
     cores_per_worker: float = 0.0001
     worker_port_range: tuple[int, int] = (10000, 20000)
-    label: str = 'htex'
 
     def get_config(self, run_dir: PathLike) -> Config:
         """Create a parsl configuration for testing locally."""
@@ -60,11 +63,11 @@ class LocalConfig(BaseComputeConfig):
             strategy=None,
             executors=[
                 HighThroughputExecutor(
-                    address='localhost',
                     label=self.label,
                     max_workers=self.max_workers,
                     cores_per_worker=self.cores_per_worker,
                     worker_port_range=self.worker_port_range,
+                    available_accelerators=self.available_accelerators,
                     provider=LocalProvider(init_blocks=1, max_blocks=1),
                 ),
             ],
