@@ -26,6 +26,8 @@ class VLLMGeneratorConfig(BaseConfig):
     max_tokens: int = 2000
     # Whether to use beam search
     use_beam_search: bool = False
+    # The number of GPUs to use
+    tensor_parallel_size: int = 1
 
 
 class VLLMGenerator:
@@ -62,6 +64,7 @@ class VLLMGenerator:
             model=config.llm_name,
             trust_remote_code=config.trust_remote_code,
             dtype='bfloat16',
+            tensor_parallel_size=config.tensor_parallel_size,
         )
 
     def generate(self, prompts: str | list[str]) -> list[str]:
