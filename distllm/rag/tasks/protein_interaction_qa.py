@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from distllm.rag.tasks.base import QuestionAnswerTask
 from distllm.rag.tasks.litqa import QuestionAnswerEntry
 from distllm.utils import BaseConfig
@@ -34,7 +36,11 @@ class ProteinInteractionQATask(QuestionAnswerTask):
     def load_data(self) -> tuple[list[str], list[str]]:
         """Load the data from the dataset."""
         # Read in the json file containing the questions
-        data = ProtienInteractionQAData.from_json(self.data_file)
+        with open(self.data_file) as fp:
+            data = json.load(fp)
+
+        # Parse the entries from the json
+        data = ProtienInteractionQAData(entries=data)
 
         # Parse the questions
         # Generate multiple choice questions
