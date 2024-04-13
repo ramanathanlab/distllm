@@ -1,7 +1,9 @@
-# An input directory containing the files to embed.
+# Note: since it is a single input file (that we are bastardizing to run with this framework)
+# we can only run on one rank. This isn't a huge deal since its fairly small (~15min)
+# but this is inherently flawed for larger datasets.
 input_dir: /lus/eagle/projects/FoundEpidem/psetty/gb/data/uniprot_data/
 # An output directory to save the embeddings.
-output_dir: /lus/eagle/projects/FoundEpidem/hippekp/aglimmer/amp-testing/question_generation.AMP
+output_dir: /lus/eagle/projects/FoundEpidem/hippekp/aglimmer/data/question_generation.AMP
 # A set of glob patterns to match the input files.
 glob_patterns: ['peptides_with_functions_cleaned.json']
 
@@ -25,8 +27,7 @@ generator_config:
 
 # Locally on a compute node
 compute_config:
-  name: local
-  max_workers: 4
+  name: workstation
   available_accelerators: 4
 
 # # Settings for the parsl compute backend.

@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import Any
 from typing import Union
 
+from distllm.generate.prompts.amp_question import AMPQuestionPromptConfig
+from distllm.generate.prompts.amp_question import AMPQuestionPromptTemplate
 from distllm.generate.prompts.base import PromptTemplate
 from distllm.generate.prompts.identity import IdentityPromptTemplate
 from distllm.generate.prompts.identity import IdentityPromptTemplateConfig
@@ -24,9 +26,6 @@ from distllm.generate.prompts.question_chunk import QuestionChunkPromptTemplate
 from distllm.generate.prompts.question_chunk import (
     QuestionChunkPromptTemplateConfig,
 )
-from distllm.generate.prompts.amp_question import AMPQuestionPromptTemplate
-from distllm.generate.prompts.amp_question import AMPQuestionPromptConfig
-
 from distllm.utils import BaseConfig
 
 PromptTemplateConfigs = Union[
@@ -34,7 +33,7 @@ PromptTemplateConfigs = Union[
     QuestionChunkPromptTemplateConfig,
     QuestionAnswerPromptTemplateConfig,
     KeywordSelectionPromptTemplateConfig,
-    AMPQuestionPromptConfig
+    AMPQuestionPromptConfig,
 ]
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[PromptTemplate]]] = {
