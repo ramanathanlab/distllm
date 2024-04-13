@@ -6,6 +6,12 @@ from typing import Any
 from typing import Union
 
 from distllm.generate.generators.base import LLMGenerator
+from distllm.generate.generators.huggingface_backend import (
+    HuggingFaceGenerator,
+)
+from distllm.generate.generators.huggingface_backend import (
+    HuggingFaceGeneratorConfig,
+)
 from distllm.generate.generators.langchain_backend import LangChainGenerator
 from distllm.generate.generators.langchain_backend import (
     LangChainGeneratorConfig,
@@ -15,11 +21,16 @@ from distllm.generate.generators.vllm_backend import VLLMGeneratorConfig
 from distllm.registry import registry
 from distllm.utils import BaseConfig
 
-LLMGeneratorConfigs = Union[VLLMGeneratorConfig, LangChainGeneratorConfig]
+LLMGeneratorConfigs = Union[
+    VLLMGeneratorConfig,
+    LangChainGeneratorConfig,
+    HuggingFaceGeneratorConfig,
+]
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[LLMGenerator]]] = {
     'vllm': (VLLMGeneratorConfig, VLLMGenerator),
     'langchain': (LangChainGeneratorConfig, LangChainGenerator),
+    'huggingface': (HuggingFaceGeneratorConfig, HuggingFaceGenerator),
 }
 
 
@@ -50,6 +61,7 @@ def get_generator(
     Currently supports the following strategies:
     - vllm
     - langchain
+    - huggingface
 
     Parameters
     ----------

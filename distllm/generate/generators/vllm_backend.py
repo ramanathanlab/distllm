@@ -8,7 +8,7 @@ from distllm.utils import BaseConfig
 
 
 class VLLMGeneratorConfig(BaseConfig):
-    """Configuration for the LLMGenerator."""
+    """Configuration for the VLLMGenerator."""
 
     name: Literal['vllm'] = 'vllm'  # type: ignore[assignment]
     # The name of the vllm LLM model, see
@@ -32,12 +32,12 @@ class VLLMGenerator:
     """Language model generator using vllm backend."""
 
     def __init__(self, config: VLLMGeneratorConfig) -> None:
-        """Initialize the LLMGenerator.
+        """Initialize the VLLMGenerator.
 
         Parameters
         ----------
         config : vLLMGeneratorConfig
-            The configuration for the LLMGenerator.
+            The configuration for the VLLMGenerator.
         """
         from vllm import LLM
         from vllm import SamplingParams
