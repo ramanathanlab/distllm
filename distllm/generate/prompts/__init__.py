@@ -24,12 +24,17 @@ from distllm.generate.prompts.question_chunk import QuestionChunkPromptTemplate
 from distllm.generate.prompts.question_chunk import (
     QuestionChunkPromptTemplateConfig,
 )
+from distllm.generate.prompts.amp_question import AMPQuestionPromptTemplate
+from distllm.generate.prompts.amp_question import AMPQuestionPromptConfig
+
 from distllm.utils import BaseConfig
 
 PromptTemplateConfigs = Union[
     IdentityPromptTemplateConfig,
     QuestionChunkPromptTemplateConfig,
     QuestionAnswerPromptTemplateConfig,
+    KeywordSelectionPromptTemplateConfig,
+    AMPQuestionPromptConfig
 ]
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[PromptTemplate]]] = {
@@ -46,6 +51,7 @@ STRATEGIES: dict[str, tuple[type[BaseConfig], type[PromptTemplate]]] = {
         KeywordSelectionPromptTemplateConfig,
         KeywordSelectionPromptTemplate,
     ),
+    'amp_question': (AMPQuestionPromptConfig, AMPQuestionPromptTemplate),
 }
 
 

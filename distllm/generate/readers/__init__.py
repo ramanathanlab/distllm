@@ -10,13 +10,16 @@ from distllm.generate.readers.huggingface import HuggingFaceReader
 from distllm.generate.readers.huggingface import HuggingFaceReaderConfig
 from distllm.generate.readers.jsonl import JsonlReader
 from distllm.generate.readers.jsonl import JsonlReaderConfig
+from distllm.generate.readers.amp_json import AMPJsonReader
+from distllm.generate.readers.amp_json import AMPJsonReaderConfig
 from distllm.utils import BaseConfig
 
-ReaderConfigs = Union[HuggingFaceReaderConfig, JsonlReaderConfig]
+ReaderConfigs = Union[HuggingFaceReaderConfig, JsonlReaderConfig, AMPJsonReaderConfig]
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[Reader]]] = {
     'huggingface': (HuggingFaceReaderConfig, HuggingFaceReader),
     'jsonl': (JsonlReaderConfig, JsonlReader),
+    'amp_json': (AMPJsonReaderConfig, AMPJsonReader),
 }
 
 
