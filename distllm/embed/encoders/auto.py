@@ -10,6 +10,11 @@ from transformers import PreTrainedTokenizer
 
 from distllm.utils import BaseConfig
 
+try:
+    import intel_extension_for_pytorch as ipex
+except ModuleNotFoundError:
+    ipex = None
+
 
 class AutoEncoderConfig(BaseConfig):
     """Config for the transformers AutoModel encoder."""
@@ -76,9 +81,12 @@ class AutoEncoder:
 
         # Load the model onto the device
         if not config.quantization:
-            device = torch.device(
-                'cuda' if torch.cuda.is_available() else 'cpu',
-            )
+            if ipex is not None:
+                device = 'xpu' if torch.xpu.is_available() else 'cpu'
+            else:
+                device = torch.device(
+                    'cuda' if torch.cuda.is_available() else 'cpu',
+                )
             model.to(device)
 
         # Compile the model for faster inference
