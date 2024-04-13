@@ -346,15 +346,25 @@ class Retriever:
         if isinstance(query, str):
             query = [query]
 
+        # Sort the data by length
+        indices = sorted(range(len(query)), key=lambda i: len(query[i]))
+        sorted_query = [query[i] for i in indices]
+
         # Batch the queries
-        query_batches = batch_data(query, chunk_size=self.batch_size)
+        query_batches = batch_data(sorted_query, chunk_size=self.batch_size)
 
         # Get the pooled embeddings for the queries
         pool_embeds = []
         for batch in query_batches:
             pool_embeds.append(self._get_pooled_embeddings(batch))
 
-        return np.concatenate(pool_embeds, axis=0)
+        # Combine the pooled embeddings
+        pool_embeds = np.concatenate(pool_embeds, axis=0)
+
+        # Reorder the embeddings to match the original order
+        pool_embeds = pool_embeds[np.argsort(indices)]
+
+        return pool_embeds
 
     @torch.no_grad()
     def _get_pooled_embeddings(self, query: str | list[str]) -> np.ndarray:
