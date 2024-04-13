@@ -38,8 +38,11 @@ class QuestionAnswerEntry(BaseModel):
         str
             The multiple choice question.
         """
+        # Pick 3 distractors at random
+        distractors = random.sample(self.distractors, 3)
+
         # Collect the answer options
-        options = [self.ideal, *self.distractors]
+        options = [self.ideal, *distractors]
 
         # Shuffle the options
         random.shuffle(options)
@@ -48,9 +51,14 @@ class QuestionAnswerEntry(BaseModel):
         mark = '' if self.question.endswith('?') else '?'
 
         # Format the multiple choice question
-        mc_question = (
-            f'{self.question}{mark} Choose one of these '
-            f'options: {",".join(options)}'
+        # mc_question = (
+        #     f'{self.question}{mark} Choose one of these '
+        #     f'options: {",".join(options)}'
+        # )
+
+        mc_question = '{}\nOptions:\n1. {}\n2. {}\n3. {}\n4. {}\n'.format(
+            f'{self.question}{mark}',
+            *options,
         )
 
         return mc_question
