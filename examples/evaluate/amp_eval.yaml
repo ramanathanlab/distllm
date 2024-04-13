@@ -1,0 +1,21 @@
+rag_configs:
+  - generator_config:
+      name: vllm
+      llm_name: mistralai/Mistral-7B-Instruct-v0.2
+      top_p: 0.95
+    
+
+    retriever_config:
+      vector_database_dir: /rbstor/ac.ogokdemir/auroraglimmer/datasets/AMP.nougat.pubmedbert.merge
+      encoder_config:
+        name: auto
+        pretrained_model_name_or_path: pritamdeka/S-PubMedBert-MS-MARCO
+
+      pooler_config:
+        name: mean
+
+tasks:
+  - protein_interaction_qa
+  - litqa
+
+download_dir: /rbstor/ac.ogokdemir/auroraglimmer/benchmarks

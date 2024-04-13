@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 from typing import Protocol
 
-from rag.response_synthesizer import RagGenerator
+from distllm.rag.response_synthesizer import RagGenerator
 
 
 class EvaluationTask(Protocol):

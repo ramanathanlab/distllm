@@ -22,14 +22,16 @@ class QuestionAnswerEntry(BaseModel):
     Uses the LitQA Benchmark format: https://github.com/Future-House/LitQA
     """
 
-    id: str = Field(..., description='The unique identifier for the question.')
-    question: str = Field(..., description='The question to answer.')
-    ideal: str = Field(..., description='The ideal answer to the question.')
+    id: str = Field(..., description="The unique identifier for the question.")
+    question: str = Field(..., description="The question to answer.")
+    ideal: str = Field(..., description="The ideal answer to the question.")
     distractors: list[str] = Field(
         ...,
-        description='The distractor answers to the question.',
+        description="The distractor answers to the question.",
     )
-    sources: str = Field(..., description='The sources for the question.')
+    sources: list[str] = Field(
+        ..., description="The sources for the question."
+    )
 
     def get_multiple_choice(self) -> str:
         """Build a multiple choice question from the entry."""
@@ -42,10 +44,10 @@ class QuestionAnswerTask(ABC):
     """LitQA evaluation task."""
 
     # URL to download the dataset (should be overridden in subclasses)
-    download_url = ''
+    download_url = ""
 
     # Name of the task (should be overridden in subclasses)
-    task_name = ''
+    task_name = ""
 
     def __init__(self, download_dir: Path) -> None:
         """Initialize the task.
@@ -58,21 +60,21 @@ class QuestionAnswerTask(ABC):
         # Ensure the download URL and task name are set
         if not self.download_url or not self.task_name:
             raise NotImplementedError(
-                'download_url and task_name must be set in the subclass.',
+                "download_url and task_name must be set in the subclass.",
             )
 
         # Initialize the prompt template
-        self.prompt_template = get_prompt_template({'name': 'question_answer'})
+        self.prompt_template = get_prompt_template({"name": "question_answer"})
 
         # Set the download directory and data file
         download_dir = download_dir / self.task_name
         download_dir.mkdir(parents=True, exist_ok=True)
-        self.data_file = download_dir / f'{self.task_name}.jsonl'
+        self.data_file = download_dir / f"{self.task_name}.jsonl"
 
     def download(self) -> None:
         """Download the dataset."""
         if not self.data_file.exists():
-            command = f'curl -o {self.data_file} {self.download_url}'
+            command = f"curl -o {self.data_file} {self.download_url}"
             subprocess.run(command.split(), check=False)
 
     def _compute_accuracy(
@@ -91,7 +93,7 @@ class QuestionAnswerTask(ABC):
     ) -> float:
         """Compute the precision of the model."""
         # TODO: write the 'not sure' answers to a file to investigate.
-        sure_preds = [a for a in preds if a != 'I cannot answer.']
+        sure_preds = [a for a in preds if a != "I cannot answer."]
         precision = self._compute_accuracy(ground_truths, sure_preds)
         return precision
 
@@ -112,7 +114,7 @@ class QuestionAnswerTask(ABC):
         self.download()
 
         # Read in the jsonl file containing the questions
-        lines = self.data_file.read_text().strip().split('\n')
+        lines = self.data_file.read_text().strip().split("\n")
 
         # Parse the entries from the json lines
         entries = [QuestionAnswerEntry(**json.loads(line)) for line in lines]
@@ -130,22 +132,22 @@ class QuestionAnswerTask(ABC):
         accuracy = self._compute_accuracy(ground_truths, preds)
         precision = self._compute_precision(ground_truths, preds)
 
-        return {'accuracy': accuracy, 'precision': precision}
+        return {"accuracy": accuracy, "precision": precision}
 
 
 class LitQATask(QuestionAnswerTask):
     """LitQA evaluation task."""
 
     # URL to download
-    download_url = 'https://raw.githubusercontent.com/Future-House/LitQA/main/litqa-v0.jsonl'
+    download_url = "https://raw.githubusercontent.com/Future-House/LitQA/main/litqa-v0.jsonl"
     # Name of the task
-    task_name = 'litqa'
+    task_name = "litqa"
 
 
 class ProteinInteractionQATask(QuestionAnswerTask):
     """Protein interaction QA evaluation task."""
 
     # URL to download
-    download_url = 'https://raw.githubusercontent.com/ramanathanlab/AmpQA/main/interactionQA.json'
+    download_url = "https://raw.githubusercontent.com/ramanathanlab/AmpQA/main/interactionQA.json"
     # Name of the task
-    task_name = 'protein_interaction_qa'
+    task_name = "protein_interaction_qa"

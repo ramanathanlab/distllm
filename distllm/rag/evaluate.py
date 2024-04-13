@@ -25,15 +25,15 @@ class RetrieverConfig(BaseConfig):
 
     vector_database_dir: Path = Field(
         ...,
-        description='Directory where the faiss dataset is stored',
+        description="Directory where the faiss dataset is stored",
     )
     encoder_config: EncoderConfigs = Field(
         ...,
-        description='Settings for the encoder',
+        description="Settings for the encoder",
     )
     pooler_config: PoolerConfigs = Field(
         ...,
-        description='Settings for the pooler',
+        description="Settings for the pooler",
     )
 
     def get_retriever(self) -> Retriever:
@@ -57,12 +57,12 @@ class RetrievalAugmentedGenerationConfig(BaseConfig):
     # Settings for the generator
     generator_config: LLMGeneratorConfigs = Field(
         ...,
-        description='Settings for the generator',
+        description="Settings for the generator",
     )
     # Settings for the retriever
     retriever_config: Optional[RetrieverConfig] = Field(  # noqa: UP007
         None,
-        description='Settings for the retriever',
+        description="Settings for the retriever",
     )
 
     def get_rag_model(self) -> RagGenerator:
@@ -87,17 +87,17 @@ class EvalSuiteConfig(BaseConfig):
     # Settings for the retriever
     rag_configs: list[RetrievalAugmentedGenerationConfig] = Field(
         ...,
-        description='Settings for the retrieval-augmented generation models',
+        description="Settings for the retrieval-augmented generation models",
     )
     # Tasks to evaluate on
     tasks: list[str] = Field(
         ...,
-        description='The tasks to evaluate on',
+        description="The tasks to evaluate on",
     )
     # Directory to download the datasets to
     download_dir: Path = Field(
         ...,
-        description='The directory to download the datasets to',
+        description="The directory to download the datasets to",
     )
 
 
@@ -118,15 +118,15 @@ def run_eval_suite(config: EvalSuiteConfig) -> None:
 
             # TODO: Figure out what to do with the results
             # Print the results
-            print(f'{rag_model} {task_name}: {results}')
+            print(f"{rag_model} {task_name}: {results}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from argparse import ArgumentParser
 
     # Parse the command-line arguments
     parser = ArgumentParser()
-    parser.add_argument('--config', type=Path, required=True)
+    parser.add_argument("--config", type=Path, required=True)
     args = parser.parse_args()
 
     # Load the configuration
