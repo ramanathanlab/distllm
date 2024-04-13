@@ -1,8 +1,9 @@
 rag_configs:
   - generator_config:
       name: vllm
-      llm_name: mistralai/Mistral-7B-Instruct-v0.2
+      llm_name: mistralai/Mistral-7B-Instruct-v0.1
       top_p: 0.95
+      tensor_parallel_size: 8
 
 
     retriever_config:
@@ -15,7 +16,9 @@ rag_configs:
         name: mean
 
 tasks:
-  - protein_interaction_qa
+  - protein_function_qa
   - litqa
+  - protein_interaction_qa
+
 
 download_dir: /rbstor/ac.ogokdemir/auroraglimmer/benchmarks

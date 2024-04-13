@@ -9,7 +9,6 @@ from pydantic import BaseModel
 from pydantic import Field
 
 from distllm.rag.tasks.base import QuestionAnswerTask
-from distllm.rag.tasks.litqa import QuestionAnswerEntry
 from distllm.utils import BaseConfig
 from distllm.utils import curl_download
 
@@ -71,14 +70,14 @@ class ProteinFunctionQAEntry(BaseModel):
 class ProteinFunctionQAData(BaseConfig):
     """Format for the protein interaction QA task."""
 
-    entries: list[QuestionAnswerEntry]
+    entries: list[ProteinFunctionQAEntry]
 
 
 class ProteinFunctionQATask(QuestionAnswerTask):
     """Protein function QA evaluation task."""
 
     # Name of the task
-    task_name = 'protein_interaction_qa'
+    task_name = 'protein_function_qa'
 
     def download(self) -> None:
         """Download the dataset."""
@@ -90,31 +89,6 @@ class ProteinFunctionQATask(QuestionAnswerTask):
 
         # Download the dataset
         curl_download(self.data_file, download_url)
-
-    # def load_data(self) -> tuple[list[str], list[str]]:
-    #     """Load the data from the dataset."""
-    #     # Read in the json file containing the questions
-    #     with open(self.data_file) as fp:
-    #         data = json.load(fp)
-
-    #     # Parse the entries from the json
-    #     data = ProteinFunctionQAData(entries=data)
-
-    #     # Remove all data where 'ideal' is longer than 200 words.
-    #     max_len = 200
-    #     entries = [
-    #         entry
-    #         for entry in data.entries
-    #         if len(entry.ideal.split()) <= max_len
-    #     ]
-
-    #     # Generate multiple choice questions
-    #     questions = [entry.get_multiple_choice() for entry in entries]
-
-    #     # Get the ground truth answers
-    #     ground_truths = [entry.ideal for entry in entries]
-
-    #     return questions, ground_truths
 
     def load_data(self) -> tuple[list[str], list[str]]:
         """Load the data from the dataset."""
