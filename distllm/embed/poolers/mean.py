@@ -43,6 +43,7 @@ def average_pool(
     sum_embeds = torch.sum(embeddings * pool_mask, 1)
 
     # Avoid division by zero for zero length sequences by clamping
+    print(f"{pool_mask.dtype=}")
     sum_mask = torch.clamp(pool_mask.sum(1), min=1e-9)
 
     # Compute mean pooled embeddings for each sequence
