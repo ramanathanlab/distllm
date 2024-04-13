@@ -30,6 +30,7 @@ PromptTemplateConfigs = Union[
     IdentityPromptTemplateConfig,
     QuestionChunkPromptTemplateConfig,
     QuestionAnswerPromptTemplateConfig,
+    KeywordSelectionPromptTemplateConfig,
 ]
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[PromptTemplate]]] = {
