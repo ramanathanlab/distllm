@@ -5,16 +5,18 @@ from __future__ import annotations
 from typing import Any
 from typing import Union
 
+from distllm.generate.readers.amp_json import AMPJsonReader
+from distllm.generate.readers.amp_json import AMPJsonReaderConfig
 from distllm.generate.readers.base import Reader
 from distllm.generate.readers.huggingface import HuggingFaceReader
 from distllm.generate.readers.huggingface import HuggingFaceReaderConfig
 from distllm.generate.readers.jsonl import JsonlReader
 from distllm.generate.readers.jsonl import JsonlReaderConfig
-from distllm.generate.readers.amp_json import AMPJsonReader
-from distllm.generate.readers.amp_json import AMPJsonReaderConfig
 from distllm.utils import BaseConfig
 
-ReaderConfigs = Union[HuggingFaceReaderConfig, JsonlReaderConfig, AMPJsonReaderConfig]
+ReaderConfigs = Union[
+    HuggingFaceReaderConfig, JsonlReaderConfig, AMPJsonReaderConfig
+]
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[Reader]]] = {
     'huggingface': (HuggingFaceReaderConfig, HuggingFaceReader),
