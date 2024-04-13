@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from distllm.rag.tasks.base import EvaluationTask
-from distllm.rag.tasks.question_answer_task import LitQATask
-from distllm.rag.tasks.question_answer_task import ProteinInteractionQATask
+from distllm.rag.tasks.litqa import LitQATask
+from distllm.rag.tasks.protein_interaction_qa import ProteinInteractionQATask
 
 TASKS: dict[str, type[EvaluationTask]] = {
     'litqa': LitQATask,

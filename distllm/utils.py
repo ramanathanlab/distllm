@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 from typing import Literal
 from typing import TypeVar
@@ -88,7 +89,20 @@ class BaseConfig(BaseModel):
 
 
 def batch_data(data: list[T], chunk_size: int) -> list[list[T]]:
-    """Batch data into chunks of size chunk_size."""
+    """Batch data into chunks of size chunk_size.
+
+    Parameters
+    ----------
+    data : list[T]
+        The data to batch.
+    chunk_size : int
+        The size of each batch.
+
+    Returns
+    -------
+    list[list[T]]
+        The batched data.
+    """
     batches = [
         data[i * chunk_size : (i + 1) * chunk_size]
         for i in range(0, len(data) // chunk_size)
@@ -96,3 +110,19 @@ def batch_data(data: list[T], chunk_size: int) -> list[list[T]]:
     if len(data) > chunk_size * len(batches):
         batches.append(data[len(batches) * chunk_size :])
     return batches
+
+
+def curl_download(data_file: Path, download_url: str) -> None:
+    """Download a file using curl.
+
+    Parameters
+    ----------
+    data_file : Path
+        The path to the data file.
+
+    download_url : str
+        The URL to download the data from.
+    """
+    if not data_file.exists():
+        command = f'curl -o {data_file} {download_url}'
+        subprocess.run(command.split(), check=False)
