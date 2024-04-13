@@ -10,27 +10,27 @@ from distllm.utils import BaseConfig
 class QuestionAnswerPromptTemplateConfig(BaseConfig):
     """Configuration for the QuestionAnswerPromptTemplate."""
 
-    name: Literal["question_answer"] = "question_answer"  # type: ignore[assignment]
+    name: Literal['question_answer'] = 'question_answer'  # type: ignore[assignment]
 
 
 class QuestionAnswerPromptTemplate:
     """Question answer prompt template."""
 
     template_with_context: str = (
-        "Answer the question below with the context.\n\n"
-        "Context (with relevance scores):\n\n{context}\n\n----\n\n"
-        "Question: {question}\n\n"
-        "Choose one of the given options and only output that. "
-        "If the context provides insufficient information and "
-        "the question cannot be directly answered, reply "
+        'Answer the question below with the context.\n\n'
+        'Context (with relevance scores):\n\n{context}\n\n----\n\n'
+        'Question: {question}\n\n'
+        'Choose one of the given options and only output that. '
+        'If the context provides insufficient information and '
+        'the question cannot be directly answered, reply '
         '"I cannot answer. \n\n Answer: " '
     )
 
     template_no_context: str = (
-        "Answer the question below.\n\n"
-        "Question: {question}\n\n"
-        "Choose one of the given options and only output that. If the question cannot "
-        'be directly answered, reply "I cannot answer. \n\n Answer" '
+        'Answer the question below.\n\n'
+        'Question: {question}\n\n'
+        'Choose one of the given options and only output that. If the question'
+        ' cannot be directly answered, reply "I cannot answer. \n\n Answer" '
     )
 
     def __init__(self, config: QuestionAnswerPromptTemplateConfig) -> None:
@@ -44,8 +44,8 @@ class QuestionAnswerPromptTemplate:
         score: list[float],
     ) -> str:
         """Format the prompt with the question and context."""
-        context_concat = "\n".join(
-            f"Context: {c}, score: {s}" for c, s in zip(context, score)
+        context_concat = '\n'.join(
+            f'Context: {c}, score: {s}' for c, s in zip(context, score)
         )
         return self.template_with_context.format(
             context=context_concat,

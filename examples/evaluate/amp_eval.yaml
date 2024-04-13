@@ -3,7 +3,7 @@ rag_configs:
       name: vllm
       llm_name: mistralai/Mistral-7B-Instruct-v0.2
       top_p: 0.95
-    
+
 
     retriever_config:
       vector_database_dir: /rbstor/ac.ogokdemir/auroraglimmer/datasets/AMP.nougat.pubmedbert.merge
