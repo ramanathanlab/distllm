@@ -42,11 +42,18 @@ class ProteinInteractionQATask(QuestionAnswerTask):
         # Parse the entries from the json
         data = ProteinInteractionQAData(entries=data)
 
-        # Parse the questions
+        # Remove all data where 'ideal' is longer than 200 words.
+        max_len = 200
+        entries = [
+            entry
+            for entry in data.entries
+            if len(entry.ideal.split()) <= max_len
+        ]
+
         # Generate multiple choice questions
-        questions = [entry.get_multiple_choice() for entry in data.entries]
+        questions = [entry.get_multiple_choice() for entry in entries]
 
         # Get the ground truth answers
-        ground_truths = [entry.ideal for entry in data.entries]
+        ground_truths = [entry.ideal for entry in entries]
 
         return questions, ground_truths

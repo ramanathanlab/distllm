@@ -39,7 +39,14 @@ class QuestionAnswerEntry(BaseModel):
             The multiple choice question.
         """
         # Pick 3 distractors at random
-        distractors = random.sample(self.distractors, 3)
+        k = 3
+        distractors = random.sample(
+            self.distractors,
+            min(k, len(self.distractors)),
+        )
+        if len(distractors) < k:
+            # TODO: Think about this.
+            distractors.extend([''] * (k - len(distractors)))
 
         # Collect the answer options
         options = [self.ideal, *distractors]
@@ -49,12 +56,6 @@ class QuestionAnswerEntry(BaseModel):
 
         # Check if the question ends in a question mark
         mark = '' if self.question.endswith('?') else '?'
-
-        # Format the multiple choice question
-        # mc_question = (
-        #     f'{self.question}{mark} Choose one of these '
-        #     f'options: {",".join(options)}'
-        # )
 
         mc_question = '{}\nOptions:\n1. {}\n2. {}\n3. {}\n4. {}\n'.format(
             f'{self.question}{mark}',

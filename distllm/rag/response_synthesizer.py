@@ -79,9 +79,14 @@ class RagGenerator:
         prompts = prompt_template.preprocess(texts, contexts, scores)
 
         # Generate a response to the query
-        response = self.generator.generate(prompts)
+        responses = self.generator.generate(prompts)
 
         # Postprocess the response
-        response = prompt_template.postprocess(response)
+        responses = prompt_template.postprocess(responses)
 
-        return response
+        # Check 1-1 correspondence between queries and responses
+        assert len(texts) == len(
+            responses,
+        ), 'Mismatch between queries and responses.'
+
+        return responses
