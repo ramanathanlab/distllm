@@ -1,4 +1,4 @@
-"""Protein interaction QA evaluation task."""
+"""Protein function QA evaluation task."""
 
 from __future__ import annotations
 
