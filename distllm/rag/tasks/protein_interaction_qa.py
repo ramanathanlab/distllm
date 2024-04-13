@@ -10,7 +10,7 @@ from distllm.utils import BaseConfig
 from distllm.utils import curl_download
 
 
-class ProtienInteractionQAData(BaseConfig):
+class ProteinInteractionQAData(BaseConfig):
     """Format for the protein interaction QA task."""
 
     entries: list[QuestionAnswerEntry]
@@ -40,7 +40,7 @@ class ProteinInteractionQATask(QuestionAnswerTask):
             data = json.load(fp)
 
         # Parse the entries from the json
-        data = ProtienInteractionQAData(entries=data)
+        data = ProteinInteractionQAData(entries=data)
 
         # Parse the questions
         # Generate multiple choice questions
