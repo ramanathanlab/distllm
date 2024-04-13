@@ -184,8 +184,80 @@ class PolarisConfig(BaseComputeConfig):
         )
 
 
+class SunspotConfig(BaseComputeConfig):
+    """Configuration for running on Sunspot
+
+    Each GPU tasks uses a single tile"""
+
+    name: Literal['sunspot'] = 'sunspot'  # type: ignore[assignment]
+    label: str = 'htex'
+
+    num_nodes: int = 1
+    """Number of nodes to request"""
+    account: str
+    """The account to charge compute to."""
+    queue: str
+    """Which queue to submit jobs to, will usually be prod."""
+    walltime: str
+    """Maximum job time."""
+    retries: int = 0
+    """Number of retries upon failure."""
+
+    def get_config(self, run_dir: PathLike) -> Config:
+        """Create a Parsl configuration for running on Sunspot."""
+        accel_ids = [
+            f"{gid}.{tid}"
+            for gid in range(6)
+            for tid in range(2)
+        ]
+        return Config(
+            executors=[
+                HighThroughputExecutor(
+                    label=self.label,
+                    available_accelerators=accel_ids,  # Ensures one worker per accelerator
+                    cpu_affinity="block",  # Assigns cpus in sequential order
+                    prefetch_capacity=0,
+                    max_workers=12,
+                    cores_per_worker=16,
+                    heartbeat_period=30,
+                    heartbeat_threshold=300,
+                    worker_debug=False,
+                    provider=PBSProProvider(
+                        launcher=MpiExecLauncher(
+                            bind_cmd="--cpu-bind",
+                            overrides="--depth=208 --ppn 1"
+                        ),  # Ensures 1 manger per node and allows it to divide work among all 208 threads
+                        worker_init="""
+export HTTP_PROXY=http://proxy.alcf.anl.gov:3128
+export HTTPS_PROXY=http://proxy.alcf.anl.gov:3128
+export http_proxy=http://proxy.alcf.anl.gov:3128
+export https_proxy=http://proxy.alcf.anl.gov:3128
+git config --global http.proxy http://proxy.alcf.anl.gov:3128
+echo 'before module load'
+module use /soft/modulefiles/
+module load frameworks/2023.12.15.001
+echo 'after module load'
+source /lus/gila/projects/candle_aesp_CNDA/hippekp/venvs/distllm/bin/activate
+export HF_HOME=/lus/gila/projects/candle_aesp_CNDA/hippekp/hf-home/
+echo 'after env activate' """,
+                        nodes_per_block=self.num_nodes,
+                        account=self.account,
+                        queue=self.queue,
+                        walltime=self.walltime,
+
+                    ),
+                ),
+            ],
+            run_dir=str(run_dir),
+            checkpoint_mode='task_exit',
+            retries=self.retries,
+            app_cache=True,
+        )
+
+
 ComputeConfigs = Union[
     LocalConfig,
     WorkstationConfig,
     PolarisConfig,
+    SunspotConfig
 ]
