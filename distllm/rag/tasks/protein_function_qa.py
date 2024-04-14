@@ -7,6 +7,7 @@ import random
 
 from pydantic import BaseModel
 from pydantic import Field
+from pydantic import validator
 
 from distllm.rag.tasks.base import QuestionAnswerTask
 from distllm.utils import BaseConfig
@@ -31,6 +32,16 @@ class ProteinFunctionQAEntry(BaseModel):
         ...,
         description='The source for the question.',
     )
+
+    @validator('ideal', pre=True, always=True)
+    def lowercase_ideal(cls, value: str) -> str:  # noqa N805
+        """Convert ideal answer to lowercase."""
+        return value.lower()
+
+    @validator('distractors', pre=True, each_item=True, always=True)
+    def lowercase_distractors(cls, value: str) -> str:  # noqa N805
+        """Convert each distractor to lowercase."""
+        return value.lower()
 
     def get_multiple_choice(self) -> str:
         """Build a multiple choice question from the entry.

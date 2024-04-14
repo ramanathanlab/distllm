@@ -112,4 +112,7 @@ class QuestionAnswerPromptTemplate:
         # If present, remove the period from the end of the response
         responses = [r if r and r[-1] != '.' else r[:-1] for r in responses]
 
+        # Cast responses to lower caps in case model capitalized answers.
+        responses = [r.lower() for r in responses]
+
         return responses

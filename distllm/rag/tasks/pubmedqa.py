@@ -15,8 +15,8 @@ from distllm.utils import curl_download
 class PubmedQAEntry(BaseModel):
     """Question entry format within a jsonl file.
 
-    Uses the FunctionQA Benchmark at:
-        https://github.com/ramanathanlab/AmpQA/blob/main/FunctionQA.jsonl
+    Uses the PubmedQA Benchmark at:
+        https://https://github.com/pubmedqa/pubmedqa
     """
 
     QUESTION: str = Field(..., description='The text of the question.')
