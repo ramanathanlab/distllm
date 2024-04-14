@@ -8,8 +8,10 @@ from distllm.rag.tasks.base import EvaluationTask
 from distllm.rag.tasks.litqa import LitQATask
 from distllm.rag.tasks.protein_function_qa import ProteinFunctionQATask
 from distllm.rag.tasks.protein_interaction_qa import ProteinInteractionQATask
+from distllm.rag.tasks.pubmedqa import PubmedQATask
 
 TASKS: dict[str, type[EvaluationTask]] = {
+    'pubmedqa': PubmedQATask,
     'litqa': LitQATask,
     'protein_interaction_qa': ProteinInteractionQATask,
     'protein_function_qa': ProteinFunctionQATask,

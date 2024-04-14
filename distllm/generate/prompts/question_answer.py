@@ -22,7 +22,9 @@ class QuestionAnswerPromptTemplate:
         '{question}'
         '[INST] Answer this question using the context to help by choosing '
         "one of the options. Don't include option number or explanation in "
-        'your answer. [/INST]'
+        'your answer. '
+        'Output the option you choose exactly as it is presented '
+        'to you. [/INST]'
         'Answer: '
     )
 
@@ -30,7 +32,9 @@ class QuestionAnswerPromptTemplate:
         'Question: '
         '{question}'
         '[INST] Answer this question by choosing one of the options. '
-        "Don't include option number in your answer. [/INST]"
+        "Don't include option number or explanation in your answer. "
+        'Output the option you choose exactly as it is presented '
+        'to you. [/INST]'
         'Answer: '
     )
 

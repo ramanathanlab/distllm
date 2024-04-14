@@ -6,19 +6,20 @@ rag_configs:
       tensor_parallel_size: 8
 
 
-    retriever_config:
-      vector_database_dir: /rbstor/ac.ogokdemir/auroraglimmer/datasets/AMP.nougat.pubmedbert.merge
-      encoder_config:
-        name: auto
-        pretrained_model_name_or_path: pritamdeka/S-PubMedBert-MS-MARCO
+    # retriever_config:
+    #   vector_database_dir: /rbstor/ac.ogokdemir/auroraglimmer/datasets/AMP.nougat.pubmedbert.merge
+    #   encoder_config:
+    #     name: auto
+    #     pretrained_model_name_or_path: pritamdeka/S-PubMedBert-MS-MARCO
 
-      pooler_config:
-        name: mean
+    #   pooler_config:
+    #     name: mean
 
 tasks:
-  - protein_function_qa
+  - pubmedqa
   - litqa
   - protein_interaction_qa
+  - protein_function_qa
 
 
 download_dir: /rbstor/ac.ogokdemir/auroraglimmer/benchmarks
