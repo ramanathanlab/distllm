@@ -30,7 +30,7 @@ class RagGenerator:
         self,
         texts: str | list[str],
         prompt_template: PromptTemplate | None = None,
-        retrieval_top_k: int = 5,
+        retrieval_top_k: int = 1,
         retrieval_score_threshold: float = 0.0,
     ) -> list[str]:
         """Generate a response to a query given a context.

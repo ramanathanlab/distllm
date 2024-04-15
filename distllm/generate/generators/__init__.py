@@ -12,6 +12,12 @@ from distllm.generate.generators.huggingface_backend import (
 from distllm.generate.generators.huggingface_backend import (
     HuggingFaceGeneratorConfig,
 )
+from distllm.generate.generators.huggingface_backend_galactica import (
+    HuggingFaceGalacticaGenerator,
+)
+from distllm.generate.generators.huggingface_backend_galactica import (
+    HuggingFaceGalacticaGeneratorConfig,
+)
 from distllm.generate.generators.langchain_backend import LangChainGenerator
 from distllm.generate.generators.langchain_backend import (
     LangChainGeneratorConfig,
@@ -25,12 +31,17 @@ LLMGeneratorConfigs = Union[
     VLLMGeneratorConfig,
     LangChainGeneratorConfig,
     HuggingFaceGeneratorConfig,
+    HuggingFaceGalacticaGeneratorConfig,
 ]
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[LLMGenerator]]] = {
     'vllm': (VLLMGeneratorConfig, VLLMGenerator),
     'langchain': (LangChainGeneratorConfig, LangChainGenerator),
     'huggingface': (HuggingFaceGeneratorConfig, HuggingFaceGenerator),
+    'huggingface_galactica': (
+        HuggingFaceGalacticaGeneratorConfig,
+        HuggingFaceGalacticaGenerator,
+    ),
 }
 
 

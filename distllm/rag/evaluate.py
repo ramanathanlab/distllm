@@ -118,6 +118,8 @@ def run_eval_suite(config: EvalSuiteConfig) -> None:
             # Initialize the task
             task = get_task(task_name, config.download_dir)
 
+            print(f'Started {task!r} task.')
+
             # Evaluate the model on the task
             results = task.evaluate(rag_model)
 

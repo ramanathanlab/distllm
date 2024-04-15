@@ -1,9 +1,7 @@
 rag_configs:
   - generator_config:
-      name: vllm
-      llm_name: mistralai/Mistral-7B-Instruct-v0.1
-      top_p: 0.95
-      tensor_parallel_size: 8
+      name: huggingface_galactica
+      pretrained_model_name_or_path: facebook/galactica-6.7b
 
     retriever_config:
       vector_database_dir: /rbstor/ac.ogokdemir/auroraglimmer/datasets/AMP.nougat.pubmedbert.merge
@@ -16,10 +14,10 @@ rag_configs:
 
 tasks:
   - litqa
-  - sciq
-  - pubmedqa
-  - protein_interaction_qa
-  - protein_function_qa
+  # - sciq
+  # - pubmedqa
+  # - protein_interaction_qa
+  # - protein_function_qa
 
 
 download_dir: /rbstor/ac.ogokdemir/auroraglimmer/benchmarks

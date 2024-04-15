@@ -71,6 +71,7 @@ class FaissIndex:
             self.dataset.load_faiss_index(
                 index_name=self.faiss_index_name,
                 file=self.faiss_index_file,
+                device=-1,
             )
         else:
             # Create a new FAISS index
