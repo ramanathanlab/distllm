@@ -333,6 +333,12 @@ def generate(  # noqa: PLR0913
         help='The batch size to use for generating the text'
         ' (for huggingface).',
     ),
+    quantization: bool = typer.Option(
+        False,
+        '--quantization',
+        '-q',
+        help='Quantize the model for faster inference.',
+    ),
 ) -> None:
     """Merge datasets from multiple directories output by `embed` command."""
     from distllm.distributed_generation import generate_worker
@@ -384,6 +390,8 @@ def generate(  # noqa: PLR0913
         generator_kwargs['top_p'] = top_p
         # The batch size to use for generating the text
         generator_kwargs['batch_size'] = batch_size
+        # Use quantization
+        generator_kwargs['quantization'] = quantization
 
     # Get the dataset directories
     input_paths = list(input_dir.glob('*'))
