@@ -31,7 +31,7 @@ writer_config:
   name: huggingface
 
 # The compute settings for the workflow
-compute_settings:
+compute_config:
   # The name of the compute platform to use
   name: leonardo
   # The number of compute nodes to use
