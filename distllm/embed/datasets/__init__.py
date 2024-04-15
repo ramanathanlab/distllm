@@ -14,6 +14,8 @@ from distllm.embed.datasets.jsonl_chunk import JsonlChunkDataset
 from distllm.embed.datasets.jsonl_chunk import JsonlChunkDatasetConfig
 from distllm.embed.datasets.single_line import SequencePerLineDataset
 from distllm.embed.datasets.single_line import SequencePerLineDatasetConfig
+from distllm.embed.datasets.huggingface import HuggingFaceDataset
+from distllm.embed.datasets.huggingface import HuggingFaceDatasetConfig
 from distllm.utils import BaseConfig
 
 DatasetConfigs = Union[
@@ -21,6 +23,7 @@ DatasetConfigs = Union[
     SequencePerLineDatasetConfig,
     JsonlDatasetConfig,
     JsonlChunkDatasetConfig,
+    HuggingFaceDatasetConfig,
 ]
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[Dataset]]] = {
@@ -31,6 +34,7 @@ STRATEGIES: dict[str, tuple[type[BaseConfig], type[Dataset]]] = {
     ),
     'jsonl': (JsonlDatasetConfig, JsonlDataset),
     'jsonl_chunk': (JsonlChunkDatasetConfig, JsonlChunkDataset),
+    'huggingface': (HuggingFaceDatasetConfig, HuggingFaceDataset),
 }
 
 
@@ -41,6 +45,8 @@ def get_dataset(kwargs: dict[str, Any]) -> Dataset:
     - fasta
     - sequence_per_line
     - jsonl
+    - jsonl_chunk
+    - huggingface
 
     Parameters
     ----------
