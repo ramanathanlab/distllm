@@ -1,0 +1,46 @@
+# An input directory containing the files to embed.
+input_dir: /lus/gila/projects/candle_aesp_CNDA/hippekp/aglimmer/data/scaling/distllm-scaling/nougat.scaling.data/
+# An output directory to save the embeddings.
+output_dir: /lus/gila/projects/candle_aesp_CNDA/hippekp/aglimmer/data/scaling/distllm-scaling/output/nougat.sfr-mistral.sunspot.nodes64
+# A set of glob patterns to match the input files.
+glob_patterns: ['*.jsonl']
+
+# Settings for reading the input files.
+dataset_config:
+  name: jsonl_chunk
+  buffer_size: 4
+  batch_size: 4
+
+# Settings for the encoder.
+encoder_config:
+  name: auto
+  pretrained_model_name_or_path: Salesforce/SFR-Embedding-Mistral
+  quantization: false
+  half_precision: true
+
+# Settings for the pooler.
+pooler_config:
+  name: mean
+
+# Settings for the embedder.
+embedder_config:
+  name: semantic_chunk
+  chunk_batch_size: 1
+  normalize_embeddings: true
+
+# Settings for the writer.
+writer_config:
+  name: huggingface
+
+# Settings for the parsl compute backend.
+compute_config:
+  # The name of the compute platform to use
+  name: sunspot
+  # The number of compute nodes to use
+  num_nodes: 64
+  # Make sure to change the account to the account you want to charge
+  account: candle_aesp_CNDA
+  # The HPC queue to submit to
+  queue: run_next
+  # The amount of time to request for your job
+  walltime: 01:00:00
