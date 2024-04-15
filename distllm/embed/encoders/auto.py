@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, Optional
 
 import torch
 from transformers import BatchEncoding
@@ -18,6 +18,8 @@ class AutoEncoderConfig(BaseConfig):
     name: Literal['auto'] = 'auto'  # type: ignore[assignment]
     # The model id
     pretrained_model_name_or_path: str
+    # Optional tokenizer
+    tokenizer_name: Optional[str] = None
     # Use the model in half precision
     half_precision: bool = False
     # Set the model to evaluation mode
@@ -58,8 +60,10 @@ class AutoEncoder:
             trust_remote_code=True,
             **model_kwargs,
         )
+
+        tokenizer_path = config.tokenizer_name or config.pretrained_model_name_or_path
         tokenizer = AutoTokenizer.from_pretrained(
-            config.pretrained_model_name_or_path,
+            tokenizer_path,
             trust_remote_code=True,
         )
 
