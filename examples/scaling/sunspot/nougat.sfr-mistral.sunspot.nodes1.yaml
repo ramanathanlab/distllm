@@ -9,7 +9,7 @@ glob_patterns: ['*.jsonl']
 dataset_config:
   name: jsonl_chunk
   buffer_size: 4
-  batch_size: 4
+  batch_size: 2
 
 # Settings for the encoder.
 encoder_config:
