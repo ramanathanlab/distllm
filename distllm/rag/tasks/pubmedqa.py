@@ -45,11 +45,19 @@ class PubmedQAEntry(BaseModel):
         # All PubmedQA answers are "yes", "no" or "maybe"
         options = ['yes', 'no', 'maybe']
 
-        mc_question = '{}\nOptions:\n1. {}\n2. {}\n3. {}\n'.format(
+        # Get the PubmedQA-provided contexts and join them.
+        joined_contexts = '\n'.join(self.CONTEXTS)
+
+        # Indicator of PubmedQA provided ground truth context
+        gt_context_indicator = 'Most relevant context:'
+
+        # Add the PubmedQA provided context to the question
+        mc_question = '{}\n{}\n{}\nOptions:\n1. {}\n2. {}\n3. {}\n'.format(
+            f'{gt_context_indicator}',
+            f'{joined_contexts}',
             f'{self.QUESTION}{mark}',
             *options,
         )
-
         return mc_question
 
 
