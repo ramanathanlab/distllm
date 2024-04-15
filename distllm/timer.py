@@ -132,7 +132,8 @@ class TimeLogger:
         lines = Path(log_path).read_text().strip().split('\n')
 
         # Parse out any lines that don't contain the timer information
-        lines = [line for line in lines if line.startswith('[timer]')]
+        # lines = [line for line in lines if line.startswith('[timer]')]
+        lines = [line for line in lines if '[timer]' in line]
 
         # Regex pattern to extract items in square brackets []
         regex_pattern = r'\[([^\[\]]+)\]'
