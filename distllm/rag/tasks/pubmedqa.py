@@ -53,7 +53,8 @@ class PubmedQAEntry(BaseModel):
 
         # Add the PubmedQA provided context to the question
         mc_question = '{}\n{}\n{}\nOptions:\n1. {}\n2. {}\n3. {}\n'.format(
-            f'{gt_context_indicator}{joined_contexts}',
+            f'{gt_context_indicator}',
+            f'{joined_contexts}',
             f'{self.QUESTION}{mark}',
             *options,
         )
