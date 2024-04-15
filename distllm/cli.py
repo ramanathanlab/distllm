@@ -174,6 +174,8 @@ def embed(  # noqa: PLR0913
 
     # Get the data files
     data_files = list(data_path.glob(f'*.{data_extension}'))
+    print("get the data files")
+    print(data_files)
     if not data_files:
         raise ValueError(
             f'No files found in {data_path} with extension {data_extension}',

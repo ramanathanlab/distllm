@@ -47,7 +47,7 @@ def embedding_worker(  # noqa: PLR0913
     # Initialize the model and tokenizer
     with Timer('loaded-encoder', input_path):
         encoder = get_encoder(encoder_kwargs, register=True)
-
+    print(encoder)
     # Initialize the dataset
     dataset = get_dataset(dataset_kwargs)
 

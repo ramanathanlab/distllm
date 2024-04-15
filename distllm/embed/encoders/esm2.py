@@ -34,7 +34,7 @@ class Esm2Encoder:
         import torch
         from transformers import EsmForMaskedLM
         from transformers import EsmTokenizer
-
+        print(in_esm_encoder)
         # Load model and tokenizer
         model = EsmForMaskedLM.from_pretrained(
             config.pretrained_model_name_or_path,

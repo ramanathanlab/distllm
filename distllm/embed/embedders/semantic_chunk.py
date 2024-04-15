@@ -261,6 +261,7 @@ class SemanticChunkEmbedder:
         EmbedderResult
             Dataclass with the embeddings, text, and optional metadata.
         """
+        print("**************************** computing semantic chunks ******************************")
         dataset = compute_semantic_chunks(
             dataloader=dataloader,
             encoder=encoder,
@@ -277,7 +278,7 @@ class SemanticChunkEmbedder:
             dataset=dataset,
             collate_fn=DataCollator(encoder.tokenizer),
         )
-
+        print("**********************computing for each chunk ********************")
         # Compute embeddings for each chunk
         chunked_embeds = compute_embeddings(
             dataloader=chunked_dataloader,

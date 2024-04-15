@@ -349,7 +349,7 @@ class Retriever:
             truncation=True,
             return_tensors='pt',
         )
-
+        print(in_pooled_embedding)
         # Move the batch encoding to the device
         inputs = batch_encoding.to(self.encoder.device)
 

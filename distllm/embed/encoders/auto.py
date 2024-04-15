@@ -51,7 +51,8 @@ class AutoEncoder:
             )
 
             model_kwargs['quantization_config'] = nf4_config
-
+        print("in auto model")
+        print(config.pretrained_model_name_or_path)
         # Load model and tokenizer
         model = AutoModel.from_pretrained(
             config.pretrained_model_name_or_path,

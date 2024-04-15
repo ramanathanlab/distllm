@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 from typing import Literal
-
+from flops_profiler.profiler import get_model_profile
 from distllm.utils import BaseConfig
-
-
+from transformers import AutoTokenizer, AutoModelForCausalLM
 class VLLMGeneratorConfig(BaseConfig):
     """Configuration for the LLMGenerator."""
 
@@ -58,11 +57,14 @@ class VLLMGenerator:
         )
 
         # Create an LLM instance
+        print(f"LLM name: {config.llm_name}")
         self.llm = LLM(
             model=config.llm_name,
             trust_remote_code=config.trust_remote_code,
             dtype='bfloat16',
         )
+
+        self.h_llm_model = AutoModelForCausalLM.from_pretrained(config.llm_name)
 
     def generate(self, prompts: str | list[str]) -> list[str]:
         """Generate response text from prompts.
@@ -81,6 +83,17 @@ class VLLMGenerator:
         # Ensure that the prompts are in a list
         if isinstance(prompts, str):
             prompts = [prompts]
+        step_profile = True 
+        if step_profile:
+            self.h_llm_model = self.h_llm_model.to('cuda')
+            flops, latency, tflops = get_model_profile(model=self.h_llm_model, # model
+                    kwargs=dict(prompts, self.sampling_params), # dictionary of keyword arguments to the model.
+                    print_profile=True, # prints the model graph
+                    detailed=False, # print the detailed profile
+                    as_string=False, # print raw numbers (e.g. 1000) or as human-readable strings (e.g. 1k)
+                    func_name='generate') # the function name to profile, "forward" by default
+            print(f"*********:flops:{flops} latency:{latency} tflops:{tflops}")
+            total_iters = total_iters + 1
 
         # Generate responses from the prompts. The output is a list of
         # RequestOutput objects that contain the prompt, generated text,
