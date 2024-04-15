@@ -1,0 +1,50 @@
+# An input directory containing the files to embed.
+input_dir: /leonardo_scratch/large/userexternal/abrace00/metric-rag/data/semantic_chunking/scaling-data/nougat.scaling.data
+# An output directory to save the embeddings.
+output_dir: /leonardo_scratch/large/userexternal/abrace00/metric-rag/data/semantic_chunking/sfr-mistral.leonardo.nodes256
+# A set of glob patterns to match the input files.
+glob_patterns: ['*.jsonl']
+
+# Settings for reading the input files.
+dataset_config:
+  name: jsonl_chunk
+  buffer_size: 4
+  batch_size: 8
+
+# Settings for the encoder.
+encoder_config:
+  name: auto
+  pretrained_model_name_or_path: Salesforce/SFR-Embedding-Mistral
+
+# Settings for the pooler.
+pooler_config:
+  name: last_token
+
+# Settings for the embedder.
+embedder_config:
+  name: semantic_chunk
+  chunk_batch_size: 2
+  normalize_embeddings: true
+
+# Settings for the writer.
+writer_config:
+  name: huggingface
+
+# The compute settings for the workflow
+compute_config:
+  # The name of the compute platform to use
+  name: leonardo
+  # The number of compute nodes to use
+  num_nodes: 256
+  # Make sure to update the path to your conda environment and HF cache
+  worker_init: "module load python/3.11.6--gcc--8.5.0; source /leonardo_scratch/large/userexternal/abrace00/venvs/distllm/bin/activate; export HF_HOME=/leonardo_scratch/large/userexternal/abrace00/.cache"
+  # The scheduler options to use when submitting jobs
+  # scheduler_options: "#SBATCH --reservation=s_res_gb"
+  # Partition to use.
+  partition: boost_usr_prod
+  # Quality of service.
+  qos: boost_qos_bprod
+  # Account to charge compute to.
+  account: try24_Genomics_0
+  # The amount of time to request for your job
+  walltime: 00:60:00
