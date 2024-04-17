@@ -20,7 +20,7 @@ class AutoEncoderConfig(BaseConfig):
     # The model id
     pretrained_model_name_or_path: str
     # Optional tokenizer
-    tokenizer_name: Optional[str] = None
+    tokenizer_name: Optional[str] = None  # noqa: UP007
     # Use the model in half precision
     half_precision: bool = False
     # Set the model to evaluation mode
