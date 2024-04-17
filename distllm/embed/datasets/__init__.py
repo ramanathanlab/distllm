@@ -8,14 +8,14 @@ from typing import Union
 from distllm.embed.datasets.base import Dataset
 from distllm.embed.datasets.fasta import FastaDataset
 from distllm.embed.datasets.fasta import FastaDatasetConfig
+from distllm.embed.datasets.huggingface import HuggingFaceDataset
+from distllm.embed.datasets.huggingface import HuggingFaceDatasetConfig
 from distllm.embed.datasets.jsonl import JsonlDataset
 from distllm.embed.datasets.jsonl import JsonlDatasetConfig
 from distllm.embed.datasets.jsonl_chunk import JsonlChunkDataset
 from distllm.embed.datasets.jsonl_chunk import JsonlChunkDatasetConfig
 from distllm.embed.datasets.single_line import SequencePerLineDataset
 from distllm.embed.datasets.single_line import SequencePerLineDatasetConfig
-from distllm.embed.datasets.huggingface import HuggingFaceDataset
-from distllm.embed.datasets.huggingface import HuggingFaceDatasetConfig
 from distllm.utils import BaseConfig
 
 DatasetConfigs = Union[

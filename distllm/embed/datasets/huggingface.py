@@ -5,16 +5,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
-from torch.utils.data import DataLoader
+from datasets import Dataset
 from pydantic import Field
+from torch.utils.data import DataLoader
 
 from distllm.embed.datasets.utils import DataCollator
 from distllm.embed.datasets.utils import InMemoryDataset
 from distllm.embed.encoders.base import Encoder
-from distllm.utils import BaseConfig
-
-from datasets import Dataset
-
 from distllm.utils import BaseConfig
 
 
@@ -75,7 +72,6 @@ class HuggingFaceDataset:
 
             # Convert the metadata to a list of dictionaries
             metadatas = [dict(row) for row in columns]
-
 
         # Instantiate the dataloader
         return DataLoader(

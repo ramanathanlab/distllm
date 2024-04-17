@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Literal
+from typing import Optional
 
 import torch
 from transformers import BatchEncoding
@@ -61,7 +62,9 @@ class AutoEncoder:
             **model_kwargs,
         )
 
-        tokenizer_path = config.tokenizer_name or config.pretrained_model_name_or_path
+        tokenizer_path = (
+            config.tokenizer_name or config.pretrained_model_name_or_path
+        )
         tokenizer = AutoTokenizer.from_pretrained(
             tokenizer_path,
             trust_remote_code=True,
