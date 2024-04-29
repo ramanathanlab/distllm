@@ -3,16 +3,20 @@
 from __future__ import annotations
 
 from typing import Any
+from typing import Union
 
 from distllm.generate.readers.base import Reader
 from distllm.generate.readers.huggingface import HuggingFaceReader
 from distllm.generate.readers.huggingface import HuggingFaceReaderConfig
+from distllm.generate.readers.jsonl import JsonlReader
+from distllm.generate.readers.jsonl import JsonlReaderConfig
 from distllm.utils import BaseConfig
 
-ReaderConfigs = HuggingFaceReaderConfig
+ReaderConfigs = Union[HuggingFaceReaderConfig, JsonlReaderConfig]
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[Reader]]] = {
     'huggingface': (HuggingFaceReaderConfig, HuggingFaceReader),
+    'jsonl': (JsonlReaderConfig, JsonlReader),
 }
 
 
@@ -21,6 +25,7 @@ def get_reader(kwargs: dict[str, Any]) -> Reader:
 
     Currently supports the following strategies:
     - huggingface
+    - jsonl
 
     Parameters
     ----------

@@ -226,6 +226,10 @@ class SemanticChunkEmbedderConfig(BaseConfig):
         description='The minimum length of a chunk (number of characters) to '
         'filter out any small chunks.',
     )
+    normalize_embeddings: bool = Field(
+        False,
+        description='Whether to return normalized the embeddings.',
+    )
 
 
 class SemanticChunkEmbedder:
@@ -279,6 +283,7 @@ class SemanticChunkEmbedder:
             dataloader=chunked_dataloader,
             encoder=encoder,
             pooler=pooler,
+            normalize=self.config.normalize_embeddings,
         )
 
         # Return the result

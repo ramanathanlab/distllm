@@ -21,7 +21,7 @@ from distllm.utils import BaseConfig
 
 
 def embedding_worker(  # noqa: PLR0913
-    file: Path,
+    input_path: Path,
     output_dir: Path,
     dataset_kwargs: dict[str, Any],
     encoder_kwargs: dict[str, Any],
@@ -39,9 +39,14 @@ def embedding_worker(  # noqa: PLR0913
     from distllm.embed import get_encoder
     from distllm.embed import get_pooler
     from distllm.embed import get_writer
+    from distllm.timer import Timer
+
+    # Time the worker function
+    timer = Timer('finished-embedding', input_path).start()
 
     # Initialize the model and tokenizer
-    encoder = get_encoder(encoder_kwargs, register=True)
+    with Timer('loaded-encoder', input_path):
+        encoder = get_encoder(encoder_kwargs, register=True)
 
     # Initialize the dataset
     dataset = get_dataset(dataset_kwargs)
@@ -56,17 +61,23 @@ def embedding_worker(  # noqa: PLR0913
     writer = get_writer(writer_kwargs)
 
     # Initialize the dataloader
-    dataloader = dataset.get_dataloader(file, encoder)
+    with Timer('loaded-dataset', input_path):
+        dataloader = dataset.get_dataloader(input_path, encoder)
 
     # Compute the embeddings
-    result = embedder.embed(dataloader, encoder, pooler)
+    with Timer('computed-embeddings', input_path):
+        result = embedder.embed(dataloader, encoder, pooler)
 
     # Create the output directory for the embedding dataset
     dataset_dir = output_dir / f'{uuid4()}'
     dataset_dir.mkdir(parents=True, exist_ok=True)
 
     # Write the result to disk
-    writer.write(dataset_dir, result)
+    with Timer('wrote-embeddings', input_path):
+        writer.write(dataset_dir, result)
+
+    # Stop the timer to log the worker time
+    timer.stop()
 
 
 class Config(BaseConfig):
@@ -147,4 +158,4 @@ if __name__ == '__main__':
 
     # Distribute the input files across processes
     with ParslPoolExecutor(parsl_config) as pool:
-        pool.map(worker_fn, input_files)
+        list(pool.map(worker_fn, input_files))

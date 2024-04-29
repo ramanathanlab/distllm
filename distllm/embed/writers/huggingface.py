@@ -70,7 +70,7 @@ class HuggingFaceWriter:
         )
 
         # Write the dataset to disk
-        dataset.save_to_disk(output_dir, num_proc=self.config.num_proc)
+        dataset.save_to_disk(output_dir)
 
     def merge(self, dataset_dirs: list[Path], output_dir: Path) -> None:
         """Merge the datasets from multiple directories.

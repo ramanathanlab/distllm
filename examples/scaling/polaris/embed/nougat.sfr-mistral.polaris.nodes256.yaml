@@ -1,0 +1,48 @@
+# An input directory containing the files to embed.
+input_dir: /lus/eagle/projects/tpc/braceal/metric-rag/data/parsed_pdfs/scaling/scaling-data/nougat.scaling.data
+# An output directory to save the embeddings.
+output_dir: /lus/eagle/projects/FoundEpidem/hippekp/aglimmer/data/scaling/semantic_chunks/nougat.sfr-mistral.polaris.nodes256
+# A set of glob patterns to match the input files.
+glob_patterns: ['*.jsonl']
+
+# Settings for reading the input files.
+dataset_config:
+  name: jsonl_chunk
+  buffer_size: 4
+  batch_size: 8
+
+# Settings for the encoder.
+encoder_config:
+  name: auto
+  pretrained_model_name_or_path: Salesforce/SFR-Embedding-Mistral
+
+# Settings for the pooler.
+pooler_config:
+  name: last_token
+
+# Settings for the embedder.
+embedder_config:
+  name: semantic_chunk
+  chunk_batch_size: 2
+  normalize_embeddings: true
+
+# Settings for the writer.
+writer_config:
+  name: huggingface
+
+# Settings for the parsl compute backend.
+compute_config:
+  # The name of the compute platform to use
+  name: polaris
+  # The number of compute nodes to use
+  num_nodes: 256
+  # Make sure to update the path to your conda environment and HF cache
+  worker_init: "module load conda/2023-10-04; conda activate distllm-vllm-v0.2.1.post1; export HF_HOME=/lus/eagle/projects/FoundEpidem/hippekp/hf-home"
+  # The scheduler options to use when submitting jobs
+  scheduler_options: "#PBS -l filesystems=home:eagle:grand"
+  # Make sure to change the account to the account you want to charge
+  account: FoundEpidem
+  # The HPC queue to submit to
+  queue: run_next
+  # The amount of time to request for your job
+  walltime: 00:60:00

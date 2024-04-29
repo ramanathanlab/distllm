@@ -17,8 +17,10 @@ from parsl.addresses import address_by_hostname
 from parsl.config import Config
 from parsl.executors import HighThroughputExecutor
 from parsl.launchers import MpiExecLauncher
+from parsl.launchers import SrunLauncher
 from parsl.providers import LocalProvider
 from parsl.providers import PBSProProvider
+from parsl.providers import SlurmProvider
 
 from distllm.utils import BaseConfig
 from distllm.utils import PathLike
@@ -96,6 +98,72 @@ class WorkstationConfig(BaseComputeConfig):
                     available_accelerators=self.available_accelerators,
                     worker_port_range=self.worker_port_range,
                     provider=LocalProvider(init_blocks=1, max_blocks=1),
+                ),
+            ],
+        )
+
+
+class LeonardoSettings(BaseComputeConfig):
+    """Leonardo settings.
+
+    See here for details:
+    https://wiki.u-gov.it/confluence/display/SCAIUS/UG3.2%3A+LEONARDO+UserGuide
+    """
+
+    name: Literal['leonardo'] = 'leonardo'  # type: ignore[assignment]
+    label: str = 'htex'
+
+    partition: str
+    """Partition to use."""
+    qos: str
+    """Quality of service."""
+    account: str
+    """Account to charge compute to."""
+    walltime: str
+    """Maximum job time."""
+    num_nodes: int = 1
+    """Number of nodes to request."""
+    worker_init: str = ''
+    """How to start a worker. Should load any modules and environments."""
+    scheduler_options: str = ''
+    """Additional scheduler options."""
+    retries: int = 0
+    """Number of retries upon failure."""
+
+    def get_config(self, run_dir: PathLike) -> Config:
+        """Create a parsl configuration for running on Leonardo."""
+        # Default scheduler options for GPU partition
+        scheduler_options = '#SBATCH --gres=gpu:4\n#SBATCH --ntasks-per-node=1'
+
+        # Add the user provided scheduler options
+        if self.scheduler_options:
+            scheduler_options += '\n' + self.scheduler_options
+
+        return Config(
+            run_dir=str(run_dir),
+            retries=self.retries,
+            executors=[
+                HighThroughputExecutor(
+                    label=self.label,
+                    # Creates 4 workers and pins one to each GPU,
+                    # use only for GPU
+                    available_accelerators=4,
+                    # Pins distinct groups of CPUs to each worker
+                    cpu_affinity='block',
+                    provider=SlurmProvider(
+                        # Must supply GPUs and CPU per node
+                        launcher=SrunLauncher(
+                            overrides='--gpus-per-node 4 -c 32',
+                        ),
+                        partition=self.partition,
+                        qos=self.qos,
+                        account=self.account,
+                        walltime=self.walltime,
+                        nodes_per_block=self.num_nodes,
+                        # Switch to "-C cpu" for CPU partition
+                        scheduler_options=scheduler_options,
+                        worker_init=self.worker_init,
+                    ),
                 ),
             ],
         )
@@ -188,4 +256,5 @@ ComputeConfigs = Union[
     LocalConfig,
     WorkstationConfig,
     PolarisConfig,
+    LeonardoSettings,
 ]

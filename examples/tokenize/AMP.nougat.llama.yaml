@@ -1,0 +1,26 @@
+# An input directory containing the files to tokenize.
+input_dir: /lus/eagle/projects/tpc/braceal/metric-rag/data/parsed_pdfs/AMP.nougat/parsed_pdfs
+# An output directory to save the tokenized text.
+output_dir: /lus/eagle/projects/tpc/braceal/metric-rag/data/tokenized_pdfs/AMP.nougat.llama
+
+# Configuration for the tokenizer
+tokenizer_config:
+    tokenizer_name: meta-llama/Llama-2-70b-chat-hf
+    save_labels: true
+
+# Settings for the parsl compute backend.
+compute_config:
+  # The name of the compute platform to use
+  name: polaris
+  # The number of compute nodes to use
+  num_nodes: 10
+  # Make sure to update the path to your conda environment and HF cache
+  worker_init: "module load conda/2023-10-04; conda activate distllm-vllm-v0.2.1.post1; export HF_HOME=/lus/eagle/projects/CVD-Mol-AI/braceal/.cache"
+  # The scheduler options to use when submitting jobs
+  scheduler_options: "#PBS -l filesystems=home:eagle:grand"
+  # Make sure to change the account to the account you want to charge
+  account: FoundEpidem
+  # The HPC queue to submit to
+  queue: demand
+  # The amount of time to request for your job
+  walltime: "01:00:00"

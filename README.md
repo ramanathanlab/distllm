@@ -16,8 +16,8 @@ python -m nltk.downloader punkt
 To install the package on Polaris, run the following command:
 ```bash
 module load conda/2023-10-04
-conda create -n vllm-v0.2.1.post1 python=3.9
-conda activate vllm-v0.2.1.post1
+conda create -n distllm-vllm-v0.2.1.post1 python=3.9
+conda activate distllm-vllm-v0.2.1.post1
 pip install vllm==v0.2.1.post1
 git clone git@github.com:ramanathanlab/distllm.git
 cd distllm
