@@ -17,30 +17,25 @@ class QuestionAnswerPromptTemplate:
     """Question answer prompt template."""
 
     template_with_context: str = (
-        'Answer the question below with the context.\n\n'
         'Context (with relevance scores):\n\n{context}\n\n----\n\n'
-        'Question: {question}\n\n'
-        'Write an answer based on the context. '
-        'If the context provides insufficient information and '
-        'the question cannot be directly answered, reply '
-        '"I cannot answer." '
-        'Write in the style of a Wikipedia article, '
-        'with concise sentences and coherent paragraphs. '
-        'The context comes from a variety of sources and is only a summary, '
-        'so there may inaccuracies or ambiguities. If quotes are present and '
-        'relevant, use them in the answer. This answer will go directly onto '
-        'Wikipedia, so do not add any extraneous information.\n\n'
+        'Question: '
+        '{question}'
+        '[INST] Answer this question using the context to help by choosing '
+        "one of the options. Don't include option number or explanation in "
+        'your answer. '
+        'Output the option you choose exactly as it is presented '
+        'to you. [/INST]'
         'Answer: '
     )
 
     template_no_context: str = (
-        'Answer the question below.\n\n'
-        'Question: {question}\n\n'
-        'Write an answer based on your knowledge. If the question cannot '
-        'be directly answered, reply "I cannot answer." Write in the style '
-        'of a Wikipedia article, with concise sentences and coherent '
-        'paragraphs. This answer will go directly onto Wikipedia, so do not '
-        'add any extraneous information.\n\nAnswer: '
+        'Question: '
+        '{question}'
+        '[INST] Answer this question by choosing one of the options. '
+        "Don't include option number or explanation in your answer. "
+        'Output the option you choose exactly as it is presented '
+        'to you. [/INST]'
+        'Answer: '
     )
 
     def __init__(self, config: QuestionAnswerPromptTemplateConfig) -> None:
@@ -109,4 +104,15 @@ class QuestionAnswerPromptTemplate:
         list[str]
             The postprocessed responses.
         """
+        # If present, remove the option number from the response
+        responses = [
+            r[3:] if r[:2] in ['1.', '2.', '3.', '4.'] else r
+            for r in responses
+        ]
+        # If present, remove the period from the end of the response
+        responses = [r if r and r[-1] != '.' else r[:-1] for r in responses]
+
+        # Cast responses to lower caps in case model capitalized answers.
+        responses = [r.lower() for r in responses]
+
         return responses

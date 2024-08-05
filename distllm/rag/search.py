@@ -14,6 +14,7 @@ from datasets.search import BatchedSearchResults
 
 from distllm.embed import Encoder
 from distllm.embed import Pooler
+from distllm.utils import batch_data
 
 
 class FaissIndex:
@@ -250,6 +251,7 @@ class Retriever:
         encoder: Encoder,
         pooler: Pooler,
         faiss_index: FaissIndex,
+        batch_size: int = 4,
     ) -> None:
         """Initialize the Retriever.
 
@@ -261,10 +263,13 @@ class Retriever:
             The pooler instance to use for pooling embeddings.
         faiss_index : FaissIndex
             The FAISS index instance to use for searching.
+        batch_size : int
+            The batch size to use for encoding queries, by default 4.
         """
         self.encoder = encoder
         self.pooler = pooler
         self.faiss_index = faiss_index
+        self.batch_size = batch_size
 
     def search(
         self,
@@ -323,8 +328,46 @@ class Retriever:
 
         return results, query_embedding
 
-    @torch.no_grad()
     def get_pooled_embeddings(self, query: str | list[str]) -> np.ndarray:
+        """Get the pooled embeddings for the queries.
+
+        Parameters
+        ----------
+        query : str | list[str]
+            The single query or list of queries.
+
+        Returns
+        -------
+        np.ndarray
+            The embeddings of the queries
+            (shape: [num_queries, embedding_size])
+        """
+        # Convert the query to a list if it is a single string
+        if isinstance(query, str):
+            query = [query]
+
+        # Sort the data by length
+        indices = sorted(range(len(query)), key=lambda i: len(query[i]))
+        sorted_query = [query[i] for i in indices]
+
+        # Batch the queries
+        query_batches = batch_data(sorted_query, chunk_size=self.batch_size)
+
+        # Get the pooled embeddings for the queries
+        pool_embeds = []
+        for batch in query_batches:
+            pool_embeds.append(self._get_pooled_embeddings(batch))
+
+        # Combine the pooled embeddings
+        pool_embeds = np.concatenate(pool_embeds, axis=0)
+
+        # Reorder the embeddings to match the original order
+        pool_embeds = pool_embeds[np.argsort(indices)]
+
+        return pool_embeds
+
+    @torch.no_grad()
+    def _get_pooled_embeddings(self, query: str | list[str]) -> np.ndarray:
         """Get the embeddings for the queries.
 
         Parameters

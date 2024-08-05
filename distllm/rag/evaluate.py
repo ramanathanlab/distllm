@@ -35,6 +35,10 @@ class RetrieverConfig(BaseConfig):
         ...,
         description='Settings for the pooler',
     )
+    batch_size: int = Field(
+        4,
+        description='Batch size for the embedder model',
+    )
 
     def get_retriever(self) -> Retriever:
         """Get the retriever."""
@@ -46,6 +50,7 @@ class RetrieverConfig(BaseConfig):
             encoder=encoder,
             pooler=pooler,
             faiss_index=faiss_index,
+            batch_size=self.batch_size,
         )
 
         return retriever

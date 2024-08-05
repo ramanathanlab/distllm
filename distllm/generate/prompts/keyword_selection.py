@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Literal
+from typing import Union
 
 from distllm.utils import BaseConfig
 
@@ -12,71 +14,38 @@ class KeywordSelectionPromptTemplateConfig(BaseConfig):
 
     name: Literal['keyword_selection'] = 'keyword_selection'  # type: ignore[assignment]
 
+    keywords: Union[Path, list[str]]  # noqa: UP007
+    """List of keywords to select from.
+      If path, requires newline separated keywords."""
+
 
 class KeywordSelectionPromptTemplate:
     """Keyword selection prompt template for selecting relevant keywords."""
 
-    # TODO: Read the keywords from a file that is specified in the config
-    keywords_list: list[str] = [  # noqa: RUF012
-        'Radiosensitivity',
-        'Radioprotection',
-        'Radiobiology',
-        'DNA damage',
-        'Low-dose radiation',
-        'Radiation therapy',
-        'Ionizing radiation',
-        'Non-ionizing radiation',
-        'Radiation exposure',
-        'Radiation effects',
-        'Cellular response',
-        'Oncology',
-        'Carcinogenesis',
-        'Mutation',
-        'Cancer therapy',
-        'Radiation oncology',
-        'Dosimetry',
-        'Health physics',
-        'Radiation protection',
-        'Radiation poisoning',
-        'Radiation sickness',
-        'Chronic exposure',
-        'Acute exposure',
-        'Stochastic effects',
-        'Deterministic effects',
-        'Linear no-threshold model',
-        'Threshold dose',
-        'Epidemiology',
-        'Risk assessment',
-        'Bioinformatics',
-        'Genomics',
-        'Proteomics',
-        'Cell cycle',
-        'Apoptosis',
-        'Repair mechanisms',
-        'Oxidative stress',
-        'Free radicals',
-        'Immune response',
-        'Inflammation',
-        'Radiation dermatitis',
-    ]
-
-    # TODO: Update prompt to sample keywords for full documents
     template: str = (
-        'You are a perfect scientist in the domain of radiation-based medicine and biology.\n'  # noqa: E501
-        'You are also highly capable and well-read in all adjacent scientific domains.\n'  # noqa: E501
+        'You are a perfect scientist in the domain of radiation-based medicine'
+        ' and biology.\n'
+        'You are also highly capable and well-read in all adjacent scientific '
+        'domains.\n'
         'Given a list of keywords of the domain and a paragraph,\n'
-        'You are tasked with selecting the 3 keywords that are most relevant for the given paragraph.\n'  # noqa: E501
+        'You are tasked with selecting the 3 keywords that are most relevant '
+        'for the given paragraph.\n'
         'Order the 3 keywords by relevance in ascending order.\n'
-        'The paragraph:\n\n{paragraph}\n\n----\n\n'
+        'The document:\n\n{document}\n\n----\n\n'
         'List of keywords: {keywords_list}\n\n'
         'Write an answer based on the context.\n'
-        'If all keywords in the list are equally irrelevant, return the str `None of the above` 3 times.\n'  # noqa: E501
+        'If all keywords in the list are equally irrelevant, return the str '
+        '`None of the above` 3 times.\n'
         'Answer: '
     )
 
     def __init__(self, config: KeywordSelectionPromptTemplateConfig) -> None:
         """Initialize the KeywordSelectionPromptTemplate."""
         self.config = config
+        if isinstance(self.config.keywords, Path):
+            self.keywords_list = self.config.keywords.read_text().splitlines()
+        else:
+            self.keywords_list = self.config.keywords
 
     def preprocess(
         self,
@@ -108,7 +77,7 @@ class KeywordSelectionPromptTemplate:
         return [
             self.template.format(
                 keywords_list=self.keywords_list,
-                paragraph=paper,
+                document=paper,
             )
             for paper in text
         ]
