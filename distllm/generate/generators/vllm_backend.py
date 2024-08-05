@@ -8,7 +8,7 @@ from distllm.utils import BaseConfig
 
 
 class VLLMGeneratorConfig(BaseConfig):
-    """Configuration for the LLMGenerator."""
+    """Configuration for the VLLMGenerator."""
 
     name: Literal['vllm'] = 'vllm'  # type: ignore[assignment]
     # The name of the vllm LLM model, see
@@ -26,18 +26,20 @@ class VLLMGeneratorConfig(BaseConfig):
     max_tokens: int = 2000
     # Whether to use beam search
     use_beam_search: bool = False
+    # The number of GPUs to use
+    tensor_parallel_size: int = 1
 
 
 class VLLMGenerator:
     """Language model generator using vllm backend."""
 
     def __init__(self, config: VLLMGeneratorConfig) -> None:
-        """Initialize the LLMGenerator.
+        """Initialize the VLLMGenerator.
 
         Parameters
         ----------
         config : vLLMGeneratorConfig
-            The configuration for the LLMGenerator.
+            The configuration for the VLLMGenerator.
         """
         from vllm import LLM
         from vllm import SamplingParams
@@ -62,6 +64,7 @@ class VLLMGenerator:
             model=config.llm_name,
             trust_remote_code=config.trust_remote_code,
             dtype='bfloat16',
+            tensor_parallel_size=config.tensor_parallel_size,
         )
 
     def generate(self, prompts: str | list[str]) -> list[str]:

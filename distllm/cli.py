@@ -182,7 +182,7 @@ def embed(  # noqa: PLR0913
     # Embed and save the files
     for data_file in tqdm(data_files):
         embedding_worker(
-            file=data_file,
+            input_path=data_file,
             output_dir=output_path,
             dataset_kwargs=dataset_kwargs,
             encoder_kwargs=encoder_kwargs,
@@ -222,8 +222,8 @@ def merge(
         help='The dataset directory to save the merged datasets to.',
     ),
 ) -> None:
-    """Merge datasets from multiple directories output by `embed` command."""
-    from distllm.embed import get_writer
+    """Merge datasets from multiple directories output by `generate`."""
+    from distllm.generate import get_writer
 
     # The writer kwargs
     writer_kwargs: dict[str, Any] = {
@@ -281,19 +281,12 @@ def generate(  # noqa: PLR0913
         help='The name of the writer to use for saving datasets '
         '[huggingface].',
     ),
-    num_proc: int = typer.Option(
-        None,
-        '--num_proc',
-        '-np',
-        help='The number of processes to use for merging the datasets. '
-        'Only works with huggingface writer.',
-    ),
     generator_name: str = typer.Option(
         'vllm',
         '--generator_name',
         '-gn',
         help='The name of the generator to use for generating the text '
-        '[vllm].',
+        '[vllm, huggingface].',
     ),
     llm_name: str = typer.Option(
         'mistralai/Mistral-7B-Instruct-v0.2',
@@ -333,6 +326,19 @@ def generate(  # noqa: PLR0913
         '-bs',
         help='Whether to use beam search.',
     ),
+    batch_size: int = typer.Option(
+        1,
+        '--batch_size',
+        '-b',
+        help='The batch size to use for generating the text'
+        ' (for huggingface).',
+    ),
+    quantization: bool = typer.Option(
+        False,
+        '--quantization',
+        '-q',
+        help='Quantize the model for faster inference.',
+    ),
 ) -> None:
     """Merge datasets from multiple directories output by `embed` command."""
     from distllm.distributed_generation import generate_worker
@@ -355,27 +361,37 @@ def generate(  # noqa: PLR0913
         'name': writer_name,
     }
 
-    # If the writer is huggingface, set the number of processes
-    if writer_name == 'huggingface':
-        writer_kwargs['num_proc'] = num_proc
-
     # The generator kwargs
     generator_kwargs: dict[str, Any] = {
         # The name of the generator to use
         'name': generator_name,
-        # The name of the VLLM model to use
-        'llm_name': llm_name,
-        # Temperature for sampling
-        'temperature': temperature,
-        # Min p for sampling
-        'min_p': min_p,
-        # Top p for sampling (off by default)
-        'top_p': top_p,
-        # Max tokens to generate
-        'max_tokens': max_tokens,
-        # Whether to use beam search
-        'use_beam_search': use_beam_search,
     }
+
+    # vllm backend specific kwargs
+    if generator_name == 'vllm':
+        # The name of the VLLM model to use
+        generator_kwargs['llm_name'] = llm_name
+        # Temperature for sampling
+        generator_kwargs['temperature'] = temperature
+        # Min p for sampling
+        generator_kwargs['min_p'] = min_p
+        # Top p for sampling (off by default)
+        generator_kwargs['top_p'] = top_p
+        # Max tokens to generate
+        generator_kwargs['max_tokens'] = max_tokens
+        # Whether to use beam search
+        generator_kwargs['use_beam_search'] = use_beam_search
+
+    # huggingface backend specific kwargs
+    elif generator_name == 'huggingface':
+        # The name of the HuggingFace model to use
+        generator_kwargs['pretrained_model_name_or_path'] = llm_name
+        # Top p for sampling
+        generator_kwargs['top_p'] = top_p
+        # The batch size to use for generating the text
+        generator_kwargs['batch_size'] = batch_size
+        # Use quantization
+        generator_kwargs['quantization'] = quantization
 
     # Get the dataset directories
     input_paths = list(input_dir.glob('*'))
@@ -388,6 +404,72 @@ def generate(  # noqa: PLR0913
             reader_kwargs=reader_kwargs,
             writer_kwargs=writer_kwargs,
             generator_kwargs=generator_kwargs,
+        )
+
+
+@app.command()
+def tokenize(  # noqa: PLR0913
+    input_dir: Path = typer.Option(  # noqa: B008
+        ...,
+        '--input_dir',
+        '-i',
+        help='The directory containing the input sub-files/directories '
+        'containing inputs for tokenization (will glob * this directory).',
+    ),
+    output_dir: Path = typer.Option(  # noqa: B008
+        ...,
+        '--output_dir',
+        '-o',
+        help='The directory to save the tokenized text to.',
+    ),
+    text_field: str = typer.Option(
+        'text',
+        '--text_field',
+        '-tf',
+        help='The name of the text field in the jsonl file.',
+    ),
+    tokenizer_name: str = typer.Option(
+        'meta-llama/Llama-2-70b-chat-hf',
+        '--tokenizer_name',
+        '-tn',
+        help='The name of the tokenizer to use.',
+    ),
+    dotenv_path: Path = typer.Option(  # noqa: B008
+        Path('~/.env'),
+        '--dotenv_path',
+        '-dp',
+        help='Path to the .env file with HF_TOKEN for huggingface hub.',
+    ),
+    save_labels: bool = typer.Option(
+        False,
+        '--save_labels',
+        '-sl',
+        help='Whether to store a separate labels field in the dataset.',
+    ),
+) -> None:
+    """Tokenize a directory of jsonl files and save the datasets to disk."""
+    from distllm.distributed_tokenization import tokenizer_worker
+
+    # The tokenizer kwargs
+    tokenizer_kwargs: dict[str, Any] = {
+        # The name of the text field in the jsonl file
+        'text_field': text_field,
+        # The name of the tokenizer to use
+        'tokenizer_name': tokenizer_name,
+        # Path to the .env file
+        'dotenv_path': dotenv_path,
+        # Whether to save labels
+        'save_labels': save_labels,
+    }
+
+    # Get the dataset directories
+    input_paths = list(input_dir.glob('*'))
+
+    for input_path in tqdm(input_paths):
+        tokenizer_worker(
+            input_path=input_path,
+            output_dir=output_dir,
+            tokenizer_kwargs=tokenizer_kwargs,
         )
 
 

@@ -6,6 +6,8 @@ from typing import Literal
 
 import numpy as np
 import torch
+import torch.nn.functional as F  # noqa: N812
+from pydantic import Field
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -20,6 +22,7 @@ def compute_embeddings(
     dataloader: DataLoader,
     encoder: Encoder,
     pooler: Pooler,
+    normalize: bool = False,
 ) -> np.ndarray:
     """Compute pooled hidden embeddings.
 
@@ -31,6 +34,8 @@ def compute_embeddings(
         The encoder to use for inference.
     pooler : Pooler
         The pooler to use for pooling the embeddings.
+    normalize : bool, optional
+        Whether to normalize the embeddings, by default False.
 
     Returns
     -------
@@ -59,6 +64,10 @@ def compute_embeddings(
         # Compute the pooled embeddings
         pooled_embeds = pooler.pool(embeddings, inputs.attention_mask)
 
+        # Normalize the embeddings
+        if normalize:
+            pooled_embeds = F.normalize(pooled_embeds, p=2, dim=-1)
+
         # Get the batch size
         batch_size = inputs.attention_mask.shape[0]
 
@@ -75,6 +84,10 @@ class FullSequenceEmbedderConfig(BaseConfig):
     """Configuration for the full sequence embedder."""
 
     name: Literal['full_sequence'] = 'full_sequence'  # type: ignore[assignment]
+    normalize_embeddings: bool = Field(
+        False,
+        description='Whether to return normalized the embeddings.',
+    )
 
 
 class FullSequenceEmbedder:
@@ -106,7 +119,12 @@ class FullSequenceEmbedder:
         EmbedderResult
             Dataclass with the embeddings, text, and optional metadata.
         """
-        embeddings = compute_embeddings(dataloader, encoder, pooler)
+        embeddings = compute_embeddings(
+            dataloader=dataloader,
+            encoder=encoder,
+            pooler=pooler,
+            normalize=self.config.normalize_embeddings,
+        )
 
         # Return the result
         return EmbedderResult(

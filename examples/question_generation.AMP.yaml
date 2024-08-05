@@ -1,0 +1,48 @@
+# Note: since it is a single input file (that we are bastardizing to run with this framework)
+# we can only run on one rank. This isn't a huge deal since its fairly small (~15min)
+# but this is inherently flawed for larger datasets.
+input_dir: /lus/eagle/projects/FoundEpidem/psetty/gb/data/uniprot_data/
+# An output directory to save the embeddings.
+output_dir: /lus/eagle/projects/FoundEpidem/hippekp/aglimmer/data/question_generation.AMP
+# A set of glob patterns to match the input files.
+glob_patterns: ['peptides_with_functions_cleaned.json']
+
+# Settings for the prompt.
+prompt_config:
+  name: amp_question
+
+# Settings for the reader.
+reader_config:
+  name: amp_json
+
+# Settings for the writer.
+writer_config:
+  name: amp_jsonl
+
+# Settings for the generator.
+generator_config:
+  name: vllm
+  llm_name: mistralai/Mistral-7B-Instruct-v0.2
+  top_p: 0.95
+
+# Locally on a compute node
+compute_config:
+  name: workstation
+  available_accelerators: 4
+
+# # Settings for the parsl compute backend.
+# compute_config:
+#   # The name of the compute platform to use
+#   name: polaris
+#   # The number of compute nodes to use
+#   num_nodes: 20
+#   # Make sure to update the path to your conda environment and HF cache
+#   worker_init: "module load conda/2023-10-04; conda activate distllm-vllm-v0.2.1.post1; export HF_HOME=/lus/eagle/projects/CVD-Mol-AI/braceal/.cache"
+#   # The scheduler options to use when submitting jobs
+#   scheduler_options: "#PBS -l filesystems=home:eagle:grand"
+#   # Make sure to change the account to the account you want to charge
+#   account: FoundEpidem
+#   # The HPC queue to submit to
+#   queue: demand
+#   # The amount of time to request for your job
+#   walltime: 06:00:00
