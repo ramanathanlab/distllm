@@ -12,7 +12,7 @@ from pydantic import Field
 from pydantic import field_validator
 
 from distllm.generate import LLMGeneratorConfigs
-from distllm.generate import PromptConfigs
+from distllm.generate import PromptTemplateConfigs
 from distllm.generate import ReaderConfigs
 from distllm.generate import WriterConfigs
 from distllm.parsl import ComputeConfigs
@@ -28,16 +28,20 @@ def generate_worker(  # noqa: PLR0913
     generator_kwargs: dict[str, Any],
 ) -> None:
     """Generate text for a file and save to the output directory."""
-    import time
     from uuid import uuid4
 
     from distllm.generate import get_generator
-    from distllm.generate import get_prompt
+    from distllm.generate import get_prompt_template
     from distllm.generate import get_reader
     from distllm.generate import get_writer
+    from distllm.timer import Timer
+
+    # Time the worker function
+    timer = Timer('finished-generation', input_path).start()
 
     # Initialize the generator
-    generator = get_generator(generator_kwargs, register=True)
+    with Timer('loaded-generator', input_path):
+        generator = get_generator(generator_kwargs, register=True)
 
     # Initialize the reader
     reader = get_reader(reader_kwargs)
@@ -46,38 +50,40 @@ def generate_worker(  # noqa: PLR0913
     writer = get_writer(writer_kwargs)
 
     # Initialize the prompt
-    prompt = get_prompt(prompt_kwargs)
-
-    start = time.time()
+    prompt = get_prompt_template(prompt_kwargs)
 
     # Read the text from the file
+    with Timer('loaded-dataset', input_path):
+        text, paths = reader.read(input_path)
     text, paths = reader.read(input_path)
 
     # Preprocess the text
-    prompts = prompt.preprocess(text)
-
-    # Time the generation
-    start = time.time()
+    with Timer('preprocessed-text', input_path):
+        prompts = prompt.preprocess(text)
 
     # Generate response for each text
-    responses = generator.generate(prompts)
-
-    print(f'Generated responses in {time.time() - start:.2f} seconds')
+    with Timer('generated-responses', input_path):
+        responses = generator.generate(prompts)
 
     # Postprocess the responses
-    results = prompt.postprocess(responses)
+    with Timer('postprocessed-responses', input_path):
+        results = prompt.postprocess(responses)
 
-    # Filter out any empty responses (e.g., empty strings)
-    text = [t for t, r in zip(text, results) if r]
-    paths = [p for p, r in zip(paths, results) if r]
-    results = [r for r in results if r]
+        # Filter out any empty responses (e.g., empty strings)
+        text = [t for t, r in zip(text, results) if r]
+        paths = [p for p, r in zip(paths, results) if r]
+        results = [r for r in results if r]
 
     # Create the output directory for the dataset
     dataset_dir = output_dir / f'{uuid4()}'
     dataset_dir.mkdir(parents=True, exist_ok=True)
 
     # Write the responses to disk
-    writer.write(dataset_dir, paths, text, results)
+    with Timer('wrote-responses', input_path):
+        writer.write(dataset_dir, paths, text, results)
+
+    # Stop the timer to log the worker time
+    timer.stop()
 
 
 class Config(BaseConfig):
@@ -90,7 +96,7 @@ class Config(BaseConfig):
     # A set of glob patterns to match the input files.
     glob_patterns: list[str] = Field(default=['*'])
     # Settings for the prompt.
-    prompt_config: PromptConfigs
+    prompt_config: PromptTemplateConfigs
     # Settings for the reader.
     reader_config: ReaderConfigs
     # Settings for the writer.
@@ -153,6 +159,9 @@ if __name__ == '__main__':
     for pattern in config.glob_patterns:
         input_paths.extend(list(config.input_dir.glob(pattern)))
 
+    # Log the input files to stdout
+    print(f'Found {len(input_paths)} input files.')
+
     # Set the parsl compute settings
     parsl_config = config.compute_config.get_config(
         config.output_dir / 'parsl',
@@ -160,4 +169,4 @@ if __name__ == '__main__':
 
     # Distribute the input files across processes
     with ParslPoolExecutor(parsl_config) as pool:
-        pool.map(worker_fn, input_paths)
+        list(pool.map(worker_fn, input_paths))

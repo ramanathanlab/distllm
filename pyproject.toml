@@ -21,12 +21,17 @@ dependencies = [
     "transformers==4.38.2",
     "datasets==2.18.0",
     "bitsandbytes",
-    "accelerate",
+    "langchain==0.1.15",
+    "langchain-anthropic==0.1.7",
+    "langchain-google-genai==1.0.1",
+    "accelerate==0.28.0",
     "parsl==2024.1.29",
     "pydantic==2.6.0",
     "typer[all]==0.9.0",
     "nltk==3.8.1",
+    "python-dotenv==1.0.1",
     "torch",
+    "peft==0.10.0",
 ]
 
 [project.urls]

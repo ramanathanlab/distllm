@@ -1,0 +1,41 @@
+# An input directory containing the files to embed.
+input_dir: /lus/eagle/projects/tpc/braceal/metric-rag/data/semantic_chunks/lit_covid_part1.nougat.pubmedbert/embeddings
+# An output directory to save the embeddings.
+output_dir: /lus/eagle/projects/tpc/braceal/metric-rag/data/question_samples/lit_covid_part1.nougat.pubmedbert
+# A set of glob patterns to match the input files.
+glob_patterns: ['*']
+
+# Settings for the prompt.
+prompt_config:
+  name: question_chunk
+
+# Settings for the reader.
+reader_config:
+  name: huggingface
+
+# Settings for the writer.
+writer_config:
+  name: huggingface
+
+# Settings for the generator.
+generator_config:
+  name: vllm
+  llm_name: mistralai/Mistral-7B-Instruct-v0.2
+  top_p: 0.95
+
+# Settings for the parsl compute backend.
+compute_config:
+  # The name of the compute platform to use
+  name: polaris
+  # The number of compute nodes to use
+  num_nodes: 200
+  # Make sure to update the path to your conda environment and HF cache
+  worker_init: "module load conda/2023-10-04; conda activate distllm-vllm-v0.2.1.post1; export HF_HOME=/lus/eagle/projects/CVD-Mol-AI/braceal/.cache"
+  # The scheduler options to use when submitting jobs
+  scheduler_options: "#PBS -l filesystems=home:eagle:grand"
+  # Make sure to change the account to the account you want to charge
+  account: FoundEpidem
+  # The HPC queue to submit to
+  queue: R1819640
+  # The amount of time to request for your job
+  walltime: 06:00:00
