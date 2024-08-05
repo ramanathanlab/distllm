@@ -17,7 +17,7 @@ class AMPJsonReaderConfig(BaseConfig):
 
 
 class AMPJsonReader:
-    """Reader for the AMP json dataset"""
+    """Reader for the AMP json dataset."""
 
     def __init__(self, config: AMPJsonReaderConfig) -> None:
         """Initialize the reader with the configuration."""

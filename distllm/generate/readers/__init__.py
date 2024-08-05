@@ -15,7 +15,9 @@ from distllm.generate.readers.jsonl import JsonlReaderConfig
 from distllm.utils import BaseConfig
 
 ReaderConfigs = Union[
-    HuggingFaceReaderConfig, JsonlReaderConfig, AMPJsonReaderConfig
+    HuggingFaceReaderConfig,
+    JsonlReaderConfig,
+    AMPJsonReaderConfig,
 ]
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[Reader]]] = {
