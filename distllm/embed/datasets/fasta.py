@@ -98,7 +98,7 @@ class FastaDataset:
         sequences = read_fasta(data_file)
 
         # Get the sequence data
-        data = [' '.join(seq.sequence.upper()) for seq in sequences]
+        data = [seq.sequence.upper() for seq in sequences]
 
         # Get the metadata
         metadata = [
