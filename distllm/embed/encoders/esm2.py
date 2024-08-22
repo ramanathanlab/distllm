@@ -43,6 +43,9 @@ class Esm2Encoder:
             config.pretrained_model_name_or_path,
         )
 
+        # Set the model max length for proper truncation
+        tokenizer.model_max_length = model.config.max_position_embeddings
+
         # Convert the model to half precision
         if config.half_precision:
             model.half()

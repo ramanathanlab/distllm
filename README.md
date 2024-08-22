@@ -21,6 +21,7 @@ conda activate distllm-vllm-v0.2.1.post1
 pip install vllm==v0.2.1.post1
 git clone git@github.com:ramanathanlab/distllm.git
 cd distllm
+pip install -U pip setuptools wheel
 pip install -e .
 python -m nltk.downloader punkt
 ```

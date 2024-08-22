@@ -95,8 +95,14 @@ class FastaDataset:
             The dataloader instance.
         """
         # Read the sequences from the fasta file
-        data = [
-            ' '.join(seq.sequence.upper()) for seq in read_fasta(data_file)
+        sequences = read_fasta(data_file)
+
+        # Get the sequence data
+        data = [seq.sequence.upper() for seq in sequences]
+
+        # Get the metadata
+        metadata = [
+            {'tags': seq.tag, 'paths': str(data_file)} for seq in sequences
         ]
 
         # Instantiate the dataloader
@@ -104,6 +110,6 @@ class FastaDataset:
             pin_memory=self.config.pin_memory,
             batch_size=self.config.batch_size,
             num_workers=self.config.num_data_workers,
-            dataset=InMemoryDataset(data),
+            dataset=InMemoryDataset(data, metadata),
             collate_fn=DataCollator(encoder.tokenizer),
         )
