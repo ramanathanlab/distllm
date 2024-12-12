@@ -405,6 +405,7 @@ class Retriever:
         # Convert the query embeddings to numpy float32 for FAISS
         pool_embeds = pool_embeds.cpu().numpy().astype(np.float32)
 
+        # TODO: Consider moving this into faiss index internals
         # Transform the embeddings according to the faiss strategy
         pool_embeds = self.faiss_index.transform(pool_embeds)
 
