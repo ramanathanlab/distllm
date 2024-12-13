@@ -2,6 +2,7 @@
 Distributed Inference for Large Language Models.
 - Create embeddings for large datasets at scale.
 - Generate text using language models at scale.
+- Semantic similarity search using Faiss.
 
 ## Installation
 
