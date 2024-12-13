@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from typing import Literal
 
 import torch
@@ -23,7 +24,9 @@ class Esm2EncoderConfig(BaseConfig):
     # Set the model to evaluation mode
     eval_mode: bool = True
     # Compile the model for faster inference
-    compile_model: bool = True
+    compile_model: bool = False
+    # Use faesm implementation (faster)
+    faesm: bool = False
 
 
 class Esm2Encoder:
@@ -32,8 +35,20 @@ class Esm2Encoder:
     def __init__(self, config: Esm2EncoderConfig):
         """Initialize the encoder."""
         import torch
-        from transformers import EsmForMaskedLM
         from transformers import EsmTokenizer
+
+        # Check if faesm is enabled
+        if config.faesm:
+            try:
+                from faesm.esm import FAEsmForMaskedLM as EsmForMaskedLM
+
+                print('Using faesm implementation.')
+            except ImportError:
+                warnings.warn(
+                    'faesm is not installed. Falling back to transformers.',
+                    stacklevel=2,
+                )
+                from transformers import EsmForMaskedLM
 
         # Load model and tokenizer
         model = EsmForMaskedLM.from_pretrained(
