@@ -10,6 +10,8 @@ from distllm.embed.encoders.auto import AutoEncoderConfig
 from distllm.embed.encoders.base import Encoder
 from distllm.embed.encoders.esm2 import Esm2Encoder
 from distllm.embed.encoders.esm2 import Esm2EncoderConfig
+from distllm.embed.encoders.esmc import EsmCambrianEncoder
+from distllm.embed.encoders.esmc import EsmCambrianEncoderConfig
 from distllm.registry import registry
 from distllm.utils import BaseConfig
 
@@ -17,6 +19,7 @@ EncoderConfigs = Union[Esm2EncoderConfig, AutoEncoderConfig]
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[Encoder]]] = {
     'esm2': (Esm2EncoderConfig, Esm2Encoder),
+    'esmc': (EsmCambrianEncoderConfig, EsmCambrianEncoder),
     'auto': (AutoEncoderConfig, AutoEncoder),
 }
 
@@ -47,6 +50,7 @@ def get_encoder(
 
     Currently supports the following strategies:
     - esm2
+    - esmc
     - auto
 
     Parameters
