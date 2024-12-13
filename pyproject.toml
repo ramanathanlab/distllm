@@ -20,7 +20,7 @@ classifiers = [
 dependencies = [
     "transformers>=4.38.2",
     "datasets>=2.18.0",
-    "bitsandbytes",
+    "bitsandbytes>=0.45.0",
     "langchain>=0.2.5",
     "langchain-anthropic>=0.1.7",
     "langchain-google-genai>=1.0.1",
@@ -30,9 +30,9 @@ dependencies = [
     "typer[all]>=0.9.0",
     "nltk>=3.9",
     "python-dotenv>=1.0.1",
-    "torch",
     "peft>=0.10.0",
     "sentence-transformers>=3.3.1",
+    "torch",
 ]
 
 [project.urls]
