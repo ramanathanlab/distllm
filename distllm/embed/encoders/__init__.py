@@ -15,7 +15,11 @@ from distllm.embed.encoders.esmc import EsmCambrianEncoderConfig
 from distllm.registry import registry
 from distllm.utils import BaseConfig
 
-EncoderConfigs = Union[Esm2EncoderConfig, AutoEncoderConfig]
+EncoderConfigs = Union[
+    Esm2EncoderConfig,
+    EsmCambrianEncoderConfig,
+    AutoEncoderConfig,
+]
 
 STRATEGIES: dict[str, tuple[type[BaseConfig], type[Encoder]]] = {
     'esm2': (Esm2EncoderConfig, Esm2Encoder),
