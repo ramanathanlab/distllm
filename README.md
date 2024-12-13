@@ -5,23 +5,15 @@ Distributed Inference for Large Language Models.
 
 ## Installation
 
-To install the package, run the following command:
+To install the package on Polaris@ALCF as of 12/12/2024, run the following command:
 ```bash
 git clone git@github.com:ramanathanlab/distllm.git
 cd distllm
-pip install -e .
-python -m nltk.downloader punkt
-```
-
-To install the package on Polaris, run the following command:
-```bash
-module load conda/2023-10-04
-conda create -n distllm-vllm-v0.2.1.post1 python=3.9
-conda activate distllm-vllm-v0.2.1.post1
-pip install vllm==v0.2.1.post1
-git clone git@github.com:ramanathanlab/distllm.git
-cd distllm
-pip install -U pip setuptools wheel
+module use /soft/modulefiles; module load conda
+conda create -n distllm python=3.12 -y
+conda activate distllm-12-12
+pip install faiss-gpu-cu12
+pip install vllm
 pip install -e .
 python -m nltk.downloader punkt
 ```
