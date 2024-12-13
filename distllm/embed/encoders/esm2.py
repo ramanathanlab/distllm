@@ -118,7 +118,10 @@ class Esm2Encoder:
             (shape: [num_sequences, sequence_length, embedding_size])
         """
         # Get the model outputs with a forward pass
-        outputs = self.model(**batch_encoding, output_hidden_states=True)
+        outputs = self.model(
+            **batch_encoding,
+            output_hidden_states=not self.faesm,
+        )
 
         # Return the last hidden state
         if self.faesm:
