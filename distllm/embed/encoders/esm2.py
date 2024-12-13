@@ -78,6 +78,7 @@ class Esm2Encoder:
             model = torch.compile(model, fullgraph=True)
 
         # Set persistent attributes
+        self.faesm = config.faesm
         self.model = model
         self._tokenizer = tokenizer
 
@@ -119,5 +120,8 @@ class Esm2Encoder:
         # Get the model outputs with a forward pass
         outputs = self.model(**batch_encoding, output_hidden_states=True)
 
-        # Get the last hidden states
+        # Return the last hidden state
+        if self.faesm:
+            return outputs['last_hidden_state']
+
         return outputs.hidden_states[-1]
