@@ -7,53 +7,12 @@ from typing import Optional
 
 from pydantic import Field
 
-from distllm.embed import EncoderConfigs
-from distllm.embed import get_encoder
-from distllm.embed import get_pooler
-from distllm.embed import PoolerConfigs
 from distllm.generate import get_generator
 from distllm.generate import LLMGeneratorConfigs
 from distllm.rag.response_synthesizer import RagGenerator
-from distllm.rag.search import FaissIndex
-from distllm.rag.search import Retriever
+from distllm.rag.search import RetrieverConfig
 from distllm.rag.tasks import get_task
 from distllm.utils import BaseConfig
-
-
-class RetrieverConfig(BaseConfig):
-    """Configuration for the retriever."""
-
-    vector_database_dir: Path = Field(
-        ...,
-        description='Directory where the faiss dataset is stored',
-    )
-    encoder_config: EncoderConfigs = Field(
-        ...,
-        description='Settings for the encoder',
-    )
-    pooler_config: PoolerConfigs = Field(
-        ...,
-        description='Settings for the pooler',
-    )
-    batch_size: int = Field(
-        4,
-        description='Batch size for the embedder model',
-    )
-
-    def get_retriever(self) -> Retriever:
-        """Get the retriever."""
-        encoder = get_encoder(self.encoder_config.model_dump())
-        pooler = get_pooler(self.pooler_config.model_dump())
-        faiss_index = FaissIndex(self.vector_database_dir)
-
-        retriever = Retriever(
-            encoder=encoder,
-            pooler=pooler,
-            faiss_index=faiss_index,
-            batch_size=self.batch_size,
-        )
-
-        return retriever
 
 
 class RetrievalAugmentedGenerationConfig(BaseConfig):

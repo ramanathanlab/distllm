@@ -473,6 +473,47 @@ def tokenize(  # noqa: PLR0913
         )
 
 
+@app.command()
+def chunk_fasta_file(
+    input_file: Path = typer.Option(  # noqa: B008
+        ...,
+        '--input_file',
+        '-i',
+        help='The fasta file to chunk.',
+    ),
+    output_dir: Path = typer.Option(  # noqa: B008
+        ...,
+        '--output_dir',
+        '-o',
+        help='The directory to save the chunked fasta files to.',
+    ),
+    num_chunks: int = typer.Option(
+        ...,
+        '--chunk_size',
+        '-c',
+        help='The number of smaller files to chunk the fasta file into.',
+    ),
+) -> None:
+    """Chunk a fasta file into smaller fasta files."""
+    from distllm.embed.datasets.fasta import read_fasta
+    from distllm.embed.datasets.fasta import write_fasta
+    from distllm.utils import batch_data
+
+    # Read the fasta file
+    sequences = read_fasta(input_file)
+
+    # Chunk the sequences
+    chunks = batch_data(sequences, len(sequences) // num_chunks)
+
+    # Make the output directory
+    output_dir.mkdir(parents=True)
+
+    # Save the chunked fasta files
+    for i, chunk in tqdm(enumerate(chunks), desc='Writing chunks'):
+        filename = f'{input_file.stem}_{i:04}{input_file.suffix}'
+        write_fasta(chunk, output_dir / filename)
+
+
 def main() -> None:
     """Entry point for CLI."""
     app()
