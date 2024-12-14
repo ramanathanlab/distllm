@@ -97,7 +97,7 @@ class EsmCambrianEncoder:
         if config.pretrained_model_name_or_path == 'esmc_600m':
             embedding_size = 1152
         else:
-            assert config.pretrained_model_name_or_path == 'esmc_330m'
+            assert config.pretrained_model_name_or_path == 'esmc_300m'
             embedding_size = 960
 
         # Set persistent attributes
