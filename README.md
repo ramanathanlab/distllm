@@ -21,7 +21,12 @@ python -m nltk.downloader punkt
 
 
 ### Protein Embedding Installation
-For computing protein embeddings, you can install the following package:
+For ESMC, you can install the following package:
+```bash
+pip install esm
+```
+
+For ESM2, you can install the following package:
 ```bash
 pip install flash-attn --no-build-isolation
 pip install faesm[flash_attn]

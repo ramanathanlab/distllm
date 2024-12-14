@@ -20,23 +20,90 @@ class EsmCambrianEncoderConfig(BaseConfig):
     pretrained_model_name_or_path: str = 'esmc_300m'
 
 
+# class EsmCambrianEncoder:
+#     """Encoder for the ESM-Cambrian model."""
+
+#     def __init__(self, config: EsmCambrianEncoderConfig):
+#         """Initialize the encoder."""
+#         from faesm.esmc import ESMC
+
+#         # Load model and auto set to device and dtype
+#         self.model = ESMC.from_pretrained(
+#             config.pretrained_model_name_or_path,
+#             use_flash_attn=True,
+#         )
+
+#     @property
+#     def dtype(self) -> torch.dtype:
+#         """Get the data type of the encoder."""
+#         return self.model.dtype
+
+#     @property
+#     def device(self) -> torch.device:
+#         """Get the device of the encoder."""
+#         return self.model.device
+
+#     @property
+#     def embedding_size(self) -> int:
+#         """Get the embedding size of the encoder."""
+#         return self.model.config.hidden_size
+
+#     @property
+#     def tokenizer(self) -> PreTrainedTokenizer:
+#         """Get the tokenizer of the encoder."""
+#         return self.model.tokenizer
+
+#     def encode(self, batch_encoding: BatchEncoding) -> torch.Tensor:
+#         """Encode the sequence.
+
+#         Parameters
+#         ----------
+#         batch_encoding : BatchEncoding
+#             The batch encoding of the sequence (containing the input_ids,
+#             attention_mask, and token_type_ids).
+
+#         Returns
+#         -------
+#         torch.Tensor
+#             The embeddings of the sequence extracted from the last hidden
+# state
+#             (shape: [num_sequences, sequence_length, embedding_size])
+#         """
+#         # Get the model outputs with a forward pass
+#         outputs = self.model(**batch_encoding)
+
+#         # Return the last hidden state
+#         return outputs.embeddings
+
+
 class EsmCambrianEncoder:
     """Encoder for the ESM-Cambrian model."""
 
     def __init__(self, config: EsmCambrianEncoderConfig):
         """Initialize the encoder."""
-        from faesm.esmc import ESMC
+        from esm.models.esmc import ESMC
+        from esm.tokenization.sequence_tokenizer import EsmSequenceTokenizer
 
-        # Load model and auto set to device and dtype
-        self.model = ESMC.from_pretrained(
-            config.pretrained_model_name_or_path,
-            use_flash_attn=True,
-        )
+        # Loads model and auto set device to cuda and dtype to bfloat16
+        model = ESMC.from_pretrained(config.pretrained_model_name_or_path)
+
+        # Set the model to evaluation mode
+        model.eval()
+
+        # Load the tokenizer
+        tokenizer = EsmSequenceTokenizer()
+
+        # Set persistent attributes
+        self.model = model
+        self._tokenizer = tokenizer
 
     @property
     def dtype(self) -> torch.dtype:
         """Get the data type of the encoder."""
-        return self.model.dtype
+        # NOTE: The model is set to bfloat16 in the ESMC class
+        # but we cast to float16 in the encode function to avoid
+        # issues with casting in the calling code
+        return torch.float16
 
     @property
     def device(self) -> torch.device:
@@ -51,7 +118,7 @@ class EsmCambrianEncoder:
     @property
     def tokenizer(self) -> PreTrainedTokenizer:
         """Get the tokenizer of the encoder."""
-        return self.model.tokenizer
+        return self._tokenizer
 
     def encode(self, batch_encoding: BatchEncoding) -> torch.Tensor:
         """Encode the sequence.
@@ -69,7 +136,7 @@ class EsmCambrianEncoder:
             (shape: [num_sequences, sequence_length, embedding_size])
         """
         # Get the model outputs with a forward pass
-        outputs = self.model(**batch_encoding)
+        outputs = self.model(sequence_tokens=batch_encoding['input_ids'])
 
-        # Return the last hidden state
-        return outputs.embeddings
+        # Return the last hidden state (cast from bfloat16 to float16)
+        return outputs.embeddings.to(torch.float16)
