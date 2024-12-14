@@ -93,9 +93,17 @@ class EsmCambrianEncoder:
         # Load the tokenizer
         tokenizer = EsmSequenceTokenizer()
 
+        # Get the embedding size
+        if config.pretrained_model_name_or_path == 'esmc_600m':
+            embedding_size = 1152
+        else:
+            assert config.pretrained_model_name_or_path == 'esmc_330m'
+            embedding_size = 960
+
         # Set persistent attributes
         self.model = model
         self._tokenizer = tokenizer
+        self._embedding_size = embedding_size
 
     @property
     def dtype(self) -> torch.dtype:
@@ -113,7 +121,7 @@ class EsmCambrianEncoder:
     @property
     def embedding_size(self) -> int:
         """Get the embedding size of the encoder."""
-        return self.model.config.hidden_size
+        return self._embedding_size
 
     @property
     def tokenizer(self) -> PreTrainedTokenizer:
