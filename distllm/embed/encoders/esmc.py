@@ -77,7 +77,11 @@ class EsmCambrianEncoderConfig(BaseConfig):
 
 
 class EsmCambrianEncoder:
-    """Encoder for the ESM-Cambrian model."""
+    """Encoder for the ESM-Cambrian model.
+
+    For more information on the ESM-Cambrian model, see:
+    https://www.evolutionaryscale.ai/blog/esm-cambrian
+    """
 
     def __init__(self, config: EsmCambrianEncoderConfig):
         """Initialize the encoder."""
@@ -92,6 +96,9 @@ class EsmCambrianEncoder:
 
         # Load the tokenizer
         tokenizer = EsmSequenceTokenizer()
+
+        # Set the model max length for proper truncation
+        tokenizer.model_max_length = 2048
 
         # Get the embedding size
         if config.pretrained_model_name_or_path == 'esmc_600m':
