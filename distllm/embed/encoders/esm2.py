@@ -49,6 +49,8 @@ class Esm2Encoder:
                     stacklevel=2,
                 )
                 from transformers import EsmForMaskedLM
+        else:
+            from transformers import EsmForMaskedLM
 
         # Load model and tokenizer
         model = EsmForMaskedLM.from_pretrained(

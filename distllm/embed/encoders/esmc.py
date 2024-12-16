@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from typing import Literal
 
 import torch
@@ -18,62 +19,8 @@ class EsmCambrianEncoderConfig(BaseConfig):
     name: Literal['esmc'] = 'esmc'  # type: ignore[assignment]
     # The model id, options [esmc_330m, esmc_600m]
     pretrained_model_name_or_path: str = 'esmc_300m'
-
-
-# class EsmCambrianEncoder:
-#     """Encoder for the ESM-Cambrian model."""
-
-#     def __init__(self, config: EsmCambrianEncoderConfig):
-#         """Initialize the encoder."""
-#         from faesm.esmc import ESMC
-
-#         # Load model and auto set to device and dtype
-#         self.model = ESMC.from_pretrained(
-#             config.pretrained_model_name_or_path,
-#             use_flash_attn=True,
-#         )
-
-#     @property
-#     def dtype(self) -> torch.dtype:
-#         """Get the data type of the encoder."""
-#         return self.model.dtype
-
-#     @property
-#     def device(self) -> torch.device:
-#         """Get the device of the encoder."""
-#         return self.model.device
-
-#     @property
-#     def embedding_size(self) -> int:
-#         """Get the embedding size of the encoder."""
-#         return self.model.config.hidden_size
-
-#     @property
-#     def tokenizer(self) -> PreTrainedTokenizer:
-#         """Get the tokenizer of the encoder."""
-#         return self.model.tokenizer
-
-#     def encode(self, batch_encoding: BatchEncoding) -> torch.Tensor:
-#         """Encode the sequence.
-
-#         Parameters
-#         ----------
-#         batch_encoding : BatchEncoding
-#             The batch encoding of the sequence (containing the input_ids,
-#             attention_mask, and token_type_ids).
-
-#         Returns
-#         -------
-#         torch.Tensor
-#             The embeddings of the sequence extracted from the last hidden
-# state
-#             (shape: [num_sequences, sequence_length, embedding_size])
-#         """
-#         # Get the model outputs with a forward pass
-#         outputs = self.model(**batch_encoding)
-
-#         # Return the last hidden state
-#         return outputs.embeddings
+    # Use faesm implementation (faster)
+    faesm: bool = False
 
 
 class EsmCambrianEncoder:
@@ -85,8 +32,22 @@ class EsmCambrianEncoder:
 
     def __init__(self, config: EsmCambrianEncoderConfig):
         """Initialize the encoder."""
-        from esm.models.esmc import ESMC
-        from esm.tokenization.sequence_tokenizer import EsmSequenceTokenizer
+        from esm.tokenization import EsmSequenceTokenizer
+
+        # Check if faesm is enabled
+        if config.faesm:
+            try:
+                from faesm.esmc import ESMC
+
+                print('Using faesm implementation.')
+            except ImportError:
+                warnings.warn(
+                    'faesm is not installed. Falling back to transformers.',
+                    stacklevel=2,
+                )
+                from esm.models.esmc import ESMC
+        else:
+            from esm.models.esmc import ESMC
 
         # Loads model and auto set device to cuda and dtype to bfloat16
         model = ESMC.from_pretrained(config.pretrained_model_name_or_path)
