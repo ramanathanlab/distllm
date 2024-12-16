@@ -19,6 +19,23 @@ pip install -e .
 python -m nltk.downloader punkt
 ```
 
+
+### Protein Embedding Installation
+For ESMC, you can install the following package:
+```bash
+pip install esm
+```
+
+For ESM2, you can install the following package:
+```bash
+pip install flash-attn --no-build-isolation
+pip install faesm[flash_attn]
+```
+Or, if you want to forego flash attention and just use SDPA
+```bash
+pip install faesm
+```
+
 ## Usage
 To create embeddings at scale, run the following command:
 ```bash
