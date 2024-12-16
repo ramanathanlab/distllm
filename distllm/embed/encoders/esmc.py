@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import warnings
 from typing import Literal
 
 import torch
@@ -19,8 +18,6 @@ class EsmCambrianEncoderConfig(BaseConfig):
     name: Literal['esmc'] = 'esmc'  # type: ignore[assignment]
     # The model id, options [esmc_330m, esmc_600m]
     pretrained_model_name_or_path: str = 'esmc_300m'
-    # Use faesm implementation (faster)
-    faesm: bool = False
 
 
 class EsmCambrianEncoder:
@@ -32,22 +29,8 @@ class EsmCambrianEncoder:
 
     def __init__(self, config: EsmCambrianEncoderConfig):
         """Initialize the encoder."""
+        from esm.models.esmc import ESMC
         from esm.tokenization import EsmSequenceTokenizer
-
-        # Check if faesm is enabled
-        if config.faesm:
-            try:
-                from faesm.esmc import ESMC
-
-                print('Using faesm implementation.')
-            except ImportError:
-                warnings.warn(
-                    'faesm is not installed. Falling back to transformers.',
-                    stacklevel=2,
-                )
-                from esm.models.esmc import ESMC
-        else:
-            from esm.models.esmc import ESMC
 
         # Loads model and auto set device to cuda and dtype to bfloat16
         model = ESMC.from_pretrained(config.pretrained_model_name_or_path)
