@@ -140,11 +140,16 @@ if __name__ == '__main__':
 
     print(embeddings.shape)
 
-    for seq, idx in zip(sequence_data, result.total_indices):
+    for seq, idx, scores in zip(
+        sequence_data,
+        result.total_indices,
+        result.total_scores,
+    ):
         search_tags = retriever.get(idx, key='tags')
         print('Query sequence tag:', seq.tag)
         print('Query sequence:', seq.sequence)
         print('idx:', idx)
+        print('scores:', scores)
         print('tags:', search_tags)
         for tag in search_tags:
             print(
