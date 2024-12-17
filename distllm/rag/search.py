@@ -221,7 +221,7 @@ class FaissIndexV2:
             embeddings = np.concatenate(quantized_embeddings)
 
         print(
-            f'Creating {self.precision} FAISS index using'
+            f'Creating {self.precision} FAISS index using '
             f'{self.search_algorithm} search with embeddings '
             f'shape: {embeddings.shape}',
         )
