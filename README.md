@@ -19,7 +19,6 @@ pip install -e .
 python -m nltk.downloader punkt
 ```
 
-
 ### Protein Embedding Installation
 For ESMC, you can install the following package:
 ```bash
@@ -81,4 +80,15 @@ To test the code, run the following command:
 ```bash
 pre-commit run --all-files
 tox -e py310
+```
+To release a new version of distllm to PyPI:
+
+1. Merge the develop branch into the main branch with an updated version number in pyproject.toml.
+2. Make a new release on GitHub with the tag and name equal to the version number.
+3. Clone a fresh distllm repository.
+4. Run the following commands from the main branch:
+```bash
+rm -r dist
+python3 -m build
+twine upload dist/*
 ```
