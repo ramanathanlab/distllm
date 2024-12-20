@@ -8,6 +8,11 @@ Distributed Inference for Large Language Models.
 
 ## Installation
 
+distllm is available on PyPI and can be installed using pip:
+```bash
+pip install distllm
+```
+
 To install the package on Polaris@ALCF as of 12/12/2024, run the following command:
 ```bash
 git clone git@github.com:ramanathanlab/distllm.git
