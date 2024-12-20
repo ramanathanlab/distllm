@@ -85,7 +85,7 @@ To release a new version of distllm to PyPI:
 
 1. Merge the develop branch into the main branch with an updated version number in pyproject.toml.
 2. Make a new release on GitHub with the tag and name equal to the version number.
-3. Clone a fresh distllm repository.
+3. Clone a fresh distllm repository and run the installation commands above.
 4. Run the following commands from the main branch:
 ```bash
 rm -r dist
