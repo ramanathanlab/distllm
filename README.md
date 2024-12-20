@@ -1,4 +1,6 @@
 # distllm
+[![PyPI version](https://badge.fury.io/py/distllm.svg)](https://badge.fury.io/py/distllm)
+
 Distributed Inference for Large Language Models.
 - Create embeddings for large datasets at scale.
 - Generate text using language models at scale.
