@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=64.0", "setuptools_scm"]
+requires = ["setuptools>=64.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "distllm"
-version = "0.1.0"
+version = "1.0.1"
 authors = [
     {name = "Alexander Brace", email = "abrace@anl.gov"},
     {name = "Ozan Gokdemir", email = "ogokdemir@uchicago.edu"},
@@ -55,6 +55,8 @@ dev = [
     "tox",
     "virtualenv",
     "types-PyYAML",
+    "build",
+    "twine",
 ]
 docs = [
     "black",
