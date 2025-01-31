@@ -5,8 +5,10 @@ from __future__ import annotations
 from typing import Literal
 
 import torch
+from pydantic import model_validator
 from transformers import BatchEncoding
 from transformers import PreTrainedTokenizer
+from typing_extensions import Self
 
 from distllm.utils import BaseConfig
 
@@ -16,8 +18,43 @@ class EsmCambrianEncoderConfig(BaseConfig):
 
     # The name of the encoder
     name: Literal['esmc'] = 'esmc'  # type: ignore[assignment]
-    # The model id, options [esmc_330m, esmc_600m]
-    pretrained_model_name_or_path: str = 'esmc_300m'
+    # The model id, options [EvolutionaryScale/esmc-300m-2024-12,
+    # EvolutionaryScale/esmc-600m-2024-12]
+    pretrained_model_name_or_path: str = 'EvolutionaryScale/esmc-300m-2024-12'
+    # The model embedding size (if you are using a fine-tuned model
+    # you should explicitly set this value)
+    embedding_size: int | None = None
+
+    @model_validator(mode='after')
+    def set_embedding_size(self) -> Self:
+        """Set the embedding size based on the model name."""
+        # If the embedding size is explicitly set, return the config
+        if self.embedding_size is not None:
+            return self
+
+        # The embedding size based on the model name
+        sizes = {
+            'EvolutionaryScale/esmc-300m-2024-12': 960,
+            'EvolutionaryScale/esmc-600m-2024-12': 1152,
+        }
+
+        # Get the embedding size
+        embedding_size = sizes.get(self.pretrained_model_name_or_path, None)
+
+        # If the embedding size is not found, raise an error
+        if embedding_size is None:
+            raise ValueError(
+                f'Invalid model name for ESMC: '
+                f'{self.pretrained_model_name_or_path} '
+                f'Valid model names are: {", ".join(sizes.keys())}.',
+                'Or you can set the embedding_size parameter explicitly ',
+                'if you are using a fine-tuned model.',
+            )
+
+        # Set the embedding size
+        self.embedding_size = embedding_size
+
+        return self
 
 
 class EsmCambrianEncoder:
@@ -44,17 +81,13 @@ class EsmCambrianEncoder:
         # Set the model max length for proper truncation
         tokenizer.model_max_length = 2048
 
-        # Get the embedding size
-        if config.pretrained_model_name_or_path == 'esmc_600m':
-            embedding_size = 1152
-        else:
-            assert config.pretrained_model_name_or_path == 'esmc_300m'
-            embedding_size = 960
+        # Ensure the embedding size is set
+        assert config.embedding_size is not None
 
         # Set persistent attributes
         self.model = model
         self._tokenizer = tokenizer
-        self._embedding_size = embedding_size
+        self._embedding_size = config.embedding_size
 
     @property
     def dtype(self) -> torch.dtype:

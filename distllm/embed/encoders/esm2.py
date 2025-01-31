@@ -19,6 +19,8 @@ class Esm2EncoderConfig(BaseConfig):
     name: Literal['esm2'] = 'esm2'  # type: ignore[assignment]
     # The model id
     pretrained_model_name_or_path: str = 'facebook/esm2_t6_8M_UR50D'
+    # The model tokenizer (if different from pretrained_model_name_or_path)
+    tokenizer_path: str | None = None
     # Use the model in half precision
     half_precision: bool = True
     # Set the model to evaluation mode
@@ -56,9 +58,9 @@ class Esm2Encoder:
         model = EsmForMaskedLM.from_pretrained(
             config.pretrained_model_name_or_path,
         )
-        tokenizer = EsmTokenizer.from_pretrained(
-            config.pretrained_model_name_or_path,
-        )
+        if config.tokenizer_path is None:
+            config.tokenizer_path = config.pretrained_model_name_or_path
+        tokenizer = EsmTokenizer.from_pretrained(config.tokenizer_path)
 
         # Set the model max length for proper truncation
         tokenizer.model_max_length = model.config.max_position_embeddings
