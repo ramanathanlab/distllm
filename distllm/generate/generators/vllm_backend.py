@@ -25,7 +25,7 @@ class VLLMGeneratorConfig(BaseConfig):
     # Max tokens to generate
     max_tokens: int = 2000
     # Whether to use beam search
-    use_beam_search: bool = False
+    # use_beam_search: bool = False
     # The number of GPUs to use
     tensor_parallel_size: int = 1
 
@@ -55,7 +55,7 @@ class VLLMGenerator:
         self.sampling_params = SamplingParams(
             temperature=config.temperature,
             max_tokens=config.max_tokens,
-            use_beam_search=config.use_beam_search,
+            # use_beam_search=config.use_beam_search,
             **sampling_kwargs,
         )
 

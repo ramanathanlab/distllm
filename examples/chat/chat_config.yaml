@@ -1,0 +1,27 @@
+# This config allows distllm.chat to spawn an interactive chat session.
+
+rag_configs:
+  - generator_config:
+      name: vllm
+      llm_name: mistralai/Mistral-7B-Instruct-v0.1
+      top_p: 0.95
+      tensor_parallel_size: 8
+
+    # retriever_config:
+    #   faiss_config:
+    #     name: faiss_index_v2
+    #     dataset_dir: /rbstor/ac.ogokdemir/tom_rag/merged_vs
+    #     faiss_index_path: /rbstor/ac.ogokdemir/tom_rag/faiss_index
+    #     dataset_chunk_paths: null
+    #     precision: float32
+    #     search_algorithm: exact
+    #     rescore_multiplier: 2
+    #     num_quantization_workers: 1
+
+
+    #   encoder_config:
+    #     name: auto
+    #     pretrained_model_name_or_path: pritamdeka/S-PubMedBert-MS-MARCO
+
+    #   pooler_config:
+    #     name: mean
