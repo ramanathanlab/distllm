@@ -10,8 +10,6 @@ import json
 
 from pydantic import Field
 
-from distllm.generate import get_generator
-from distllm.generate import LLMGeneratorConfigs
 from distllm.rag.search import RetrieverConfig
 from distllm.utils import BaseConfig
 
@@ -30,26 +28,26 @@ class RetrievalAugmentedGenerationConfig(BaseConfig):
         description='Settings for the VLLM generator',
     )
 
-    # # Settings for the retriever
-    # retriever_config: Optional[RetrieverConfig] = Field(  # noqa: UP007
-    #     None,
-    #     description='Settings for the retriever',
-    # )
+    # Settings for the retriever
+    retriever_config: Optional[RetrieverConfig] = Field(  # noqa: UP007
+        None,
+        description='Settings for the retriever',
+    )
 
-    # def get_rag_model(self) -> RagGenerator:
-    #     """Get the retrieval-augmented generation model."""
-    #     # Initialize the generator
-    #     generator = get_generator(self.generator_config.model_dump())
+    def get_rag_model(self) -> RagGenerator:
+        """Get the retrieval-augmented generation model."""
+        # Initialize the generator
+        generator = VLLMGenerator(self.generator_config)
 
-    #     # Initialize the retriever
-    #     retriever = None
-    #     if self.retriever_config is not None:
-    #         retriever = self.retriever_config.get_retriever()
+        # Initialize the retriever
+        retriever = None
+        if self.retriever_config is not None:
+            retriever = self.retriever_config.get_retriever()
 
-    #     # Initialize the RAG model
-    #     rag_model = RagGenerator(generator=generator, retriever=retriever)
+        # Initialize the RAG model
+        rag_model = RagGenerator(generator=generator, retriever=retriever)
 
-    #     return rag_model
+        return rag_model
 
 
 class ChatAppConfig(BaseConfig):
@@ -68,27 +66,25 @@ class ChatAppConfig(BaseConfig):
 
 def chat_with_model(config: ChatAppConfig) -> None:
     """Run the evaluation suite."""
-    # Evaluate the models on the tasks
-    for rag_config in config.rag_configs:
-        # Initialize the RAG model
-        rag_model = rag_config.get_rag_model()
+    # Initialize the RAG model
+    rag_model = config.rag_configs.get_rag_model()
 
-        # Start an interactive chat session
-        print(f'Chatting with model: {rag_model}')
-        while True:
-            # Get the user input
-            user_input = input('You: ')
+    # Start an interactive chat session
+    print(f'Chatting with model: {rag_model}')
+    while True:
+        # Get the user input
+        user_input = input('You: ')
 
-            # Generate a response
-            response = rag_model.generate(
-                [user_input],
-                prompt_template=None,
-                retrieval_top_k=20,
-                retrieval_score_threshold=0.5,
-            )
+        # Generate a response
+        response = rag_model.generate(
+            [user_input],
+            prompt_template=None,
+            retrieval_top_k=20,
+            retrieval_score_threshold=0.5,
+        )
 
-            # Print the response
-            print(f'Model: {response}')
+        # Print the response
+        print(f'Model: {response}')
 
 
 class VLLMGeneratorConfig(BaseConfig):
@@ -110,6 +106,14 @@ class VLLMGeneratorConfig(BaseConfig):
         ...,
         description='The model that vLLM server is running.',
     )
+    temperature: float = Field(
+        0.0,
+        description='The temperature for sampling from the model.',
+    )
+    max_tokens: int = Field(
+        1024,
+        description='The maximum number of tokens to generate.',
+    )
 
     def get_generator(self) -> VLLMGenerator:
         """Get the vLLM generator."""
@@ -129,18 +133,21 @@ class VLLMGenerator:
         self.model = config.model
         self.port = config.port
         self.api_key = config.api_key
+        self.temperature = config.temperature
+        self.max_tokens = config.max_tokens
 
     def generate(self,  
-                 prompt:str, 
-                 context: str | None = None, 
-                 temperature: float = 0.0,
-                 max_tokens:int = 200) -> str:
+                 prompt:str,  
+                 temperature: float,
+                 max_tokens:int) -> str:
         
-        #TODO ADD CONTEXT IF PROVIDED
+        '''
+        Queries the local vLLM server with a prompt.
+        '''
 
-        '''
-        Queries the vLLM server with a prompt, optionally providing context (if RAG is used).
-        '''
+        # Use provided values or fall back to instance defaults
+        temp_to_use = temperature if temperature is not None else self.temperature
+        tokens_to_use = max_tokens if max_tokens is not None else self.max_tokens
       
         url = f"http://{self.server}.cels.anl.gov:{self.port}/v1/chat/completions"
 
@@ -153,32 +160,33 @@ class VLLMGenerator:
             "model": f"{self.model}",
             "messages": [
                 {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", f"content": prompt}
+                {"role": "user", "content": prompt}
             ],
-            "temperature": temperature,
-            "max_tokens": max_tokens
+            "temperature": temp_to_use,
+            "max_tokens": tokens_to_use
         }
 
         response = requests.post(url, headers=headers, data=json.dumps(payload))
 
         if response.status_code == 200:
-            result = response.json()
-            print(result["choices"][0]["message"]["content"])
+            result = response.json()["choices"][0]["message"]["content"]
         else:
             print(f"Error: {response.status_code}")
-            print(response.text)
+            result = response.text
+        
+        return result
 
-'''
+
 class RagGenerator:
     """RAG generator for generating responses to queries."""
 
     def __init__(
         self,
-        #generator: LLMGenerator, # replace with vLLM.
+        generator: VLLMGenerator, # replace with vLLM.
         retriever: Retriever | None = None,
     ) -> None:
         self.retriever = retriever
-        #self.generator = generator
+        self.generator = generator
 
     #for now this will just be
     def generate(
@@ -187,6 +195,8 @@ class RagGenerator:
         prompt_template: PromptTemplate | None = None,
         retrieval_top_k: int = 5,
         retrieval_score_threshold: float = 0.0,
+        max_tokens: int = 1024,
+        temperature: float = 0.0,
     ) -> list[str]:
         """Generate a response to a query given a context.
 
@@ -234,19 +244,9 @@ class RagGenerator:
         prompts = prompt_template.preprocess(texts, contexts, scores)
 
         # Generate a response to the query
-        responses = self.generator.generate(prompts)
-
-        # Postprocess the response
-        responses = prompt_template.postprocess(responses)
-
-        # Check 1-1 correspondence between queries and responses
-        assert len(texts) == len(
-            responses,
-        ), 'Mismatch between queries and responses.'
+        responses = self.generator.generate(prompt = prompts[0], temperature=temperature, max_tokens=max_tokens)
 
         return responses
-
-'''
 
 
 if __name__ == '__main__':
@@ -260,6 +260,4 @@ if __name__ == '__main__':
     # Load the configuration
     config = ChatAppConfig.from_yaml(args.config)
 
-    vllm_generator_config = config.rag_configs.generator_config
-    generator_response = VLLMGenerator(vllm_generator_config).generate("Hello!")
-    print(generator_response)
+    chat_with_model(config)
