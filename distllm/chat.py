@@ -7,6 +7,7 @@ import json
 from pydantic import Field
 from argparse import ArgumentParser
 from datetime import datetime
+import os
 
 from distllm.rag.search import RetrieverConfig, Retriever
 from distllm.generate.prompts import IdentityPromptTemplate, IdentityPromptTemplateConfig
@@ -253,6 +254,11 @@ class ChatAppConfig(BaseConfig):
         ...,
         description='Settings for this RAG application.',
     )
+    save_conversation_path: Path = Field(
+        ...,
+        description='Directory to save the output files.',
+    )
+
 
 
 # -----------------------------------------------------------------------------
@@ -292,7 +298,7 @@ def chat_with_model(config: ChatAppConfig) -> None:
             texts=[user_input],  # retrieve only on the new user input
             prompt_template=conversation_template,
             retrieval_top_k=20,
-            retrieval_score_threshold=0.5,
+            retrieval_score_threshold=0.1,
         )
         # There's only one element in response_list
         response = response_list[0]
@@ -307,7 +313,8 @@ def chat_with_model(config: ChatAppConfig) -> None:
     # Write conversation history to a file with timestamp.
     # -----------------------------------------------------------------------------
     timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"conversation_{timestamp_str}.txt"
+    os.makedirs(config.save_conversation_path, exist_ok=True)
+    filename = f"{config.save_conversation_path}/conversation_{timestamp_str}.txt"
     try:
         with open(filename, "w", encoding="utf-8") as f:
             for speaker, text in conversation_history:

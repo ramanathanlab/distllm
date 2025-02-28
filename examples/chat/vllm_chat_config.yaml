@@ -5,6 +5,7 @@ rag_configs:
     model: meta-llama/Llama-3.3-70B-Instruct
     port: 9999
     api_key: CELS
+    
 
   retriever_config:
     faiss_config:
@@ -24,3 +25,4 @@ rag_configs:
     pooler_config:
       name: mean
 
+save_conversation_path: /rbstor/ac.ogokdemir/tom_rag/conversations
