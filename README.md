@@ -53,6 +53,11 @@ For LLM generation at scale, run the following command:
 nohup python -m distllm.distributed_generation --config examples/your-config.yaml &> nohup.out &
 ```
 
+To 'chat' with a RAG dataset built with distllm, run the following command from distllm/distllm:
+```bash
+python chat.py --config ../examples/chat/your-config.yaml
+```
+
 To run smaller datasets on a single GPU, you can use the following command:
 ```bash
 distllm embed --encoder_name auto --pretrained_model_name_or_path pritamdeka/S-PubMedBert-MS-MARCO --data_path /lus/eagle/projects/FoundEpidem/braceal/projects/metric-rag/data/parsed_pdfs/LUCID.small.test/parsed_pdfs --data_extension jsonl --output_path cli_test_lucid --dataset_name jsonl_chunk --batch_size 512 --chunk_batch_size 512 --buffer_size 4 --pooler_name mean --embedder_name semantic_chunk --writer_name huggingface --quantization --eval_mode
