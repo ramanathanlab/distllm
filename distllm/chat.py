@@ -1,16 +1,20 @@
+"""Serves as a chat interface to the RAG datasets built with distllm."""
+
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Optional
-import requests
 import json
-from pydantic import Field
+import os
 from argparse import ArgumentParser
 from datetime import datetime
-import os
+from pathlib import Path
 
-from distllm.rag.search import RetrieverConfig, Retriever
-from distllm.generate.prompts import IdentityPromptTemplate, IdentityPromptTemplateConfig
+import requests
+from pydantic import Field
+
+from distllm.generate.prompts import IdentityPromptTemplate
+from distllm.generate.prompts import IdentityPromptTemplateConfig
+from distllm.rag.search import Retriever
+from distllm.rag.search import RetrieverConfig
 from distllm.utils import BaseConfig
 
 
@@ -19,6 +23,7 @@ from distllm.utils import BaseConfig
 # -----------------------------------------------------------------------------
 class PromptTemplate:
     """Base class for prompt templates."""
+
     def preprocess(
         self,
         texts: list[str],
@@ -26,13 +31,14 @@ class PromptTemplate:
         scores: list[list[float]] | None,
     ) -> list[str]:
         """Preprocess the texts before sending to the model."""
-        raise NotImplementedError("Subclasses should implement this method")
+        raise NotImplementedError('Subclasses should implement this method')
 
 
 class ConversationPromptTemplate(PromptTemplate):
-    """
-    A prompt template that includes the entire conversation history
-    plus the new user question, and optionally the retrieved context.
+    """Conversation prompt template for RAG.
+
+    Includes the entire conversation history plus the new user question,
+    and optionally the retrieved context.
     """
 
     def __init__(self, conversation_history: list[tuple[str, str]]):
@@ -46,29 +52,31 @@ class ConversationPromptTemplate(PromptTemplate):
         scores: list[list[float]] | None = None,
     ) -> list[str]:
         """
+        Preprocess the texts before sending to the model.
+
         We assume `texts` has exactly one element: the latest user query.
-        We build a single string that contains the entire conversation
-        plus the new question. If any retrieval contexts are found, we append them.
+        We build a single string that contains the entire conversation plus
+        the new question. If any retrieval contexts are found, we append them.
         """
         if not texts:
-            return [""]  # No user input, return empty prompt.
+            return ['']  # No user input, return empty prompt.
 
         # The latest user query:
         user_input = texts[0]
 
         # Build the conversation string
-        conversation_str = ""
+        conversation_str = ''
         for speaker, text in self.conversation_history:
-            conversation_str += f"{speaker}: {text}\n"
+            conversation_str += f'{speaker}: {text}\n'
         # Add the new user question
-        conversation_str += f"User: {user_input}\nAssistant:"
+        conversation_str += f'User: {user_input}\nAssistant:'
 
         # Optionally, append retrieved context if it exists
         if contexts and len(contexts) > 0 and len(contexts[0]) > 0:
             # contexts[0] is the top-k retrieval results for this query
-            conversation_str += "\n\n[Context from retrieval]\n"
+            conversation_str += '\n\n[Context from retrieval]\n'
             for doc in contexts[0]:
-                conversation_str += f"{doc}\n"
+                conversation_str += f'{doc}\n'
 
         return [conversation_str]
 
@@ -78,6 +86,7 @@ class ConversationPromptTemplate(PromptTemplate):
 # -----------------------------------------------------------------------------
 class VLLMGeneratorConfig(BaseConfig):
     """Configuration for the vLLM generator."""
+
     server: str = Field(
         ...,
         description='Cels machine you are running on, e.g, rbdgx1',
@@ -106,7 +115,7 @@ class VLLMGeneratorConfig(BaseConfig):
     def get_generator(self) -> VLLMGenerator:
         """Get the vLLM generator."""
         generator = VLLMGenerator(
-            config=self
+            config=self,
         )
         return generator
 
@@ -122,36 +131,40 @@ class VLLMGenerator:
         self.temperature = config.temperature
         self.max_tokens = config.max_tokens
 
-    def generate(self,
-                 prompt: str,
-                 temperature: float | None = None,
-                 max_tokens: int | None = None) -> str:
-        """
-        Send a prompt to the local vLLM server and return the completion.
-        """
+    def generate(
+        self,
+        prompt: str,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+    ) -> str:
+        """Send a prompt to the local vLLM server and return the completion."""
         temp_to_use = self.temperature if temperature is None else temperature
         tokens_to_use = self.max_tokens if max_tokens is None else max_tokens
 
-        url = f"http://{self.server}.cels.anl.gov:{self.port}/v1/chat/completions"
+        url = f'http://{self.server}.cels.anl.gov:{self.port}/v1/chat/completions'
         headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}"
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {self.api_key}',
         }
         payload = {
-            "model": self.model,
-            "messages": [
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt}
+            'model': self.model,
+            'messages': [
+                {'role': 'system', 'content': 'You are a helpful assistant.'},
+                {'role': 'user', 'content': prompt},
             ],
-            "temperature": temp_to_use,
-            "max_tokens": tokens_to_use
+            'temperature': temp_to_use,
+            'max_tokens': tokens_to_use,
         }
 
-        response = requests.post(url, headers=headers, data=json.dumps(payload))
-        if response.status_code == 200:
-            result = response.json()["choices"][0]["message"]["content"]
+        response = requests.post(
+            url,
+            headers=headers,
+            data=json.dumps(payload),
+        )
+        if response.status_code == 200:  # noqa: PLR2004
+            result = response.json()['choices'][0]['message']['content']
         else:
-            print(f"Error: {response.status_code}")
+            print(f'Error: {response.status_code}')
             result = response.text
 
         return result
@@ -164,11 +177,13 @@ class RagGenerator:
         self,
         generator: VLLMGenerator,
         retriever: Retriever | None = None,
+        verbose: bool = False,
     ) -> None:
         self.generator = generator
         self.retriever = retriever
+        self.verbose = verbose
 
-    def generate(
+    def generate(  # noqa: PLR0913
         self,
         texts: str | list[str],
         prompt_template: PromptTemplate | None = None,
@@ -179,7 +194,9 @@ class RagGenerator:
     ) -> list[str]:
         """
         Generate responses to the given queries.
-        If a retriever is present, the retrieved context is appended to the prompt.
+
+        If a retriever is present,
+        the retrieved context is appended to the prompt.
         """
         if isinstance(texts, str):
             texts = [texts]  # unify type
@@ -204,17 +221,22 @@ class RagGenerator:
                 self.retriever.get_texts(indices)  # top docs for each query
                 for indices in results.total_indices
             ]
+
             scores = results.total_scores
 
         # Build the final prompts
         prompts = prompt_template.preprocess(texts, contexts, scores)
+
+        # If the verbose is true in config, print contexts.
+        if self.verbose:
+            print(contexts[0])
 
         # We only expect one output per query for now
         # (If multiple texts were passed, we would loop.)
         result = self.generator.generate(
             prompt=prompts[0],
             temperature=temperature,
-            max_tokens=max_tokens
+            max_tokens=max_tokens,
         )
         # Return as list (matching the function signature)
         return [result]
@@ -225,13 +247,18 @@ class RagGenerator:
 # -----------------------------------------------------------------------------
 class RetrievalAugmentedGenerationConfig(BaseConfig):
     """Configuration for the retrieval-augmented generation model."""
+
     generator_config: VLLMGeneratorConfig = Field(
         ...,
         description='Settings for the VLLM generator',
     )
-    retriever_config: Optional[RetrieverConfig] = Field(
+    retriever_config: RetrieverConfig | None = Field(
         None,
         description='Settings for the retriever',
+    )
+    verbose: bool = Field(
+        default=False,
+        description='Whether to print retrieved contexts in chat.',
     )
 
     def get_rag_model(self) -> RagGenerator:
@@ -244,12 +271,17 @@ class RetrievalAugmentedGenerationConfig(BaseConfig):
             retriever = self.retriever_config.get_retriever()
 
         # Initialize the RAG model
-        rag_model = RagGenerator(generator=generator, retriever=retriever)
+        rag_model = RagGenerator(
+            generator=generator,
+            retriever=retriever,
+            verbose=self.verbose,
+        )
         return rag_model
 
 
 class ChatAppConfig(BaseConfig):
     """Configuration for the evaluation suite."""
+
     rag_configs: RetrievalAugmentedGenerationConfig = Field(
         ...,
         description='Settings for this RAG application.',
@@ -260,18 +292,19 @@ class ChatAppConfig(BaseConfig):
     )
 
 
-
 # -----------------------------------------------------------------------------
 # Main Chat Function
 # -----------------------------------------------------------------------------
 def chat_with_model(config: ChatAppConfig) -> None:
     """
+    Driver function for the chat application.
+
     Start an interactive chat session:
-      1) Keep track of the conversation history.
-      2) If user types 'quit', exit the loop.
-      3) Upon exit, save the conversation to a local text file with timestamp.
-      4) Use only the latest user input for retrieval, but preserve full context
-         in the prompt generation so the assistant can handle follow-up queries.
+    1) Keep track of the conversation history.
+    2) If user types 'quit', exit the loop.
+    3) Upon exit, save the conversation to a local text file with timestamp.
+    4) Use only the latest user input for retrieval, but preserve full context
+    in the prompt generation so the assistant can handle follow-up queries.
     """
     rag_model = config.rag_configs.get_rag_model()
 
@@ -283,15 +316,17 @@ def chat_with_model(config: ChatAppConfig) -> None:
 
         # Check for 'quit' to exit
         if user_input.strip().lower() == 'quit':
-            print("Exiting the chat...")
+            print('Exiting the chat...')
             break
 
         # Add the user's turn to the conversation
-        conversation_history.append(("User", user_input))
+        conversation_history.append(('User', user_input))
 
         # We create a custom prompt template that includes
         # the entire conversation so far plus the newly retrieved context.
-        conversation_template = ConversationPromptTemplate(conversation_history)
+        conversation_template = ConversationPromptTemplate(
+            conversation_history,
+        )
 
         # Ask the RAG model to generate a response
         response_list = rag_model.generate(
@@ -304,24 +339,26 @@ def chat_with_model(config: ChatAppConfig) -> None:
         response = response_list[0]
 
         # Add the model's response to the conversation
-        conversation_history.append(("Assistant", response))
+        conversation_history.append(('Assistant', response))
 
         # Print the model's response
         print(f'Model: {response}')
 
-    # -----------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     # Write conversation history to a file with timestamp.
-    # -----------------------------------------------------------------------------
-    timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # -------------------------------------------------------------------------
+    timestamp_str = datetime.now().strftime('%Y%m%d_%H%M%S')
     os.makedirs(config.save_conversation_path, exist_ok=True)
-    filename = f"{config.save_conversation_path}/conversation_{timestamp_str}.txt"
+    filename = (
+        f'{config.save_conversation_path}/conversation_{timestamp_str}.txt'
+    )
     try:
-        with open(filename, "w", encoding="utf-8") as f:
+        with open(filename, 'w', encoding='utf-8') as f:
             for speaker, text in conversation_history:
-                f.write(f"{speaker}: {text}\n")
-        print(f"Conversation saved to {filename}")
+                f.write(f'{speaker}: {text}\n')
+        print(f'Conversation saved to {filename}')
     except Exception as e:
-        print(f"Error writing conversation to file: {e}")
+        print(f'Error writing conversation to file: {e}')
 
 
 # -----------------------------------------------------------------------------
