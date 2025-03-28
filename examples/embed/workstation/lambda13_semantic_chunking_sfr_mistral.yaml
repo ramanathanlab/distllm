@@ -1,0 +1,36 @@
+# An input directory containing the files to embed.
+input_dir: /nfs/lambda_stor_01/homes/ogokdemir/ASM-papers/parsed_pdfs
+# An output directory to save the embeddings.
+output_dir: /nfs/lambda_stor_01/homes/ogokdemir/CEPI/ASM_pymupdf_sfrmistral
+# A set of glob patterns to match the input files.
+glob_patterns: ['*.jsonl']
+
+# Settings for reading the input files.
+dataset_config:
+  name: jsonl_chunk
+  buffer_size: 4
+  batch_size: 8
+
+# Settings for the encoder.
+encoder_config:
+  name: auto
+  pretrained_model_name_or_path: Salesforce/SFR-Embedding-Mistral
+
+# Settings for the pooler.
+pooler_config:
+  name: last_token
+
+# Settings for the embedder.
+embedder_config:
+  name: semantic_chunk
+  chunk_batch_size: 8
+  normalize_embeddings: true
+
+# Settings for the writer.
+writer_config:
+  name: huggingface
+
+# Settings for the parsl compute backend.
+compute_config:
+  name: workstation
+  available_accelerators: ["0", "1", "2", "3", "4", "5", "6", "7"]
