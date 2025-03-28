@@ -1,7 +1,7 @@
 # An input directory containing the files to embed.
-input_dir: /rbstor/ac.ogokdemir/tom_rag/parsed_papers/cancer/parsed/parsed_pdfs
+input_dir: /rbstor/ac.ogokdemir/ASM.pymupdf/parsed_pdfs
 # An output directory to save the embeddings.
-output_dir: /rbstor/ac.ogokdemir/tom_rag/semantic_chunks/cancer_pubmedbert
+output_dir: /rbstor/ac.ogokdemir/CEPI/semantic_chunks/ASM_pymupdf_pubmedbert
 # A set of glob patterns to match the input files.
 glob_patterns: ['*.jsonl']
 
