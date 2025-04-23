@@ -34,7 +34,7 @@ dependencies = [
     "sentence-transformers>=3.3.1",
     "torch",
     "faiss-gpu==1.7.2",
-    "numpy<2.0.0",
+    "numpy==1.26.4",
 ]
 
 [project.urls]
