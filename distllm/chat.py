@@ -27,8 +27,8 @@ class PromptTemplate:
     def preprocess(
         self,
         texts: list[str],
-        contexts: list[list[str]] | None,
-        scores: list[list[float]] | None,
+        contexts: list[list[str]],
+        scores: list[list[float]],
     ) -> list[str]:
         """Preprocess the texts before sending to the model."""
         raise NotImplementedError('Subclasses should implement this method')
@@ -186,7 +186,7 @@ class RagGenerator:
     def generate(  # noqa: PLR0913
         self,
         texts: str | list[str],
-        prompt_template: PromptTemplate | None = None,
+        prompt_template: PromptTemplate = None,
         retrieval_top_k: int = 5,
         retrieval_score_threshold: float = 0.0,
         max_tokens: int = 1024,
@@ -342,7 +342,9 @@ def chat_with_model(config: ChatAppConfig) -> None:
         conversation_history.append(('Assistant', response))
 
         # Print the model's response
-        print(f'Model: {response}')
+        print(
+            f'Model: {response} \n --------------------------------------- \n',
+        )
 
     # -------------------------------------------------------------------------
     # Write conversation history to a file with timestamp.

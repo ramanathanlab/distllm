@@ -11,7 +11,7 @@ rag_configs:
     faiss_config:
       name: faiss_index_v2
       dataset_dir: /rbstor/ac.ogokdemir/tom_rag/datasets/lucid_cancer_combined
-      faiss_index_path: /rbstor/ac.ogokdemir/faiss_indices/lucid_cancer_combined
+      faiss_index_path: /rbstor/ac.ogokdemir/tom_rag/faiss_indices/lucid_cancer_combined
       dataset_chunk_paths: null
       precision: float32
       search_algorithm: exact
