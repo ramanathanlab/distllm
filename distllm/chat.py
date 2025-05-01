@@ -105,10 +105,10 @@ class VLLMGeneratorConfig(BaseConfig):
     )
     temperature: float = Field(
         0.0,
-        description='The temperature for sampling from the model.',
+        description='Freeze off the temperature to the keep model grounded.',
     )
     max_tokens: int = Field(
-        1024,
+        16384,
         description='The maximum number of tokens to generate.',
     )
 
