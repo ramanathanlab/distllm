@@ -1,7 +1,7 @@
 # An input directory containing the files to embed.
-input_dir: /nfs/lambda_stor_01/homes/ogokdemir/ASM-papers/parsed_pdfs
+input_dir: /home/ogokdemir/projects/bvbrc_docs
 # An output directory to save the embeddings.
-output_dir: /nfs/lambda_stor_01/homes/ogokdemir/CEPI/ASM_pymupdf_sfrmistral
+output_dir: /nfs/lambda_stor_01/homes/ogokdemir/bvbrc/sfr_mistral_chunks
 # A set of glob patterns to match the input files.
 glob_patterns: ['*.jsonl']
 

@@ -1,0 +1,30 @@
+# This config allows distllm.chat to spawn an interactive chat session.
+rag_configs:
+  generator_config:
+    server: rbdgx2
+    model: meta-llama/Llama-3.3-70B-Instruct
+    port: 9999
+    api_key: CELS
+
+
+  retriever_config:
+    faiss_config:
+      name: faiss_index_v2
+      dataset_dir: /homes/ogokdemir/lambda_stor/bvbrc/merged/
+      faiss_index_path: /homes/ogokdemir/lambda_stor/bvbrc/faiss_index/
+      dataset_chunk_paths: null
+      precision: float32
+      search_algorithm: exact
+      rescore_multiplier: 2
+      num_quantization_workers: 1
+
+    encoder_config:
+      name: auto
+      pretrained_model_name_or_path: Salesforce/SFR-Embedding-Mistral 
+
+    pooler_config:
+      name: last_token
+
+  verbose: false
+
+save_conversation_path: /rbstor/ac.ogokdemir/CEPI/conversations/asm_pubmedbert
