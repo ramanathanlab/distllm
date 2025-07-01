@@ -1,0 +1,23 @@
+rag_configs:
+  generator_config:
+    _target_: ArgoGeneratorConfig
+    model: "argo:gpt-4o"  # Optional, uses env var if not specified
+    base_url: "http://localhost:56267"  # Optional, uses env var if not specified
+    temperature: 0.0
+    max_tokens: 16384
+  
+  retriever_config:
+    faiss_config:
+      name: faiss_index_v2
+      dataset_dir: /rbstor/ac.ogokdemir/tom_rag/datasets/cancer_merged
+      faiss_index_path: /rbstor/ac.ogokdemir/tom_rag/faiss_indices/cancer
+      dataset_chunk_paths: null
+      precision: float32
+      search_algorithm: exact
+      rescore_multiplier: 2
+      num_quantization_workers: 1
+
+  
+  verbose: true
+
+save_conversation_path: /rbstor/ac.ogokdemir/argo_rag/conversations/cancer
