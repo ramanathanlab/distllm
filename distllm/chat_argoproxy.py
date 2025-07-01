@@ -184,7 +184,8 @@ class ArgoGeneratorConfig(BaseConfig):
     )
     base_url: str = Field(
         default_factory=lambda: os.getenv(
-            'BASE_URL', 'http://localhost:56267'
+            'BASE_URL',
+            'http://localhost:56267',
         ),
         description='The base URL for the Argo proxy server.',
     )
@@ -353,7 +354,7 @@ class RetrievalAugmentedGenerationConfig(BaseConfig):
             generator = ArgoGenerator(self.generator_config)
         else:
             raise ValueError(
-                f'Unsupported generator config type: {type(self.generator_config)}'
+                f'Unsupported generator config type: {type(self.generator_config)}',
             )
 
         # Initialize the retriever
