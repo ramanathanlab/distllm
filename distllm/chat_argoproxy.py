@@ -22,6 +22,7 @@ from distllm.utils import BaseConfig
 # Load environment variables
 load_dotenv()
 
+
 # -----------------------------------------------------------------------------
 # Prompt Templates
 # -----------------------------------------------------------------------------
@@ -178,15 +179,17 @@ class ArgoGeneratorConfig(BaseConfig):
     """Configuration for the Argo generator using OpenAI client."""
 
     model: str = Field(
-        default_factory=lambda: os.getenv("MODEL", "argo:gpt-4o"),
+        default_factory=lambda: os.getenv('MODEL', 'argo:gpt-4o'),
         description='The model name for Argo proxy.',
     )
     base_url: str = Field(
-        default_factory=lambda: os.getenv("BASE_URL", "http://localhost:56267"),
+        default_factory=lambda: os.getenv(
+            'BASE_URL', 'http://localhost:56267'
+        ),
         description='The base URL for the Argo proxy server.',
     )
     api_key: str = Field(
-        "whatever+random",
+        'whatever+random',
         description='The API key for Argo proxy (can be any string).',
     )
     temperature: float = Field(
@@ -213,11 +216,11 @@ class ArgoGenerator:
         self.model = config.model
         self.temperature = config.temperature
         self.max_tokens = config.max_tokens
-        
+
         # Initialize OpenAI client with Argo proxy settings
         self.client = openai.OpenAI(
             api_key=config.api_key,
-            base_url=f"{config.base_url}/v1",
+            base_url=f'{config.base_url}/v1',
         )
 
     def generate(
@@ -245,7 +248,7 @@ class ArgoGenerator:
             result = response.choices[0].message.content
         except Exception as e:
             print(f'Error calling Argo proxy: {e}')
-            result = f"Error: {str(e)}"
+            result = f'Error: {e!s}'
 
         return result
 
@@ -309,7 +312,7 @@ class RagGenerator:
 
         # If the verbose is true in config, print contexts.
         if self.verbose:
-            print(contexts[0])
+            print(contexts[0] + '\n\n')
 
         # We only expect one output per query for now
         # (If multiple texts were passed, we would loop.)
@@ -349,8 +352,10 @@ class RetrievalAugmentedGenerationConfig(BaseConfig):
         elif isinstance(self.generator_config, ArgoGeneratorConfig):
             generator = ArgoGenerator(self.generator_config)
         else:
-            raise ValueError(f"Unsupported generator config type: {type(self.generator_config)}")
-            
+            raise ValueError(
+                f'Unsupported generator config type: {type(self.generator_config)}'
+            )
+
         # Initialize the retriever
         retriever = None
         if self.retriever_config is not None:
