@@ -30,7 +30,11 @@ compute_config:
   # The number of compute nodes to use
   num_nodes: 4
   # Make sure to update the path to your conda environment and HF cache
-  worker_init: "source ~/.bashrc; module load frameworks; export HF_HOME=/lus/flare/projects/FoundEpidem/ogokdemir/hf_home"
+  worker_init: |
+    module load frameworks
+    source /home/ogokdemir/distllm-venv/bin/activate
+    export PYTHONPATH=/opt/aurora/24.347.0/frameworks/aurora_nre_models_frameworks-2025.0.0/lib/python3.10/site-packages:$PYTHONPATH
+    export HF_HOME=/lus/flare/projects/FoundEpidem/ogokdemir/hf_home
   # The scheduler options to use when submitting jobs
   scheduler_options: "#PBS -l filesystems=home:flare"
   # Make sure to change the account to the account you want to charge
