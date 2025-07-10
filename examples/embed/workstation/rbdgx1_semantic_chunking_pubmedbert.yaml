@@ -1,7 +1,7 @@
 # An input directory containing the files to embed.
-input_dir: /rbstor/ac.ogokdemir/ArgoniumRick/parsed/all_parsed_jsonl/part1
+input_dir: /rbstor/ac.ogokdemir/ArgoniumRick/RESCUE/jsonls
 # An output directory to save the embeddings.
-output_dir: /rbstor/ac.ogokdemir/ArgoniumRick/semantic_chunks/pubmedbert/part1
+output_dir: /rbstor/ac.ogokdemir/ArgoniumRick/semantic_chunks/rescue/pubmedbert/
 # A set of glob patterns to match the input files.
 glob_patterns: ['*.jsonl']
 

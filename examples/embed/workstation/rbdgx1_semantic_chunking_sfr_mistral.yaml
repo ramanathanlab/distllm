@@ -1,7 +1,7 @@
 # An input directory containing the files to embed.
-input_dir: /rbstor/ac.ogokdemir/ASM.pymupdf/parsed_pdfs
+input_dir: /rbstor/ac.ogokdemir/ArgoniumRick/RESCUE/jsonls
 # An output directory to save the embeddings.
-output_dir: /rbstor/ac.ogokdemir/CEPI/semantic_chunks/ASM_pymupdf_sfr_mistral
+output_dir: /rbstor/ac.ogokdemir/ArgoniumRick/semantic_chunks/rescue/sfr_mistral/
 # A set of glob patterns to match the input files.
 glob_patterns: ['*.jsonl']
 
@@ -9,7 +9,7 @@ glob_patterns: ['*.jsonl']
 dataset_config:
   name: jsonl_chunk
   buffer_size: 4
-  batch_size: 1
+  batch_size: 4
 
 # Settings for the encoder.
 encoder_config:
@@ -23,7 +23,7 @@ pooler_config:
 # Settings for the embedder.
 embedder_config:
   name: semantic_chunk
-  chunk_batch_size: 1
+  chunk_batch_size: 4
   normalize_embeddings: true
 
 # Settings for the writer.
@@ -34,3 +34,4 @@ writer_config:
 compute_config:
   name: workstation
   available_accelerators: ["0", "1", "2", "3", "4", "5", "6", "7"]
+

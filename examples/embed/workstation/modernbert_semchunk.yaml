@@ -1,7 +1,7 @@
 # An input directory containing the files to embed.
-input_dir: /rbstor/ac.ogokdemir/ArgoniumRick/parsed/all_parsed_jsonl/part1
+input_dir: /rbstor/ac.ogokdemir/ArgoniumRick/RESCUE/jsonls
 # An output directory to save the embeddings.
-output_dir: /rbstor/ac.ogokdemir/ArgoniumRick/semantic_chunks/modernbert/part1
+output_dir: /rbstor/ac.ogokdemir/ArgoniumRick/semantic_chunks/rescue/modernbert
 # A set of glob patterns to match the input files.
 glob_patterns: ['*.jsonl']
 
@@ -9,12 +9,13 @@ glob_patterns: ['*.jsonl']
 dataset_config:
   name: jsonl_chunk
   buffer_size: 4
-  batch_size: 64
+  batch_size: 16
 
 # Settings for the encoder.
 encoder_config:
   name: auto
   pretrained_model_name_or_path: NeuML/bioclinical-modernbert-base-embeddings
+
 
 # Settings for the pooler.
 pooler_config:
@@ -23,7 +24,7 @@ pooler_config:
 # Settings for the embedder.
 embedder_config:
   name: semantic_chunk
-  chunk_batch_size: 512
+  chunk_batch_size: 16
   normalize_embeddings: true
 
 # Settings for the writer.
