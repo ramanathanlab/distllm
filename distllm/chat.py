@@ -8,6 +8,7 @@ from argparse import ArgumentParser
 from datetime import datetime
 from pathlib import Path
 
+import numpy as np
 import requests
 from pydantic import Field
 
@@ -191,6 +192,7 @@ class RagGenerator:
         retrieval_score_threshold: float = 0.0,
         max_tokens: int = 1024,
         temperature: float = 0.0,
+        debug_retrieval: bool = False,  # New parameter for debugging
     ) -> list[str]:
         """
         Generate responses to the given queries.
@@ -217,6 +219,68 @@ class RagGenerator:
                 top_k=retrieval_top_k,
                 score_threshold=retrieval_score_threshold,
             )
+
+            # Debug: Print detailed retrieval information
+            if debug_retrieval:
+                print('=' * 80)
+                print('🔍 RETRIEVAL DEBUG INFORMATION')
+                print('=' * 80)
+                print(f'Query: {texts[0]}')
+                print(f'Retrieved {len(results.total_indices[0])} documents')
+                print()
+
+                # Show results structure
+                print('📊 Results structure:')
+                print(
+                    f'  - results.total_indices: {type(results.total_indices)}'
+                    f' (length: {len(results.total_indices)})',
+                )
+                print(
+                    f'  - results.total_scores: {type(results.total_scores)}(length: {len(results.total_scores)})',
+                )
+                print(f'  - First query indices: {results.total_indices[0]}')
+                print(f'  - First query scores: {results.total_scores[0]}')
+                print()
+
+                # Show what columns are available in the dataset
+                print('🗂️ Available dataset columns:')
+                dataset_columns = list(
+                    self.retriever.faiss_index.dataset.column_names,
+                )
+                print(f'  - Columns: {dataset_columns}')
+                print()
+
+                # Show detailed information for each retrieved document
+                for i, (idx, score) in enumerate(
+                    zip(results.total_indices[0], results.total_scores[0]),
+                ):
+                    print(
+                        f'📄 Document {i + 1} (Index: {idx}, Score: {score:.4f}):',
+                    )
+
+                    # Get all available attributes for this document
+                    for column in dataset_columns:
+                        value = self.retriever.get([idx], column)[0]
+                        if column == 'text':
+                            # Show truncated text for readability
+                            text_preview = (
+                                value[:200] + '...'
+                                if len(value) > 200
+                                else value
+                            )
+                            print(f'  - {column}: {text_preview}')
+                        elif column == 'embeddings':
+                            # Show embedding info without printing the full array
+                            print(
+                                f'  - {column}: array shape {np.array(value).shape}, dtype {np.array(value).dtype}',
+                            )
+                        else:
+                            print(f'  - {column}: {value}')
+                    print()
+
+                print('=' * 80)
+                print()
+
             contexts = [
                 self.retriever.get_texts(indices)  # top docs for each query
                 for indices in results.total_indices
@@ -229,7 +293,7 @@ class RagGenerator:
 
         # If the verbose is true in config, print contexts.
         if self.verbose:
-            print(contexts[0])
+            print(contexts[0] + '\n\n')
 
         # We only expect one output per query for now
         # (If multiple texts were passed, we would loop.)
@@ -293,6 +357,107 @@ class ChatAppConfig(BaseConfig):
 
 
 # -----------------------------------------------------------------------------
+# Utility Functions
+# -----------------------------------------------------------------------------
+def inspect_retrieval_results(
+    retriever: Retriever,
+    query: str,
+    top_k: int = 5,
+    score_threshold: float = 0.0,
+) -> dict:
+    """
+    Utility function to inspect retrieval results without generating responses.
+
+    Args:
+        retriever: The retriever instance
+        query: The query string
+        top_k: Number of documents to retrieve
+        score_threshold: Minimum score threshold
+
+    Returns
+    -------
+        Dictionary containing detailed retrieval information
+    """
+    results, query_embeddings = retriever.search(
+        query=[query],
+        top_k=top_k,
+        score_threshold=score_threshold,
+    )
+
+    # Get dataset columns
+    dataset_columns = list(retriever.faiss_index.dataset.column_names)
+
+    # Build detailed results
+    detailed_results = {
+        'query': query,
+        'query_embedding_shape': query_embeddings.shape,
+        'num_results': len(results.total_indices[0]),
+        'dataset_columns': dataset_columns,
+        'retrieved_documents': [],
+    }
+
+    # Get detailed info for each retrieved document
+    for i, (idx, score) in enumerate(
+        zip(results.total_indices[0], results.total_scores[0]),
+    ):
+        doc_info = {
+            'rank': i + 1,
+            'dataset_index': idx,
+            'score': score,
+            'attributes': {},
+        }
+
+        # Get all available attributes for this document
+        for column in dataset_columns:
+            value = retriever.get([idx], column)[0]
+            if column == 'embeddings':
+                # For embeddings, store shape and dtype info
+                doc_info['attributes'][column] = {
+                    'shape': np.array(value).shape,
+                    'dtype': str(np.array(value).dtype),
+                }
+            else:
+                doc_info['attributes'][column] = value
+
+        detailed_results['retrieved_documents'].append(doc_info)
+
+    return detailed_results
+
+
+def print_retrieval_inspection(results: dict) -> None:
+    """Pretty print the retrieval inspection results."""
+    print('=' * 80)
+    print('🔍 RETRIEVAL INSPECTION')
+    print('=' * 80)
+    print(f'Query: {results["query"]}')
+    print(f'Query embedding shape: {results["query_embedding_shape"]}')
+    print(f'Number of results: {results["num_results"]}')
+    print(f'Dataset columns: {results["dataset_columns"]}')
+    print()
+
+    for doc in results['retrieved_documents']:
+        print(
+            f'📄 Document {doc["rank"]} (Index: {doc["dataset_index"]}, Score: {doc["score"]:.4f})',
+        )
+        for attr_name, attr_value in doc['attributes'].items():
+            if attr_name == 'text':
+                # Truncate text for readability
+                text_preview = (
+                    attr_value[:200] + '...'
+                    if len(attr_value) > 200
+                    else attr_value
+                )
+                print(f'  - {attr_name}: {text_preview}')
+            elif attr_name == 'embeddings':
+                print(f'  - {attr_name}: {attr_value}')
+            else:
+                print(f'  - {attr_name}: {attr_value}')
+        print()
+
+    print('=' * 80)
+
+
+# -----------------------------------------------------------------------------
 # Main Chat Function
 # -----------------------------------------------------------------------------
 def chat_with_model(config: ChatAppConfig) -> None:
@@ -311,6 +476,16 @@ def chat_with_model(config: ChatAppConfig) -> None:
     # Keep the conversation as list of (role, text)
     conversation_history: list[tuple[str, str]] = []
 
+    # Print welcome message and available commands
+    print('🤖 RAG Chat Interface Started!')
+    print('Available commands:')
+    print('  - Type your questions normally for chat responses')
+    print(
+        '  - /inspect <query> - Inspect retrieval results without generating a response',
+    )
+    print('  - quit - Exit the chat')
+    print('=' * 60)
+
     while True:
         user_input = input('You: ')
 
@@ -318,6 +493,32 @@ def chat_with_model(config: ChatAppConfig) -> None:
         if user_input.strip().lower() == 'quit':
             print('Exiting the chat...')
             break
+
+        # Check for inspect command
+        if user_input.strip().startswith('/inspect'):
+            # Extract the query after /inspect
+            query = user_input.strip()[8:].strip()  # Remove '/inspect' prefix
+            if not query:
+                print('Usage: /inspect <your query>')
+                continue
+
+            # Get the retriever from RAG model
+            if rag_model.retriever is None:
+                print('❌ No retriever configured in this RAG model.')
+                continue
+
+            # Inspect retrieval results
+            print(
+                '🔍 Inspecting retrieval results (no response generation)...',
+            )
+            results = inspect_retrieval_results(
+                retriever=rag_model.retriever,
+                query=query,
+                top_k=5,
+                score_threshold=0.1,
+            )
+            print_retrieval_inspection(results)
+            continue  # Don't add to conversation history
 
         # Add the user's turn to the conversation
         conversation_history.append(('User', user_input))
@@ -334,6 +535,7 @@ def chat_with_model(config: ChatAppConfig) -> None:
             prompt_template=conversation_template,
             retrieval_top_k=20,
             retrieval_score_threshold=0.1,
+            debug_retrieval=True,  # Enable debug mode to see retrieval details
         )
         # There's only one element in response_list
         response = response_list[0]
