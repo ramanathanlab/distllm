@@ -19,11 +19,11 @@ rag_configs:
 
     encoder_config:
       name: auto
-      pretrained_model_name_or_path: Salesforce/SFR-Embedding-Mistral 
+      pretrained_model_name_or_path: Salesforce/SFR-Embedding-Mistral
 
     pooler_config:
       name: mean
 
-  verbose: false
+  verbose: true
 
 save_conversation_path: /rbstor/ac.ogokdemir/ArgoniumRick/conversations/sfr_mistral/

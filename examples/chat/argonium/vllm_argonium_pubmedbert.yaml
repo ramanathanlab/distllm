@@ -24,6 +24,6 @@ rag_configs:
     pooler_config:
       name: mean
 
-  verbose: false
+  verbose: true
 
 save_conversation_path: /rbstor/ac.ogokdemir/ArgoniumRick/conversations/pubmedbert
