@@ -9,8 +9,8 @@ rag_configs:
   retriever_config:
     faiss_config:
       name: faiss_index_v2
-      dataset_dir: /rbstor/ac.ogokdemir/ArgoniumRick/semantic_chunks/modernbert/all_merged
-      faiss_index_path: /rbstor/ac.ogokdemir/ArgoniumRick/faiss_indices/modernbert
+      dataset_dir: /rbstor/ac.ogokdemir/ArgoniumRick/semantic_chunks/sfr_mistral//all_merged
+      faiss_index_path: /rbstor/ac.ogokdemir/ArgoniumRick/faiss_indices/sfr_mistral/
       dataset_chunk_paths: null
       precision: float32
       search_algorithm: exact
@@ -19,11 +19,11 @@ rag_configs:
 
     encoder_config:
       name: auto
-      pretrained_model_name_or_path: NeuML/bioclinical-modernbert-base-embeddings
+      pretrained_model_name_or_path: Salesforce/SFR-Embedding-Mistral 
 
     pooler_config:
       name: mean
 
   verbose: false
 
-save_conversation_path: /rbstor/ac.ogokdemir/ArgoniumRick/conversations/modernbert
+save_conversation_path: /rbstor/ac.ogokdemir/ArgoniumRick/conversations/sfr_mistral/
