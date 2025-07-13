@@ -293,7 +293,7 @@ class RagGenerator:
 
         # If the verbose is true in config, print contexts.
         if self.verbose:
-            print(contexts[0] + '\n\n')
+            print(contexts[0][0] + '\n\n')
 
         # We only expect one output per query for now
         # (If multiple texts were passed, we would loop.)
