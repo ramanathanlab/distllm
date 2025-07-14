@@ -1,0 +1,71 @@
+# Sample MCQA Configuration File
+# This file contains all configuration options for the RAG Argonium Score Parallel v2 script
+
+# Model Configuration
+model:
+  model_shortname: "llama"           # Model shortname from model_servers.yaml
+  grader_shortname: "gpt41"          # Grader model shortname from model_servers.yaml
+  model_config_file: "model_servers.yaml"  # Path to model configuration file
+
+# RAG Configuration
+rag:
+  enabled: true                      # Enable/disable RAG functionality
+  rag_config_file: null             # Path to RAG configuration YAML file (optional)
+  use_context_field: false          # Use 'text' field from JSON as context
+  retrieval_top_k: 5                # Number of documents to retrieve
+  retrieval_score_threshold: 0.0    # Minimum retrieval score threshold
+  chunk_logging_enabled: true       # Enable detailed chunk logging
+
+# Processing Configuration
+processing:
+  parallel_workers: 4                # Number of parallel workers
+  question_format: "auto"           # Question format: auto, mc, or qa
+  verbose: false                    # Enable verbose output
+  random_selection: null            # Randomly select N questions (null = all)
+  random_seed: null                 # Random seed for reproducible selection
+
+# Output Configuration
+output:
+  save_incorrect: true              # Save incorrectly answered questions
+  output_directory: "."             # Output directory for results
+  output_prefix: "rag_results"      # Prefix for output files
+
+# Example configurations for different use cases:
+
+# For basic RAG evaluation:
+# model:
+#   model_shortname: "llama"
+#   grader_shortname: "gpt41"
+# rag:
+#   enabled: true
+#   retrieval_top_k: 5
+# processing:
+#   parallel_workers: 4
+
+# For direct question answering (no RAG):
+# model:
+#   model_shortname: "llama"
+#   grader_shortname: "gpt41"
+# rag:
+#   enabled: false
+# processing:
+#   parallel_workers: 4
+
+# For testing with subset of questions:
+# model:
+#   model_shortname: "llama"
+#   grader_shortname: "gpt41"
+# processing:
+#   parallel_workers: 1
+#   random_selection: 10
+#   random_seed: 42
+#   verbose: true
+
+# For using context field from JSON:
+# model:
+#   model_shortname: "llama"
+#   grader_shortname: "gpt41"
+# rag:
+#   enabled: true
+#   use_context_field: true
+#   retrieval_top_k: 0  # No retrieval needed when using context field 
