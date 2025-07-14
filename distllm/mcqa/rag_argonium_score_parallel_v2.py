@@ -67,7 +67,7 @@ import openai
 import requests
 import yaml
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from tqdm import tqdm
 
 from distllm.generate.prompts import (
@@ -86,11 +86,43 @@ load_dotenv()
 # -----------------------------------------------------------------------------
 
 
+class GeneratorConfig(BaseModel):
+    """Base generator configuration."""
+
+    generator_type: str = Field(
+        ..., description="Generator type: 'vllm' or 'argo'"
+    )
+
+
+class VLLMGeneratorSettings(BaseModel):
+    """VLLM-specific generator settings."""
+
+    server: str = Field(..., description='Server hostname (e.g., rbdgx1)')
+    model: str = Field(..., description='Model name/path')
+    port: int = Field(..., description='Port number')
+    api_key: str = Field(..., description='API key')
+    temperature: float = Field(0.0, description='Generation temperature')
+    max_tokens: int = Field(1024, description='Maximum tokens to generate')
+
+
+class ArgoGeneratorSettings(BaseModel):
+    """Argo-specific generator settings."""
+
+    model: str = Field(
+        ..., description="Argo model name (e.g., 'argo:gpt-4o')"
+    )
+    base_url: str = Field(..., description='Argo proxy base URL')
+    api_key: str = Field('whatever+random', description='API key for Argo')
+    temperature: float = Field(0.0, description='Generation temperature')
+    max_tokens: int = Field(1024, description='Maximum tokens to generate')
+
+
 class ModelConfiguration(BaseModel):
     """Model configuration settings."""
 
-    model_shortname: str = Field(
-        ..., description='Model shortname from model_servers.yaml'
+    generator: GeneratorConfig
+    generator_settings: Union[VLLMGeneratorSettings, ArgoGeneratorSettings] = (
+        Field(..., description='Generator-specific settings')
     )
     grader_shortname: str = Field(
         ..., description='Grader model shortname from model_servers.yaml'
@@ -99,6 +131,94 @@ class ModelConfiguration(BaseModel):
         'model_servers.yaml', description='Model configuration file path'
     )
 
+    @field_validator('generator_settings')
+    @classmethod
+    def validate_generator_settings(cls, v, values):
+        generator_data = (
+            values.data.get('generator', {}) if hasattr(values, 'data') else {}
+        )
+        generator_type = (
+            getattr(generator_data, 'generator_type', None)
+            if hasattr(generator_data, 'generator_type')
+            else None
+        )
+
+        if generator_type == 'vllm' and not isinstance(
+            v, VLLMGeneratorSettings
+        ):
+            raise ValueError(
+                "generator_settings must be VLLMGeneratorSettings when generator_type is 'vllm'"
+            )
+        elif generator_type == 'argo' and not isinstance(
+            v, ArgoGeneratorSettings
+        ):
+            raise ValueError(
+                "generator_settings must be ArgoGeneratorSettings when generator_type is 'argo'"
+            )
+
+        return v
+
+
+# Retriever Configuration Classes
+class FaissIndexConfiguration(BaseModel):
+    """Configuration for FAISS Index."""
+
+    name: str = Field('faiss_index_v2', description='Index name')
+    dataset_dir: str = Field(
+        ..., description='Path to the HF dataset directory'
+    )
+    faiss_index_path: str = Field(..., description='Path to the FAISS index')
+    dataset_chunk_paths: Optional[List[str]] = Field(
+        None, description='Paths to dataset chunks'
+    )
+    precision: str = Field('float32', description='Embedding precision')
+    search_algorithm: str = Field('exact', description='Search algorithm')
+    rescore_multiplier: int = Field(
+        2, description='Oversampling factor for rescoring'
+    )
+    num_quantization_workers: int = Field(
+        1, description='Number of quantization workers'
+    )
+
+
+class EncoderConfiguration(BaseModel):
+    """Configuration for text encoder."""
+
+    name: str = Field('auto', description='Encoder name')
+    pretrained_model_name_or_path: str = Field(
+        ..., description='Pre-trained model name or path'
+    )
+    tokenizer_name: Optional[str] = Field(
+        None, description='Optional tokenizer name'
+    )
+    half_precision: bool = Field(False, description='Use half precision')
+    eval_mode: bool = Field(True, description='Set model to evaluation mode')
+    compile_model: bool = Field(
+        False, description='Compile model for faster inference'
+    )
+    quantization: bool = Field(True, description='Use quantization')
+
+
+class PoolerConfiguration(BaseModel):
+    """Configuration for pooler."""
+
+    name: str = Field('mean', description='Pooler name (mean or last_token)')
+
+
+class RetrieverConfiguration(BaseModel):
+    """Configuration for the retriever."""
+
+    faiss_config: FaissIndexConfiguration = Field(
+        ..., description='FAISS index configuration'
+    )
+    encoder_config: EncoderConfiguration = Field(
+        ..., description='Encoder configuration'
+    )
+    pooler_config: PoolerConfiguration = Field(
+        ..., description='Pooler configuration'
+    )
+    batch_size: int = Field(4, description='Batch size for the embedder model')
+
 
 class RAGConfiguration(BaseModel):
     """RAG-specific configuration settings."""
@@ -106,6 +226,9 @@ class RAGConfiguration(BaseModel):
     enabled: bool = Field(True, description='Enable RAG functionality')
     rag_config_file: Optional[str] = Field(
         None, description='RAG configuration file (YAML)'
+    )
+    retriever_config: Optional[RetrieverConfiguration] = Field(
+        None, description='Retriever configuration'
     )
     use_context_field: bool = Field(
         False, description="Use 'text' field from JSON as context"
@@ -159,7 +282,7 @@ class MCQAConfig(BaseModel):
     processing: ProcessingConfiguration = ProcessingConfiguration()
     output: OutputConfiguration = OutputConfiguration()
 
-    @validator('processing')
+    @field_validator('processing')
     def validate_processing(cls, v):
         if v.question_format not in ['auto', 'mc', 'qa']:
             raise ValueError("question_format must be 'auto', 'mc', or 'qa'")
@@ -167,7 +290,7 @@ class MCQAConfig(BaseModel):
             raise ValueError('parallel_workers must be >= 1')
         return v
 
-    @validator('rag')
+    @field_validator('rag')
     def validate_rag(cls, v):
         if v.retrieval_top_k < 1:
             raise ValueError('retrieval_top_k must be >= 1')
@@ -1349,17 +1472,33 @@ def create_config_from_args(args) -> MCQAConfig:
                 f'Warning: Configuration file {args.config} not found, using defaults'
             )
 
-        # Create default configuration
+        # Create default configuration based on model argument
+        if 'argo' in args.model.lower():
+            generator_config = GeneratorConfig(generator_type='argo')
+            generator_settings = ArgoGeneratorSettings(
+                model=f'argo:{args.model}',
+                base_url=os.getenv('ARGO_BASE_URL', 'http://localhost:56267'),
+                api_key=os.getenv('ARGO_API_KEY', 'whatever+random'),
+            )
+        else:
+            generator_config = GeneratorConfig(generator_type='vllm')
+            generator_settings = VLLMGeneratorSettings(
+                server=os.getenv('VLLM_SERVER', 'rbdgx1'),
+                model=args.model,
+                port=int(os.getenv('VLLM_PORT', '8000')),
+                api_key=os.getenv('VLLM_API_KEY', 'CELS'),
+            )
+
         config = MCQAConfig(
             model=ModelConfiguration(
-                model_shortname=args.model,
+                generator=generator_config,
+                generator_settings=generator_settings,
                 grader_shortname=args.grader,
                 model_config_file=args.model_config,
             )
         )
 
     # Override with command-line arguments
-    config.model.model_shortname = args.model
     config.model.grader_shortname = args.grader
     config.model.model_config_file = args.model_config
 
@@ -1382,6 +1521,35 @@ def create_config_from_args(args) -> MCQAConfig:
         config.output.save_incorrect = True
 
     return config
+
+
+def convert_mcqa_retriever_to_distllm_config(
+    retriever_config: RetrieverConfiguration,
+) -> Dict[str, Any]:
+    """Convert MCQA retriever configuration to distllm format."""
+    from pathlib import Path
+
+    # Convert FAISS config - only supporting v2 format
+    faiss_config = retriever_config.faiss_config.model_dump()
+    faiss_config['dataset_dir'] = Path(faiss_config['dataset_dir'])
+    faiss_config['faiss_index_path'] = Path(faiss_config['faiss_index_path'])
+    if faiss_config.get('dataset_chunk_paths'):
+        faiss_config['dataset_chunk_paths'] = [
+            Path(p) for p in faiss_config['dataset_chunk_paths']
+        ]
+
+    # Convert encoder config
+    encoder_config = retriever_config.encoder_config.model_dump()
+
+    # Convert pooler config
+    pooler_config = retriever_config.pooler_config.model_dump()
+
+    return {
+        'faiss_config': faiss_config,
+        'encoder_config': encoder_config,
+        'pooler_config': pooler_config,
+        'batch_size': retriever_config.batch_size,
+    }
 
 
 def create_metadata(
@@ -1450,9 +1618,6 @@ def main():
             )
 
     # Load model configurations
-    model_config = load_model_config(
-        config.model.model_shortname, config.model.model_config_file
-    )
     grader_config = load_model_config(
         config.model.grader_shortname, config.model.model_config_file
     )
@@ -1463,6 +1628,14 @@ def main():
         with open(config.rag.rag_config_file, 'r') as f:
             rag_config = yaml.safe_load(f)
         print(f'Using RAG configuration from {config.rag.rag_config_file}')
+    elif config.rag.retriever_config:
+        # Convert MCQA retriever config to distllm format
+        retriever_config_dict = convert_mcqa_retriever_to_distllm_config(
+            config.rag.retriever_config
+        )
+        print('Using inline retriever configuration')
+    else:
+        retriever_config_dict = None
 
     # Auto-detect question format
     question_format = config.processing.question_format
@@ -1472,23 +1645,83 @@ def main():
     # Create RAG model
     use_rag = config.rag.enabled
     if use_rag and rag_config:
-        # Use provided RAG configuration
+        # Use provided RAG configuration from file
         rag_model_config = RetrievalAugmentedGenerationConfig(**rag_config)
         rag_model_config.use_rag = True
-    elif use_rag and not config.rag.use_context_field:
-        # Create basic RAG model without retrieval
-        if 'argo' in config.model.model_shortname.lower():
+    elif use_rag and retriever_config_dict:
+        # Use inline retriever configuration
+        # Create generator config based on model settings
+        if config.model.generator.generator_type == 'argo':
+            if not isinstance(
+                config.model.generator_settings, ArgoGeneratorSettings
+            ):
+                raise ValueError(
+                    "Generator type is 'argo' but settings are not ArgoGeneratorSettings"
+                )
+            argo_settings = config.model.generator_settings
             generator_config = ArgoGeneratorConfig(
-                model=model_config['openai_model'],
-                base_url=model_config['openai_api_base'],
-                api_key=model_config['openai_api_key'],
+                model=argo_settings.model,
+                base_url=argo_settings.base_url,
+                api_key=argo_settings.api_key,
+                temperature=argo_settings.temperature,
+                max_tokens=argo_settings.max_tokens,
             )
         else:
+            if not isinstance(
+                config.model.generator_settings, VLLMGeneratorSettings
+            ):
+                raise ValueError(
+                    "Generator type is 'vllm' but settings are not VLLMGeneratorSettings"
+                )
+            vllm_settings = config.model.generator_settings
             generator_config = VLLMGeneratorConfig(
-                server=model_config['server'],
-                port=model_config['port'],
-                api_key=model_config['api_key'],
-                model=model_config['model'],
+                server=vllm_settings.server,
+                port=vllm_settings.port,
+                api_key=vllm_settings.api_key,
+                model=vllm_settings.model,
+                temperature=vllm_settings.temperature,
+                max_tokens=vllm_settings.max_tokens,
+            )
+
+        # Create full RAG configuration
+        rag_model_config = RetrievalAugmentedGenerationConfig(
+            generator_config=generator_config,
+            retriever_config=RetrieverConfig(**retriever_config_dict),
+            verbose=config.processing.verbose,
+            use_rag=True,
+        )
+    elif use_rag and not config.rag.use_context_field:
+        # Create basic RAG model without retrieval
+        if config.model.generator.generator_type == 'argo':
+            if not isinstance(
+                config.model.generator_settings, ArgoGeneratorSettings
+            ):
+                raise ValueError(
+                    "Generator type is 'argo' but settings are not ArgoGeneratorSettings"
+                )
+            argo_settings = config.model.generator_settings
+            generator_config = ArgoGeneratorConfig(
+                model=argo_settings.model,
+                base_url=argo_settings.base_url,
+                api_key=argo_settings.api_key,
+                temperature=argo_settings.temperature,
+                max_tokens=argo_settings.max_tokens,
+            )
+        else:
+            if not isinstance(
+                config.model.generator_settings, VLLMGeneratorSettings
+            ):
+                raise ValueError(
+                    "Generator type is 'vllm' but settings are not VLLMGeneratorSettings"
+                )
+            vllm_settings = config.model.generator_settings
+            generator_config = VLLMGeneratorConfig(
+                server=vllm_settings.server,
+                port=vllm_settings.port,
+                api_key=vllm_settings.api_key,
+                model=vllm_settings.model,
+                temperature=vllm_settings.temperature,
+                max_tokens=vllm_settings.max_tokens,
             )
 
         rag_model_config = RetrievalAugmentedGenerationConfig(
@@ -1499,18 +1732,36 @@ def main():
         )
     else:
         # Create model for context field usage or no-RAG mode
-        if 'argo' in config.model.model_shortname.lower():
+        if config.model.generator.generator_type == 'argo':
+            if not isinstance(
+                config.model.generator_settings, ArgoGeneratorSettings
+            ):
+                raise ValueError(
+                    "Generator type is 'argo' but settings are not ArgoGeneratorSettings"
+                )
+            argo_settings = config.model.generator_settings
             generator_config = ArgoGeneratorConfig(
-                model=model_config['openai_model'],
-                base_url=model_config['openai_api_base'],
-                api_key=model_config['openai_api_key'],
+                model=argo_settings.model,
+                base_url=argo_settings.base_url,
+                api_key=argo_settings.api_key,
+                temperature=argo_settings.temperature,
+                max_tokens=argo_settings.max_tokens,
             )
         else:
+            if not isinstance(
+                config.model.generator_settings, VLLMGeneratorSettings
+            ):
+                raise ValueError(
+                    "Generator type is 'vllm' but settings are not VLLMGeneratorSettings"
+                )
+            vllm_settings = config.model.generator_settings
             generator_config = VLLMGeneratorConfig(
-                server=model_config['server'],
-                port=model_config['port'],
-                api_key=model_config['api_key'],
-                model=model_config['model'],
+                server=vllm_settings.server,
+                port=vllm_settings.port,
+                api_key=vllm_settings.api_key,
+                model=vllm_settings.model,
+                temperature=vllm_settings.temperature,
+                max_tokens=vllm_settings.max_tokens,
             )
 
         rag_model_config = RetrievalAugmentedGenerationConfig(
@@ -1525,7 +1776,8 @@ def main():
 
     # Print configuration summary
     print(f'Configuration Summary:')
-    print(f'  Model: {config.model.model_shortname}')
+    print(f'  Generator Type: {config.model.generator.generator_type}')
+    print(f'  Generator Model: {config.model.generator_settings.model}')
     print(f'  Grader: {config.model.grader_shortname}')
     print(f'  RAG Enabled: {config.rag.enabled}')
     print(f'  Parallel Workers: {config.processing.parallel_workers}')
@@ -1659,9 +1911,12 @@ def main():
 
         # Save results with metadata
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        model_name = config.model.generator_settings.model.replace(
+            '/', '_'
+        ).replace(':', '_')
         output_file = os.path.join(
             config.output.output_directory,
-            f'{config.output.output_prefix}_{config.model.model_shortname}_{timestamp}.json',
+            f'{config.output.output_prefix}_{model_name}_{timestamp}.json',
         )
 
         # Create final output structure with metadata
@@ -1683,7 +1938,7 @@ def main():
             if incorrect_results:
                 incorrect_file = os.path.join(
                     config.output.output_directory,
-                    f'incorrect_answers_{config.model.model_shortname}_{timestamp}.json',
+                    f'incorrect_answers_{model_name}_{timestamp}.json',
                 )
                 incorrect_data = {
                     'metadata': metadata,
