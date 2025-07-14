@@ -1556,6 +1556,7 @@ def create_metadata(
     config: MCQAConfig,
     questions: List[Dict],
     rag_config: Optional[Dict] = None,
+    config_file_used: Optional[str] = None,
 ) -> Dict:
     """Create metadata for the evaluation run."""
     metadata = {
@@ -1564,6 +1565,7 @@ def create_metadata(
             'script_name': 'rag_argonium_score_parallel_v2.py',
             'timestamp': datetime.now().isoformat(),
             'configuration': config.dict(),
+            'config_file_used': config_file_used,
             'question_statistics': {
                 'total_questions': len(questions),
                 'selected_questions': len(questions)
@@ -1907,7 +1909,7 @@ def main():
                 )
 
         # Create metadata
-        metadata = create_metadata(config, questions, rag_config)
+        metadata = create_metadata(config, questions, rag_config, args.config)
 
         # Save results with metadata
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -1929,6 +1931,21 @@ def main():
             json.dump(output_data, f, indent=2)
 
         print(f'Results saved to {output_file}')
+
+        # Save configuration file to output directory for reproducibility
+        config_output_file = os.path.join(
+            config.output.output_directory,
+            f'{config.output.output_prefix}_config_{model_name}_{timestamp}.yaml',
+        )
+
+        # Create output directory if it doesn't exist
+        os.makedirs(config.output.output_directory, exist_ok=True)
+
+        try:
+            config.to_yaml(config_output_file)
+            print(f'Configuration saved to {config_output_file}')
+        except Exception as e:
+            print(f'Warning: Could not save configuration file: {e}')
 
         # Save incorrect answers if requested
         if config.output.save_incorrect:
