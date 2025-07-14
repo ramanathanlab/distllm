@@ -1629,6 +1629,29 @@ def main():
     # Create configuration from arguments and YAML
     config = create_config_from_args(args)
 
+    # Create output directory and save config file immediately for experiment tracking
+    os.makedirs(config.output.output_directory, exist_ok=True)
+
+    # Generate timestamp and model name for filenames
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    model_name = config.model.generator_settings.model.replace(
+        '/', '_'
+    ).replace(':', '_')
+
+    # Save configuration file immediately for experiment tracking
+    config_output_file = os.path.join(
+        config.output.output_directory,
+        f'{config.output.output_prefix}_config_{model_name}_{timestamp}.yaml',
+    )
+
+    try:
+        config.to_yaml(config_output_file)
+        print(
+            f'Configuration saved for experiment tracking: {config_output_file}'
+        )
+    except Exception as e:
+        print(f'Warning: Could not save initial configuration file: {e}')
+
     # Set random seed if provided
     if config.processing.random_seed is not None:
         random.seed(config.processing.random_seed)
@@ -1941,14 +1964,7 @@ def main():
         # Create metadata
         metadata = create_metadata(config, questions, rag_config, args.config)
 
-        # Create output directory if it doesn't exist (before any file operations)
-        os.makedirs(config.output.output_directory, exist_ok=True)
-
-        # Save results with metadata
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        model_name = config.model.generator_settings.model.replace(
-            '/', '_'
-        ).replace(':', '_')
+        # Save results with metadata (directory already created at start)
         output_file = os.path.join(
             config.output.output_directory,
             f'{config.output.output_prefix}_{model_name}_{timestamp}.json',
@@ -1965,18 +1981,6 @@ def main():
 
         print(f'Results saved to {output_file}')
 
-        # Save configuration file to output directory for reproducibility
-        config_output_file = os.path.join(
-            config.output.output_directory,
-            f'{config.output.output_prefix}_config_{model_name}_{timestamp}.yaml',
-        )
-
-        try:
-            config.to_yaml(config_output_file)
-            print(f'Configuration saved to {config_output_file}')
-        except Exception as e:
-            print(f'Warning: Could not save configuration file: {e}')
-
         # Save incorrect answers if requested
         if config.output.save_incorrect:
             incorrect_results = [
@@ -1985,7 +1989,7 @@ def main():
             if incorrect_results:
                 incorrect_file = os.path.join(
                     config.output.output_directory,
-                    f'incorrect_answers_{model_name}_{timestamp}.json',
+                    f'{config.output.output_prefix}_incorrect_{model_name}_{timestamp}.json',
                 )
                 incorrect_data = {
                     'metadata': metadata,

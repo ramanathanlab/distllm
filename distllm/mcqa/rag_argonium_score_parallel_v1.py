@@ -763,7 +763,7 @@ MODEL'S ANSWER:
 EVALUATION STEPS:
 1. First, identify the correct {option_type} from the reference answer {option_examples}.
 2. Next, identify which {option_type} the model selected in its answer.
-3. Check if these {option_type}s match.
+3. `Check` if these {option_type}s match.
 4. IMPORTANT: Even if the {option_type}s don't exactly match (e.g., model says "A" but correct is "1"), check if the CONTENT of the model's reasoning matches the CONTENT of the correct option from the question.
 5. Also handle cases where the model gives a number when the question uses letters, or vice versa (A=1, B=2, C=3, D=4, E=5).
 
