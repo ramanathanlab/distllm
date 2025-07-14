@@ -1,0 +1,61 @@
+# CELS Server Configurations
+# Last updated: 2025-05-24
+
+servers:
+
+- server: lambda5
+  shortname: gpt-4.1
+  openai_api_key: no_key
+  openai_api_base: http://lambda5:44497/v1
+  openai_model: argo:gpt-4.1
+- server: lambda5
+  shortname: gpt-4o
+  openai_api_key: no_key
+  openai_api_base: http://lambda5:44497/v1
+  openai_model: argo:gpt-4o
+- server: lambda5
+  shortname: gpt-4o-latest
+  openai_api_key: no_key
+  openai_api_base: http://lambda5:44497/v1
+  openai_model: argo:gpt-4o-latest
+- server: lambda5
+  shortname: gpt-o1-mini
+  openai_api_key: no_key
+  openai_api_base: http://lambda5:44497/v1
+  openai_model: argo:gpt-o1-mini
+- server: lambda5
+  shortname: o1-mini
+  openai_api_key: no_key
+  openai_api_base: http://lambda5:44497/v1
+  openai_model: argo:o1-mini
+- server: lambda5
+  shortname: gpt-o3-mini
+  openai_api_key: no_key
+  openai_api_base: http://lambda5:44497/v1
+  openai_model: argo:gpt-o3-mini
+- server: lambda5
+  shortname: o3-mini
+  openai_api_key: no_key
+  openai_api_base: http://lambda5:44497/v1
+  openai_model: argo:o3-mini
+- server: lambda5
+  shortname: gpt-o1
+  openai_api_key: no_key
+  openai_api_base: http://lambda5:44497/v1
+  openai_model: argo:gpt-o1
+- server: lambda5
+  shortname: o1
+  openai_api_key: no_key
+  openai_api_base: http://lambda5:44497/v1
+  openai_model: argo:o1
+- server: lambda5
+  shortname: gpt-o1-preview
+  openai_api_key: no_key
+  openai_api_base: http://lambda5:44497/v1
+  openai_model: argo:gpt-o1-preview
+- server: lambda5
+  shortname: o1-preview
+  openai_api_key: no_key
+  openai_api_base: http://lambda5:44497/v1
+  openai_model: argo:o1-preview
+
