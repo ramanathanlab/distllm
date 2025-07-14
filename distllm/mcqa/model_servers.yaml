@@ -58,4 +58,8 @@ servers:
   openai_api_key: no_key
   openai_api_base: http://lambda5:44497/v1
   openai_model: argo:o1-preview
-
+- server: lambda5
+  shortname: gpt-o3
+  openai_api_key: no_key
+  openai_api_base: http://lambda5:44497/v1
+  openai_model: argo:o3
