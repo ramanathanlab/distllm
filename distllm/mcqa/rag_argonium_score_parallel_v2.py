@@ -10,6 +10,7 @@ NEW in V2:
 - Enhanced traceability from questions to retrieved chunks
 - RAG toggle functionality (--no-rag) to disable RAG completely
 - File-level metadata logging for configuration tracking
+- Source chunk retrieval tracking to verify if original source was retrieved
 
 Usage:
     python rag_argonium_score_parallel_v2.py <questions_file.json> --model <model_shortname> --grader <grader_shortname> [--config <config_file>] [--rag-config <rag_config_file>] [--parallel <num_workers>] [--format auto|mc|qa] [--random <num_questions>] [--seed <random_seed>] [--save-incorrect] [--use-context-field] [--retrieval-top-k <k>] [--retrieval-score-threshold <threshold>] [--log-chunks] [--no-rag]
@@ -52,6 +53,7 @@ The script:
 7) Uses the specified MODEL to generate answers and GRADER to evaluate them
 8) Reports detailed accuracy metrics and exports results with full configuration tracking
 9) Processes multiple questions in parallel when --parallel > 1
+10) Tracks whether the source chunk of each question was retrieved (RAG mode only)
 """
 
 import argparse
@@ -145,6 +147,93 @@ def get_original_path_from_chunk_id(
         return path_mapping.get(file_id)
     except ValueError:
         return None
+
+
+def check_source_chunk_retrieved(
+    qa_pair: Dict[str, Any], retrieval_info: Dict[str, Any], use_rag: bool
+) -> Optional[bool]:
+    """
+    Check if the source chunk of the question was included in the retrieved chunks.
+
+    Args:
+        qa_pair: Question-answer pair that might contain source information
+        retrieval_info: Information about retrieved chunks
+        use_rag: Whether RAG was used for this evaluation
+
+    Returns:
+        True if source chunk was retrieved, False if not, None if RAG not used or no source info
+    """
+    # If RAG was not used, return None
+    if not use_rag:
+        return None
+
+    # If no retrieval info or no retrieved chunks, return None
+    if not retrieval_info or not retrieval_info.get('retrieved_chunks'):
+        return None
+
+    # Look for source information in the question data
+    # Check various possible field names for source information
+    source_fields = [
+        'source_chunk_id',
+        'chunk_id',
+        'source_id',
+        'source_file',
+        'source_path',
+        'dataset_index',
+        'source_dataset_index',
+    ]
+
+    source_info = None
+    source_field_name = None
+
+    for field in source_fields:
+        if field in qa_pair:
+            source_info = qa_pair[field]
+            source_field_name = field
+            break
+
+    # If no source information found, return None
+    if source_info is None:
+        return None
+
+    # Get all retrieved chunks
+    retrieved_chunks = []
+    for chunk_list in retrieval_info['retrieved_chunks']:
+        retrieved_chunks.extend(chunk_list)
+
+    # Check different types of source information
+    if source_field_name in ['source_chunk_id', 'chunk_id']:
+        # Direct chunk ID comparison
+        retrieved_chunk_ids = [
+            chunk.get('chunk_id') for chunk in retrieved_chunks
+        ]
+        return source_info in retrieved_chunk_ids
+
+    elif source_field_name in ['source_file', 'source_path']:
+        # Path-based comparison
+        retrieved_paths = [chunk.get('path') for chunk in retrieved_chunks]
+        return source_info in retrieved_paths
+
+    elif source_field_name in ['dataset_index', 'source_dataset_index']:
+        # Dataset index comparison
+        retrieved_indices = [
+            chunk.get('dataset_index') for chunk in retrieved_chunks
+        ]
+        return source_info in retrieved_indices
+
+    elif source_field_name == 'source_id':
+        # Generic source ID - try to match against chunk IDs or paths
+        retrieved_chunk_ids = [
+            chunk.get('chunk_id') for chunk in retrieved_chunks
+        ]
+        retrieved_paths = [chunk.get('path') for chunk in retrieved_chunks]
+        return (
+            source_info in retrieved_chunk_ids
+            or source_info in retrieved_paths
+        )
+
+    # If we can't determine the match, return None
+    return None
 
 
 # -----------------------------------------------------------------------------
@@ -1038,6 +1127,11 @@ def process_question(
         if format_type == 'auto':
             format_type = 'mc' if 'correct_letter' in evaluation else 'qa'
 
+        # Check if source chunk was retrieved
+        source_chunk_retrieved = check_source_chunk_retrieved(
+            qa_pair, retrieval_info, use_rag
+        )
+
         # Prepare detailed result
         result = {
             'question_id': i,
@@ -1050,6 +1144,7 @@ def process_question(
             'model_time_seconds': model_time,
             'evaluation_time_seconds': eval_time,
             'retrieval_info': retrieval_info,  # Include retrieval information
+            'source_chunk_retrieved': source_chunk_retrieved,  # Track source retrieval
             'skipped': False,
         }
 
