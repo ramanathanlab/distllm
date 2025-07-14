@@ -1,0 +1,71 @@
+# Sample MCQA Configuration File - v2.0
+# This file contains all configuration options for the RAG Argonium Score Parallel v2 script
+# Now with explicit generator type specification and questions file
+
+# Questions Configuration
+questions_file: "/rbstor/ac.ogokdemir/ArgoniumRick/MCQA_Benchmarks/rick/HR-1kp-cc-1kqa.json"  # Path to JSON file containing questions
+
+# Model Configuration
+model:
+  # Generator configuration - specify type explicitly
+  generator:
+    generator_type: "argo"  # Changed from "vllm" to "argo"
+  
+  # Generator-specific settings for Argo
+  generator_settings:
+    model: "argo:o3"                    # Changed to use gpt-4.1 via Argo
+    base_url: "http://lambda5:55625/v1"      # Argo proxy URL from model_servers.yaml
+    api_key: "no_key"                       # API key (can be any string for Argo)
+    temperature: 0.0
+    max_tokens: 2048
+  
+  # Grader configuration (already using gpt-4.1)
+  grader_shortname: "gpt-4.1"          # Grader model shortname from model_servers.yaml
+  model_config_file: "model_servers.yaml"  # Path to model configuration file
+
+# RAG Configuration
+rag:
+  enabled: true                      # Enable/disable RAG functionality
+  rag_config_file: null             # Path to RAG configuration YAML file (optional)
+  
+  
+  # Optional: Inline retriever configuration (alternative to rag_config_file)
+  retriever_config:
+    faiss_config:
+      name: "faiss_index_v2"
+      dataset_dir: "/rbstor/ac.ogokdemir/ArgoniumRick/semantic_chunks/modernbert/all_merged"
+      faiss_index_path: "/rbstor/ac.ogokdemir/ArgoniumRick/faiss_indices/modernbert"
+      dataset_chunk_paths: null
+      precision: "float32"
+      search_algorithm: "exact"
+      rescore_multiplier: 2
+      num_quantization_workers: 1
+    
+    encoder_config:
+      name: "auto"
+      pretrained_model_name_or_path: "NeuML/bioclinical-modernbert-base-embeddings"
+      quantization: false
+    
+    pooler_config:
+      name: "mean"
+    
+    batch_size: 4
+  
+  use_context_field: false          # Use 'text' field from JSON as context
+  retrieval_top_k: 5                # Number of documents to retrieve
+  retrieval_score_threshold: 0.0    # Minimum retrieval score threshold
+  chunk_logging_enabled: true       # Enable detailed chunk logging
+
+# Processing Configuration
+processing:
+  parallel_workers: 4                # Number of parallel workers
+  question_format: "mc"           # Question format: auto, mc, or qa
+  verbose: true                    # Enable verbose output
+  random_selection: null            # Randomly select N questions (null = all)
+  random_seed: null                 # Random seed for reproducible selection
+
+# Output Configuration
+output:
+  save_incorrect: true              # Save incorrectly answered questions
+  output_directory: "/rbstor/ac.ogokdemir/ArgoniumRick/mcqa_results/o3-gpt41/modernbert/"             # Updated path to reflect gpt41-gpt41
+  output_prefix: "o3-gpt41-modernbert"      # Updated prefix to reflect gpt41-gpt41
