@@ -14,23 +14,26 @@ NEW in V2:
 - Pydantic configuration management with YAML support
 
 Usage:
-    python rag_argonium_score_parallel_v2.py <questions_file.json> --model <model_shortname> --grader <grader_shortname> [--config <mcqa_config.yaml>] [--model-config <model_servers.yaml>]
+    # Recommended: Use YAML config file (everything specified in config)
+    python rag_argonium_score_parallel_v2.py --config <mcqa_config.yaml>
+
+    # Alternative: Command-line arguments (for backward compatibility)
+    python rag_argonium_score_parallel_v2.py <questions_file.json> --model <model_shortname> --grader <grader_shortname> [--config <mcqa_config.yaml>]
 
 Where:
+    - config: MCQA configuration file (YAML) containing all evaluation settings including questions file, model, and grader
     - questions_file.json: A JSON file with an array of objects, each having "question", "answer", and optionally "text" fields
     - model_shortname: The shortname of the model to test from model_servers.yaml
     - grader_shortname: The shortname of the model to use for grading from model_servers.yaml
-    - config: MCQA configuration file (YAML) containing all evaluation settings (optional)
-    - model-config: Model configuration file (default: model_servers.yaml)
 
 Examples:
-    # Basic usage with YAML config
-    python rag_argonium_score_parallel_v2.py questions.json --model llama --grader gpt41 --config mcqa_config.yaml
+    # Recommended: Everything in YAML config
+    python rag_argonium_score_parallel_v2.py --config mcqa_config.yaml
 
-    # Override specific settings
-    python rag_argonium_score_parallel_v2.py questions.json --model llama --grader gpt41 --config mcqa_config.yaml --no-rag
+    # Override specific settings from config
+    python rag_argonium_score_parallel_v2.py --config mcqa_config.yaml --no-rag
 
-    # Use without YAML config (fallback to command-line args)
+    # Traditional command-line usage (requires all arguments)
     python rag_argonium_score_parallel_v2.py questions.json --model llama --grader gpt41 --parallel 4
 
 The script:
@@ -277,6 +280,9 @@ class OutputConfiguration(BaseModel):
 class MCQAConfig(BaseModel):
     """Main MCQA evaluation configuration."""
 
+    questions_file: str = Field(
+        ..., description='Path to JSON file containing questions'
+    )
     model: ModelConfiguration
     rag: RAGConfiguration = RAGConfiguration()
     processing: ProcessingConfiguration = ProcessingConfiguration()
@@ -1389,28 +1395,31 @@ def parse_arguments():
         description='Advanced Question Grader with RAG and Chunk Logging',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Configuration File Example:
-    Use --config to specify a YAML configuration file with all settings.
-    See sample_mcqa_config.yaml for a complete example.
+Configuration File Usage:
+    Recommended: Specify everything in YAML config file
+        python rag_argonium_score_parallel_v2.py --config mcqa_config.yaml
     
+    Alternative: Command-line arguments (for backward compatibility)
+        python rag_argonium_score_parallel_v2.py questions.json --model llama --grader gpt41
+    
+    See sample_mcqa_config.yaml for a complete configuration example.
     Command-line arguments will override YAML settings when provided.
         """,
     )
 
-    # Required arguments
+    # Arguments (can be specified in config file)
     parser.add_argument(
         'questions_file',
-        help='Path to the JSON file containing questions',
+        nargs='?',  # Make optional
+        help='Path to the JSON file containing questions (can be specified in config)',
     )
     parser.add_argument(
         '--model',
-        required=True,
-        help='Model shortname from the model configuration file',
+        help='Model shortname from the model configuration file (can be specified in config)',
     )
     parser.add_argument(
         '--grader',
-        required=True,
-        help='Grader model shortname from the model configuration file',
+        help='Grader model shortname from the model configuration file (can be specified in config)',
     )
 
     # Configuration files
@@ -1472,6 +1481,20 @@ def create_config_from_args(args) -> MCQAConfig:
                 f'Warning: Configuration file {args.config} not found, using defaults'
             )
 
+        # Ensure required arguments are provided when no config file
+        if not args.questions_file:
+            raise ValueError(
+                'questions_file must be provided either as argument or in config file'
+            )
+        if not args.model:
+            raise ValueError(
+                '--model must be provided either as argument or in config file'
+            )
+        if not args.grader:
+            raise ValueError(
+                '--grader must be provided either as argument or in config file'
+            )
+
         # Create default configuration based on model argument
         if 'argo' in args.model.lower():
             generator_config = GeneratorConfig(generator_type='argo')
@@ -1490,17 +1513,24 @@ def create_config_from_args(args) -> MCQAConfig:
             )
 
         config = MCQAConfig(
+            questions_file=args.questions_file,
             model=ModelConfiguration(
                 generator=generator_config,
                 generator_settings=generator_settings,
                 grader_shortname=args.grader,
-                model_config_file=args.model_config,
-            )
+                model_config_file=args.model_config or 'model_servers.yaml',
+            ),
         )
 
-    # Override with command-line arguments
-    config.model.grader_shortname = args.grader
-    config.model.model_config_file = args.model_config
+    # Override with command-line arguments if provided
+    if args.questions_file:
+        config.questions_file = args.questions_file
+
+    if args.grader:
+        config.model.grader_shortname = args.grader
+
+    if args.model_config:
+        config.model.model_config_file = args.model_config
 
     if args.no_rag:
         config.rag.enabled = False
@@ -1604,7 +1634,7 @@ def main():
         random.seed(config.processing.random_seed)
 
     # Load questions
-    with open(args.questions_file, 'r') as f:
+    with open(config.questions_file, 'r') as f:
         questions = json.load(f)
 
     # Randomly select questions if specified
