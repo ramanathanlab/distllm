@@ -1941,6 +1941,9 @@ def main():
         # Create metadata
         metadata = create_metadata(config, questions, rag_config, args.config)
 
+        # Create output directory if it doesn't exist (before any file operations)
+        os.makedirs(config.output.output_directory, exist_ok=True)
+
         # Save results with metadata
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         model_name = config.model.generator_settings.model.replace(
@@ -1967,9 +1970,6 @@ def main():
             config.output.output_directory,
             f'{config.output.output_prefix}_config_{model_name}_{timestamp}.yaml',
         )
-
-        # Create output directory if it doesn't exist
-        os.makedirs(config.output.output_directory, exist_ok=True)
 
         try:
             config.to_yaml(config_output_file)
