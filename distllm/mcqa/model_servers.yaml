@@ -78,3 +78,8 @@ servers:
   openai_api_key: no_key
   openai_api_base: http://lambda5:55625/v1
   openai_model: argo:claude-4-opus
+- server: lambda5
+  shortname: gpt35large
+  openai_api_key: no_key
+  openai_api_base: http://lambda5:55625/v1
+  openai_model: argo:gpt-3.5-turbo-16k
