@@ -1,0 +1,177 @@
+# Sample MCQA Configuration File - v2.0
+# This file contains all configuration options for the RAG Argonium Score Parallel v2 script
+# Now with explicit generator type specification and questions file
+
+# Questions Configuration
+questions_file: "/rbstor/ac.ogokdemir/ArgoniumRick/MCQA_Benchmarks/rick/HR-1kp-cc-1kqa.json"  # Path to JSON file containing questions
+
+# Model Configuration
+model:
+  # Generator configuration - specify type explicitly
+  generator:
+    generator_type: "vllm"  # Options: "vllm" or "argo"
+  
+  # Generator-specific settings for VLLM
+  generator_settings:
+    server: "rbdgx2"
+    model: "meta-llama/Llama-3.3-70B-Instruct"
+    port: 9999
+    api_key: "CELS"
+    temperature: 0.0
+    max_tokens: 2048
+  
+  # Grader configuration
+  grader_shortname: "gpt-4.1"          # Grader model shortname from model_servers.yaml
+  model_config_file: "model_servers.yaml"  # Path to model configuration file
+
+# RAG Configuration
+rag:
+  enabled: true                      # Enable/disable RAG functionality
+  rag_config_file: null             # Path to RAG configuration YAML file (optional)
+  
+  # Optional: Inline retriever configuration (alternative to rag_config_file)
+  retriever_config:
+    faiss_config:
+      name: "faiss_index_v2"
+      dataset_dir: "/rbstor/ac.ogokdemir/ArgoniumRick/semantic_chunks/pubmedbert/all_merged"
+      faiss_index_path: "/rbstor/ac.ogokdemir/ArgoniumRick/faiss_indices/pubmedbert"
+      dataset_chunk_paths: null
+      precision: "float32"
+      search_algorithm: "exact"
+      rescore_multiplier: 2
+      num_quantization_workers: 1
+    
+    encoder_config:
+      name: "auto"
+      pretrained_model_name_or_path: "pritamdeka/S-PubMedBert-MS-MARCO"
+
+    
+    pooler_config:
+      name: "mean"
+    
+    batch_size: 4
+  
+  use_context_field: false          # Use 'text' field from JSON as context
+  retrieval_top_k: 5                # Number of documents to retrieve
+  retrieval_score_threshold: 0.0    # Minimum retrieval score threshold
+  chunk_logging_enabled: true       # Enable detailed chunk logging
+
+# Processing Configuration
+processing:
+  parallel_workers: 4                # Number of parallel workers
+  question_format: "mc"           # Question format: auto, mc, or qa
+  verbose: true                    # Enable verbose output
+  random_selection: 100            # Randomly select N questions (null = all)
+  random_seed: null                 # Random seed for reproducible selection
+
+# Output Configuration
+output:
+  save_incorrect: true              # Save incorrectly answered questions
+  output_directory: "."             # Output directory for results
+  output_prefix: "model_llama3_pubmedbert_retriever_grader_gpt41"      # Prefix for output files
+
+#---
+# Alternative configuration examples and usage notes:
+
+# RAG Configuration Usage:
+# 1. For existing RAG config files: Set 'rag_config_file' to the path of your YAML file
+#    and leave 'retriever_config' as null or remove it entirely
+# 2. For inline configuration: Set 'retriever_config' with the structure above
+#    and leave 'rag_config_file' as null
+# 3. For no RAG: Set 'enabled' to false
+# 4. For using context field: Set 'use_context_field' to true (no retrieval needed)
+#
+# The inline retriever_config structure mirrors the distllm chat configuration:
+# - faiss_config: FAISS index settings (v2 only)
+# - encoder_config: Text encoder settings (auto, esm2, esmc)
+# - pooler_config: Pooling strategy (mean, last_token)
+# - batch_size: Batch size for embeddings
+
+# Alternative configuration examples:
+
+# Example 1: Alternative encoder configuration
+# rag:
+#   enabled: true
+#   retriever_config:
+#     faiss_config:
+#       name: "faiss_index_v2"
+#       dataset_dir: "/path/to/dataset/"
+#       faiss_index_path: "/path/to/index"
+#       precision: "float32"
+#       search_algorithm: "exact"
+#       rescore_multiplier: 2
+#       num_quantization_workers: 1
+#     encoder_config:
+#       name: "auto"
+#       pretrained_model_name_or_path: "sentence-transformers/all-MiniLM-L6-v2"
+#     pooler_config:
+#       name: "mean"
+#     batch_size: 8
+
+# Example 2: VLLM Generator Configuration
+# model:
+#   generator:
+#     generator_type: "vllm"
+#   generator_settings:
+#     server: "rbdgx2"
+#     model: "meta-llama/Llama-3.3-70B-Instruct"
+#     port: 9999
+#     api_key: "CELS"
+#     temperature: 0.1
+#     max_tokens: 2048
+#   grader_shortname: "gpt41"
+
+# Example 2: Argo Generator Configuration
+# model:
+#   generator:
+#     generator_type: "argo"
+#   generator_settings:
+#     model: "argo:gpt-4o"
+#     base_url: "http://localhost:56267"
+#     api_key: "whatever+random"
+#     temperature: 0.0
+#     max_tokens: 1024
+#   grader_shortname: "gpt41"
+
+# Example 3: Direct question answering (no RAG)
+# model:
+#   generator:
+#     generator_type: "vllm"
+#   generator_settings:
+#     server: "rbdgx1"
+#     model: "meta-llama/Llama-3.3-70B-Instruct"
+#     port: 8000
+#     api_key: "CELS"
+# rag:
+#   enabled: false
+# processing:
+#   parallel_workers: 8
+
+# Example 4: Testing configuration
+# model:
+#   generator:
+#     generator_type: "vllm"
+#   generator_settings:
+#     server: "rbdgx1"
+#     model: "meta-llama/Llama-3.3-70B-Instruct"
+#     port: 8000
+#     api_key: "CELS"
+# processing:
+#   parallel_workers: 1
+#   random_selection: 10
+#   random_seed: 42
+#   verbose: true
+
+# Example 5: Using context field from JSON (no retrieval needed)
+# model:
+#   generator:
+#     generator_type: "vllm"
+#   generator_settings:
+#     server: "rbdgx1"
+#     model: "meta-llama/Llama-3.3-70B-Instruct"
+#     port: 8000
+#     api_key: "CELS"
+# rag:
+#   enabled: true
+#   use_context_field: true
+#   retrieval_top_k: 0  # No retrieval needed when using context field 
