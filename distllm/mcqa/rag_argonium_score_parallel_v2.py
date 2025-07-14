@@ -11,37 +11,27 @@ NEW in V2:
 - RAG toggle functionality (--no-rag) to disable RAG completely
 - File-level metadata logging for configuration tracking
 - Source chunk retrieval tracking to verify if original source was retrieved
+- Pydantic configuration management with YAML support
 
 Usage:
-    python rag_argonium_score_parallel_v2.py <questions_file.json> --model <model_shortname> --grader <grader_shortname> [--config <config_file>] [--rag-config <rag_config_file>] [--parallel <num_workers>] [--format auto|mc|qa] [--random <num_questions>] [--seed <random_seed>] [--save-incorrect] [--use-context-field] [--retrieval-top-k <k>] [--retrieval-score-threshold <threshold>] [--log-chunks] [--no-rag]
+    python rag_argonium_score_parallel_v2.py <questions_file.json> --model <model_shortname> --grader <grader_shortname> [--config <mcqa_config.yaml>] [--model-config <model_servers.yaml>]
 
 Where:
     - questions_file.json: A JSON file with an array of objects, each having "question", "answer", and optionally "text" fields
     - model_shortname: The shortname of the model to test from model_servers.yaml
     - grader_shortname: The shortname of the model to use for grading from model_servers.yaml
-    - config_file: Configuration file to use for model settings (default: model_servers.yaml)
-    - rag_config_file: RAG configuration file (YAML) for retrieval settings (optional)
-    - parallel: Number of concurrent workers for parallel processing (default: 1)
-    - format: Format of questions (auto, mc, qa) (default: auto)
-    - random: Randomly select N questions from the dataset (optional)
-    - seed: Random seed for reproducible question selection (optional, only used with --random)
-    - save-incorrect: Save incorrectly answered questions to a separate JSON file (optional)
-    - use-context-field: Use the "text" field from JSON as context instead of retrieval (optional, ignored if --no-rag is used)
-    - retrieval-top-k: Number of documents to retrieve (default: 5)
-    - retrieval-score-threshold: Minimum retrieval score threshold (default: 0.0)
-    - log-chunks: Enable detailed chunk logging (always enabled in v2)
-    - no-rag: Disable RAG completely - questions are asked directly to the model without any context
+    - config: MCQA configuration file (YAML) containing all evaluation settings (optional)
+    - model-config: Model configuration file (default: model_servers.yaml)
 
 Examples:
-    # With RAG (default)
-    python rag_argonium_score_parallel_v2.py frg_mc_100.json --model llama --grader gpt41 --parallel 4
-    python rag_argonium_score_parallel_v2.py frg_mc_100.json --model llama --grader gpt41 --rag-config rag_config.yaml
+    # Basic usage with YAML config
+    python rag_argonium_score_parallel_v2.py questions.json --model llama --grader gpt41 --config mcqa_config.yaml
 
-    # Without RAG - direct question answering
-    python rag_argonium_score_parallel_v2.py frg_mc_100.json --model llama --grader gpt41 --no-rag
+    # Override specific settings
+    python rag_argonium_score_parallel_v2.py questions.json --model llama --grader gpt41 --config mcqa_config.yaml --no-rag
 
-    # With context field (ignored if --no-rag is used)
-    python rag_argonium_score_parallel_v2.py frg_mc_100.json --model llama --grader gpt41 --use-context-field
+    # Use without YAML config (fallback to command-line args)
+    python rag_argonium_score_parallel_v2.py questions.json --model llama --grader gpt41 --parallel 4
 
 The script:
 1) Can operate in RAG mode (default) or direct question answering mode (--no-rag)
@@ -54,6 +44,7 @@ The script:
 8) Reports detailed accuracy metrics and exports results with full configuration tracking
 9) Processes multiple questions in parallel when --parallel > 1
 10) Tracks whether the source chunk of each question was retrieved (RAG mode only)
+11) Uses Pydantic and YAML for clean configuration management
 """
 
 import argparse
@@ -76,7 +67,7 @@ import openai
 import requests
 import yaml
 from dotenv import load_dotenv
-from pydantic import Field
+from pydantic import BaseModel, Field, validator
 from tqdm import tqdm
 
 from distllm.generate.prompts import (
@@ -89,6 +80,113 @@ from distllm.utils import BaseConfig
 
 # Load environment variables
 load_dotenv()
+
+# -----------------------------------------------------------------------------
+# Configuration Classes
+# -----------------------------------------------------------------------------
+
+
+class ModelConfiguration(BaseModel):
+    """Model configuration settings."""
+
+    model_shortname: str = Field(
+        ..., description='Model shortname from model_servers.yaml'
+    )
+    grader_shortname: str = Field(
+        ..., description='Grader model shortname from model_servers.yaml'
+    )
+    model_config_file: str = Field(
+        'model_servers.yaml', description='Model configuration file path'
+    )
+
+
+class RAGConfiguration(BaseModel):
+    """RAG-specific configuration settings."""
+
+    enabled: bool = Field(True, description='Enable RAG functionality')
+    rag_config_file: Optional[str] = Field(
+        None, description='RAG configuration file (YAML)'
+    )
+    use_context_field: bool = Field(
+        False, description="Use 'text' field from JSON as context"
+    )
+    retrieval_top_k: int = Field(
+        5, description='Number of documents to retrieve'
+    )
+    retrieval_score_threshold: float = Field(
+        0.0, description='Minimum retrieval score threshold'
+    )
+    chunk_logging_enabled: bool = Field(
+        True, description='Enable detailed chunk logging'
+    )
+
+
+class ProcessingConfiguration(BaseModel):
+    """Processing and execution configuration."""
+
+    parallel_workers: int = Field(1, description='Number of parallel workers')
+    question_format: str = Field(
+        'auto', description='Question format: auto, mc, or qa'
+    )
+    verbose: bool = Field(False, description='Enable verbose output')
+    random_selection: Optional[int] = Field(
+        None, description='Randomly select N questions'
+    )
+    random_seed: Optional[int] = Field(
+        None, description='Random seed for reproducible selection'
+    )
+
+
+class OutputConfiguration(BaseModel):
+    """Output and result configuration."""
+
+    save_incorrect: bool = Field(
+        False, description='Save incorrectly answered questions'
+    )
+    output_directory: str = Field(
+        '.', description='Output directory for results'
+    )
+    output_prefix: str = Field(
+        'rag_results', description='Prefix for output files'
+    )
+
+
+class MCQAConfig(BaseModel):
+    """Main MCQA evaluation configuration."""
+
+    model: ModelConfiguration
+    rag: RAGConfiguration = RAGConfiguration()
+    processing: ProcessingConfiguration = ProcessingConfiguration()
+    output: OutputConfiguration = OutputConfiguration()
+
+    @validator('processing')
+    def validate_processing(cls, v):
+        if v.question_format not in ['auto', 'mc', 'qa']:
+            raise ValueError("question_format must be 'auto', 'mc', or 'qa'")
+        if v.parallel_workers < 1:
+            raise ValueError('parallel_workers must be >= 1')
+        return v
+
+    @validator('rag')
+    def validate_rag(cls, v):
+        if v.retrieval_top_k < 1:
+            raise ValueError('retrieval_top_k must be >= 1')
+        if v.retrieval_score_threshold < 0:
+            raise ValueError('retrieval_score_threshold must be >= 0')
+        return v
+
+    @classmethod
+    def from_yaml(cls, yaml_path: str) -> 'MCQAConfig':
+        """Load configuration from YAML file."""
+        with open(yaml_path, 'r') as f:
+            config_data = yaml.safe_load(f)
+        return cls(**config_data)
+
+    def to_yaml(self, yaml_path: str) -> None:
+        """Save configuration to YAML file."""
+        with open(yaml_path, 'w') as f:
+            yaml.dump(self.dict(), f, default_flow_style=False, indent=2)
+
 
 # -----------------------------------------------------------------------------
 # Chunk ID Generation Functions (from mcqa_generation_distllm_v2.py)
@@ -1165,8 +1263,18 @@ def process_question(
 def parse_arguments():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description='Advanced Question Grader with RAG and Chunk Logging'
+        description='Advanced Question Grader with RAG and Chunk Logging',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Configuration File Example:
+    Use --config to specify a YAML configuration file with all settings.
+    See sample_mcqa_config.yaml for a complete example.
+    
+    Command-line arguments will override YAML settings when provided.
+        """,
     )
+
+    # Required arguments
     parser.add_argument(
         'questions_file',
         help='Path to the JSON file containing questions',
@@ -1174,33 +1282,40 @@ def parse_arguments():
     parser.add_argument(
         '--model',
         required=True,
-        help='Model shortname from the config file',
+        help='Model shortname from the model configuration file',
     )
     parser.add_argument(
         '--grader',
         required=True,
-        help='Grader model shortname from the config file',
+        help='Grader model shortname from the model configuration file',
     )
+
+    # Configuration files
     parser.add_argument(
         '--config',
-        default='model_servers.yaml',
-        help='Path to the model configuration file',
+        help='MCQA configuration file (YAML) with all evaluation settings',
     )
     parser.add_argument(
-        '--rag-config',
-        help='Path to the RAG configuration file (YAML)',
+        '--model-config',
+        default='model_servers.yaml',
+        help='Model configuration file (default: model_servers.yaml)',
+    )
+
+    # Override arguments (can override YAML settings)
+    parser.add_argument(
+        '--no-rag',
+        action='store_true',
+        help='Disable RAG completely - direct question answering',
     )
     parser.add_argument(
         '--parallel',
         type=int,
-        default=1,
         help='Number of parallel workers',
     )
     parser.add_argument(
-        '--format',
-        choices=['auto', 'mc', 'qa'],
-        default='auto',
-        help='Question format',
+        '--verbose',
+        action='store_true',
+        help='Enable verbose output',
     )
     parser.add_argument(
         '--random',
@@ -1217,101 +1332,93 @@ def parse_arguments():
         action='store_true',
         help='Save incorrectly answered questions to a separate file',
     )
-    parser.add_argument(
-        '--use-context-field',
-        action='store_true',
-        help='Use the "text" field from JSON as context instead of retrieval (ignored if --no-rag is used)',
-    )
-    parser.add_argument(
-        '--retrieval-top-k',
-        type=int,
-        default=5,
-        help='Number of documents to retrieve',
-    )
-    parser.add_argument(
-        '--retrieval-score-threshold',
-        type=float,
-        default=0.0,
-        help='Minimum retrieval score threshold',
-    )
-    parser.add_argument(
-        '--log-chunks',
-        action='store_true',
-        help='Enable detailed chunk logging (always enabled in v2)',
-    )
-    parser.add_argument(
-        '--no-rag',
-        action='store_true',
-        help='Disable RAG completely - questions are asked directly to the model without any context',
-    )
-    parser.add_argument(
-        '--verbose',
-        action='store_true',
-        help='Enable verbose output',
-    )
 
     return parser.parse_args()
 
 
+def create_config_from_args(args) -> MCQAConfig:
+    """Create MCQAConfig from command-line arguments and YAML file."""
+
+    # Start with defaults
+    if args.config and os.path.exists(args.config):
+        print(f'Loading configuration from {args.config}')
+        config = MCQAConfig.from_yaml(args.config)
+    else:
+        if args.config:
+            print(
+                f'Warning: Configuration file {args.config} not found, using defaults'
+            )
+
+        # Create default configuration
+        config = MCQAConfig(
+            model=ModelConfiguration(
+                model_shortname=args.model,
+                grader_shortname=args.grader,
+                model_config_file=args.model_config,
+            )
+        )
+
+    # Override with command-line arguments
+    config.model.model_shortname = args.model
+    config.model.grader_shortname = args.grader
+    config.model.model_config_file = args.model_config
+
+    if args.no_rag:
+        config.rag.enabled = False
+
+    if args.parallel is not None:
+        config.processing.parallel_workers = args.parallel
+
+    if args.verbose:
+        config.processing.verbose = True
+
+    if args.random is not None:
+        config.processing.random_selection = args.random
+
+    if args.seed is not None:
+        config.processing.random_seed = args.seed
+
+    if args.save_incorrect:
+        config.output.save_incorrect = True
+
+    return config
+
+
 def create_metadata(
-    args, model_config, grader_config, questions, rag_config=None
-):
+    config: MCQAConfig,
+    questions: List[Dict],
+    rag_config: Optional[Dict] = None,
+) -> Dict:
     """Create metadata for the evaluation run."""
     metadata = {
         'evaluation_metadata': {
             'script_version': '2.0',
             'script_name': 'rag_argonium_score_parallel_v2.py',
             'timestamp': datetime.now().isoformat(),
-            'arguments': vars(args),
-            'rag_enabled': not args.no_rag,
-            'model_configuration': {
-                'model_shortname': args.model,
-                'model_name': model_config.get('model', 'unknown'),
-                'server': model_config.get('server', 'unknown'),
-                'port': model_config.get('port', 'unknown'),
-            },
-            'grader_configuration': {
-                'grader_shortname': args.grader,
-                'grader_model': grader_config.get('openai_model', 'unknown'),
-                'grader_api_base': grader_config.get(
-                    'openai_api_base', 'unknown'
-                ),
-            },
+            'configuration': config.dict(),
             'question_statistics': {
                 'total_questions': len(questions),
                 'selected_questions': len(questions)
-                if not args.random
-                else args.random,
-                'question_format': args.format,
-                'random_seed': args.seed,
+                if not config.processing.random_selection
+                else config.processing.random_selection,
+                'question_format': config.processing.question_format,
+                'random_seed': config.processing.random_seed,
             },
             'rag_configuration': {
-                'enabled': not args.no_rag,
-                'use_context_field': args.use_context_field
-                and not args.no_rag,
-                'retrieval_top_k': args.retrieval_top_k,
-                'retrieval_score_threshold': args.retrieval_score_threshold,
-                'rag_config_file': args.rag_config,
+                'enabled': config.rag.enabled,
+                'use_context_field': config.rag.use_context_field,
+                'retrieval_top_k': config.rag.retrieval_top_k,
+                'retrieval_score_threshold': config.rag.retrieval_score_threshold,
+                'rag_config_file': config.rag.rag_config_file,
                 'rag_config_details': rag_config if rag_config else None,
             },
             'processing_configuration': {
-                'parallel_workers': args.parallel,
-                'verbose': args.verbose,
-                'chunk_logging_enabled': True,  # Always enabled in v2
+                'parallel_workers': config.processing.parallel_workers,
+                'verbose': config.processing.verbose,
+                'chunk_logging_enabled': config.rag.chunk_logging_enabled,
             },
         }
     }
-
-    # Add dataset path if available from RAG config
-    if rag_config and 'retriever_config' in rag_config:
-        retriever_config = rag_config['retriever_config']
-        if 'faiss_config' in retriever_config:
-            faiss_config = retriever_config['faiss_config']
-            if 'dataset_dir' in faiss_config:
-                metadata['evaluation_metadata']['rag_configuration'][
-                    'dataset_path'
-                ] = str(faiss_config['dataset_dir'])
-
     return metadata
 
 
@@ -1319,51 +1426,58 @@ def main():
     """Main function."""
     args = parse_arguments()
 
+    # Create configuration from arguments and YAML
+    config = create_config_from_args(args)
+
     # Set random seed if provided
-    if args.seed is not None:
-        random.seed(args.seed)
+    if config.processing.random_seed is not None:
+        random.seed(config.processing.random_seed)
 
     # Load questions
     with open(args.questions_file, 'r') as f:
         questions = json.load(f)
 
     # Randomly select questions if specified
-    if args.random:
-        if args.random < len(questions):
-            questions = random.sample(questions, args.random)
+    if config.processing.random_selection:
+        if config.processing.random_selection < len(questions):
+            questions = random.sample(
+                questions, config.processing.random_selection
+            )
             print(f'Randomly selected {len(questions)} questions')
         else:
             print(
-                f'Requested {args.random} questions but only {len(questions)} available'
+                f'Requested {config.processing.random_selection} questions but only {len(questions)} available'
             )
 
     # Load model configurations
-    model_config = load_model_config(args.model, args.config)
-    grader_config = load_model_config(args.grader, args.config)
+    model_config = load_model_config(
+        config.model.model_shortname, config.model.model_config_file
+    )
+    grader_config = load_model_config(
+        config.model.grader_shortname, config.model.model_config_file
+    )
 
     # Load RAG configuration if provided
     rag_config = None
-    if args.rag_config:
-        with open(args.rag_config, 'r') as f:
+    if config.rag.rag_config_file:
+        with open(config.rag.rag_config_file, 'r') as f:
             rag_config = yaml.safe_load(f)
-        print(f'Using RAG configuration from {args.rag_config}')
+        print(f'Using RAG configuration from {config.rag.rag_config_file}')
 
     # Auto-detect question format
-    question_format = args.format
+    question_format = config.processing.question_format
     if question_format == 'auto':
         question_format = detect_question_format(questions)
 
-    # Determine if RAG should be used
-    use_rag = not args.no_rag
-
     # Create RAG model
+    use_rag = config.rag.enabled
     if use_rag and rag_config:
         # Use provided RAG configuration
         rag_model_config = RetrievalAugmentedGenerationConfig(**rag_config)
         rag_model_config.use_rag = True
-    elif use_rag and not args.use_context_field:
+    elif use_rag and not config.rag.use_context_field:
         # Create basic RAG model without retrieval
-        if 'argo' in args.model.lower():
+        if 'argo' in config.model.model_shortname.lower():
             generator_config = ArgoGeneratorConfig(
                 model=model_config['openai_model'],
                 base_url=model_config['openai_api_base'],
@@ -1380,12 +1494,12 @@ def main():
         rag_model_config = RetrievalAugmentedGenerationConfig(
             generator_config=generator_config,
             retriever_config=None,
-            verbose=args.verbose,
+            verbose=config.processing.verbose,
             use_rag=True,
         )
     else:
         # Create model for context field usage or no-RAG mode
-        if 'argo' in args.model.lower():
+        if 'argo' in config.model.model_shortname.lower():
             generator_config = ArgoGeneratorConfig(
                 model=model_config['openai_model'],
                 base_url=model_config['openai_api_base'],
@@ -1402,203 +1516,208 @@ def main():
         rag_model_config = RetrievalAugmentedGenerationConfig(
             generator_config=generator_config,
             retriever_config=None,
-            verbose=args.verbose,
+            verbose=config.processing.verbose,
             use_rag=use_rag,
         )
 
-    # Get the RAG model
+    # Create RAG model
     rag_model = rag_model_config.get_rag_model()
 
-    # Print configuration
-    print(f'Testing model: {args.model} ({model_config["model"]})')
-    print(f'Grading with: {args.grader} ({grader_config["openai_model"]})')
-    print(f'Parallel workers: {args.parallel}')
-    print(f'RAG enabled: {use_rag}')
-    if use_rag:
-        print(f'Using context field: {args.use_context_field}')
-        print(f'Retrieval top-k: {args.retrieval_top_k}')
-        print(f'Retrieval score threshold: {args.retrieval_score_threshold}')
-        print(f'Chunk logging: Enabled')
+    # Print configuration summary
+    print(f'Configuration Summary:')
+    print(f'  Model: {config.model.model_shortname}')
+    print(f'  Grader: {config.model.grader_shortname}')
+    print(f'  RAG Enabled: {config.rag.enabled}')
+    print(f'  Parallel Workers: {config.processing.parallel_workers}')
+    print(f'  Question Format: {question_format}')
+    print(f'  Total Questions: {len(questions)}')
 
-        if rag_config:
-            print('Using provided RAG configuration')
-        elif not args.use_context_field:
-            print('Using basic RAG model without retrieval')
-        else:
-            print('Using context field from JSON')
-    else:
-        print('RAG DISABLED - Direct question answering mode')
-        print(
-            'Questions will be asked directly to the model without any context'
-        )
-
-    # Create metadata
-    metadata = create_metadata(
-        args, model_config, grader_config, questions, rag_config
-    )
+    # Prepare items for parallel processing
+    items = [(i, qa_pair) for i, qa_pair in enumerate(questions, 1)]
+    results = []
 
     # Process questions
+    start_time = time.time()
     print(
-        f'\nProcessing {len(questions)} questions with {"RAG" if use_rag else "direct generation"}...'
+        f'\nProcessing {len(items)} questions with {"RAG" if use_rag else "DIRECT"} mode...'
+    )
+    if config.processing.parallel_workers > 1:
+        print(
+            f'Using {config.processing.parallel_workers} parallel workers...'
+        )
+    print(
+        'This may take some time. Each model call has built-in retries and waiting.'
     )
 
-    if args.parallel > 1:
-        print(f'Using {args.parallel} parallel workers...')
-        print(
-            'This may take some time. Each model call has built-in retries and waiting.'
-        )
+    # Track progress
+    completed = 0
+    total = len(items)
+    results_lock = threading.Lock()
 
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=args.parallel
-        ) as executor:
-            futures = [
-                executor.submit(
-                    process_question,
-                    (i, question),
-                    rag_model,
-                    grader_config,
-                    question_format,
-                    args.verbose,
-                    args.use_context_field,
-                    args.retrieval_top_k,
-                    args.retrieval_score_threshold,
-                    use_rag,
+    def update_progress(result):
+        nonlocal completed
+        with results_lock:
+            completed += 1
+            results.append(result)
+            if not config.processing.verbose:
+                print(
+                    f'Progress: {completed}/{total} ({completed / total * 100:.1f}%)',
+                    end='\r',
                 )
-                for i, question in enumerate(questions)
-            ]
 
-            results = []
-            for future in tqdm(
-                concurrent.futures.as_completed(futures),
-                total=len(futures),
-                desc='Processing questions',
-            ):
-                results.append(future.result())
-    else:
-        results = []
-        for i, question in enumerate(
-            tqdm(questions, desc='Processing questions')
-        ):
+    def process_item(item):
+        try:
             result = process_question(
-                (i, question),
+                item,
                 rag_model,
                 grader_config,
                 question_format,
-                args.verbose,
-                args.use_context_field,
-                args.retrieval_top_k,
-                args.retrieval_score_threshold,
+                config.processing.verbose,
+                config.rag.use_context_field,
+                config.rag.retrieval_top_k,
+                config.rag.retrieval_score_threshold,
                 use_rag,
             )
-            results.append(result)
+            update_progress(result)
+            return result
+        except Exception as e:
+            error_result = {
+                'question_id': item[0],
+                'error': str(e),
+                'skipped': True,
+            }
+            update_progress(error_result)
+            return error_result
 
-    # Sort results by question_id
-    results.sort(key=lambda x: x['question_id'])
+    # Execute processing
+    if config.processing.parallel_workers == 1:
+        for item in items:
+            process_item(item)
+    else:
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=config.processing.parallel_workers
+        ) as executor:
+            futures = [executor.submit(process_item, item) for item in items]
+            concurrent.futures.wait(futures)
 
-    # Calculate statistics
+    total_time = time.time() - start_time
+    print(f'\nCompleted processing in {total_time:.2f} seconds')
+
+    # Filter out skipped results for statistics
     processed_results = [r for r in results if not r.get('skipped', False)]
-    total_questions = len(questions)
-    processed_questions = len(processed_results)
-    skipped_questions = total_questions - processed_questions
 
-    if processed_questions > 0:
-        scores = [r['score'] for r in processed_results]
-        accuracy = sum(scores) / len(scores)
-
-        # Format-specific statistics
+    if processed_results:
+        # Calculate statistics
+        all_scores = [r['score'] for r in processed_results]
         mc_results = [r for r in processed_results if r.get('format') == 'mc']
         qa_results = [r for r in processed_results if r.get('format') == 'qa']
 
-        print(f'\n--- RESULTS ---')
-        print(f'Total questions: {total_questions}')
-        print(f'Processed questions: {processed_questions}')
-        print(f'Skipped questions: {skipped_questions}')
-        print(f'Overall accuracy: {accuracy:.4f} ({accuracy * 100:.2f}%)')
+        mc_scores = [r['score'] for r in mc_results]
+        qa_scores = [r['score'] for r in qa_results]
 
-        if mc_results:
-            mc_accuracy = sum(r['score'] for r in mc_results) / len(mc_results)
+        overall_accuracy = (
+            sum(all_scores) / len(all_scores) if all_scores else 0
+        )
+        mc_accuracy = sum(mc_scores) / len(mc_scores) if mc_scores else None
+        qa_accuracy = sum(qa_scores) / len(qa_scores) if qa_scores else None
+
+        print(f'\n=== EVALUATION RESULTS ===')
+        print(
+            f'Overall Accuracy: {overall_accuracy:.3f} ({sum(all_scores)}/{len(all_scores)})'
+        )
+        if mc_accuracy is not None:
             print(
-                f'Multiple choice accuracy: {mc_accuracy:.4f} ({mc_accuracy * 100:.2f}%) ({len(mc_results)} questions)'
+                f'MC Accuracy: {mc_accuracy:.3f} ({sum(mc_scores)}/{len(mc_scores)})'
+            )
+        if qa_accuracy is not None:
+            print(
+                f'QA Accuracy: {qa_accuracy:.3f} ({sum(qa_scores)}/{len(qa_scores)})'
             )
 
-        if qa_results:
-            qa_accuracy = sum(r['score'] for r in qa_results) / len(qa_results)
-            print(
-                f'Question-answer accuracy: {qa_accuracy:.4f} ({qa_accuracy * 100:.2f}%) ({len(qa_results)} questions)'
-            )
-
-        # Chunk retrieval statistics (only if RAG is enabled)
+        # Source chunk retrieval statistics
         if use_rag:
-            total_chunks_retrieved = 0
-            questions_with_retrieval = 0
-
-            for result in processed_results:
-                if result.get('retrieval_info', {}).get('retrieved_chunks'):
-                    questions_with_retrieval += 1
-                    for chunk_list in result['retrieval_info'][
-                        'retrieved_chunks'
-                    ]:
-                        total_chunks_retrieved += len(chunk_list)
-
-            if questions_with_retrieval > 0:
-                print(f'\n--- RETRIEVAL STATISTICS ---')
-                print(f'Questions with retrieval: {questions_with_retrieval}')
-                print(f'Total chunks retrieved: {total_chunks_retrieved}')
-                print(
-                    f'Average chunks per question: {total_chunks_retrieved / questions_with_retrieval:.2f}'
+            source_retrieved_results = [
+                r
+                for r in processed_results
+                if r.get('source_chunk_retrieved') is not None
+            ]
+            if source_retrieved_results:
+                source_retrieved_count = sum(
+                    1
+                    for r in source_retrieved_results
+                    if r.get('source_chunk_retrieved')
                 )
+                source_retrieval_rate = source_retrieved_count / len(
+                    source_retrieved_results
+                )
+                print(
+                    f'Source Chunk Retrieval Rate: {source_retrieval_rate:.3f} ({source_retrieved_count}/{len(source_retrieved_results)})'
+                )
+
+        # Create metadata
+        metadata = create_metadata(config, questions, rag_config)
+
+        # Save results with metadata
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_file = os.path.join(
+            config.output.output_directory,
+            f'{config.output.output_prefix}_{config.model.model_shortname}_{timestamp}.json',
+        )
+
+        # Create final output structure with metadata
+        output_data = {
+            'metadata': metadata,
+            'results': results,
+        }
+
+        with open(output_file, 'w') as f:
+            json.dump(output_data, f, indent=2)
+
+        print(f'Results saved to {output_file}')
+
+        # Save incorrect answers if requested
+        if config.output.save_incorrect:
+            incorrect_results = [
+                r for r in processed_results if r['score'] < 1.0
+            ]
+            if incorrect_results:
+                incorrect_file = os.path.join(
+                    config.output.output_directory,
+                    f'incorrect_answers_{config.model.model_shortname}_{timestamp}.json',
+                )
+                incorrect_data = {
+                    'metadata': metadata,
+                    'results': incorrect_results,
+                }
+                with open(incorrect_file, 'w') as f:
+                    json.dump(incorrect_data, f, indent=2)
+                print(f'Incorrect answers saved to {incorrect_file}')
+
+        # Print sample chunk logging if available
+        if (
+            use_rag
+            and processed_results
+            and processed_results[0]
+            .get('retrieval_info', {})
+            .get('retrieved_chunks')
+        ):
+            print(f'\n--- SAMPLE CHUNK LOGGING ---')
+            sample_result = processed_results[0]
+            print(f'Question ID: {sample_result["question_id"]}')
+            print(f'Retrieved chunks:')
+            for chunk_list in sample_result['retrieval_info'][
+                'retrieved_chunks'
+            ]:
+                for chunk in chunk_list:
+                    print(f'  - Chunk ID: {chunk["chunk_id"]}')
+                    print(f'    Score: {chunk["score"]:.4f}')
+                    print(f'    Path: {chunk["path"]}')
+                    print(f'    Text preview: {chunk["text"][:100]}...')
+                    print()
 
     else:
         print('\nNo questions were successfully processed.')
         return
-
-    # Save results with metadata
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    output_file = f'rag_results_{args.model}_{timestamp}.json'
-
-    # Create final output structure with metadata
-    output_data = {
-        'metadata': metadata,
-        'results': results,
-    }
-
-    with open(output_file, 'w') as f:
-        json.dump(output_data, f, indent=2)
-
-    print(f'Results saved to {output_file}')
-
-    # Save incorrect answers if requested
-    if args.save_incorrect:
-        incorrect_results = [r for r in processed_results if r['score'] < 1.0]
-        if incorrect_results:
-            incorrect_file = f'incorrect_answers_{args.model}_{timestamp}.json'
-            incorrect_data = {
-                'metadata': metadata,
-                'results': incorrect_results,
-            }
-            with open(incorrect_file, 'w') as f:
-                json.dump(incorrect_data, f, indent=2)
-            print(f'Incorrect answers saved to {incorrect_file}')
-
-    # Print sample chunk logging if available
-    if (
-        use_rag
-        and processed_results
-        and processed_results[0]
-        .get('retrieval_info', {})
-        .get('retrieved_chunks')
-    ):
-        print(f'\n--- SAMPLE CHUNK LOGGING ---')
-        sample_result = processed_results[0]
-        print(f'Question ID: {sample_result["question_id"]}')
-        print(f'Retrieved chunks:')
-        for chunk_list in sample_result['retrieval_info']['retrieved_chunks']:
-            for chunk in chunk_list:
-                print(f'  - Chunk ID: {chunk["chunk_id"]}')
-                print(f'    Score: {chunk["score"]:.4f}')
-                print(f'    Path: {chunk["path"]}')
-                print(f'    Text preview: {chunk["text"][:100]}...')
-                print()
 
 
 if __name__ == '__main__':
