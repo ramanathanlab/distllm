@@ -63,3 +63,18 @@ servers:
   openai_api_key: no_key
   openai_api_base: http://lambda5:55625/v1
   openai_model: argo:o3
+- server: lambda5
+  shortname: gemini25pro	
+  openai_api_key: no_key
+  openai_api_base: http://lambda5:55625/v1
+  openai_model: argo:gemini-2.5-pro
+- server: lambda5
+  shortname: claudesonnet4
+  openai_api_key: no_key
+  openai_api_base: http://lambda5:55625/v1
+  openai_model: argo:claude-4-sonnet
+- server: lambda5
+  shortname: claudeopus4
+  openai_api_key: no_key
+  openai_api_base: http://lambda5:55625/v1
+  openai_model: argo:claude-4-opus
