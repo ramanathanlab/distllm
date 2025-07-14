@@ -761,7 +761,7 @@ class ArgoGeneratorConfig(BaseConfig):
     )
     temperature: float = Field(0.0, description='Temperature for generation.')
     max_tokens: int = Field(
-        1024, description='Maximum number of tokens to generate.'
+        2048, description='Maximum number of tokens to generate.'
     )
 
     def get_generator(self) -> 'ArgoGenerator':
