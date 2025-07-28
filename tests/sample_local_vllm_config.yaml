@@ -1,0 +1,51 @@
+questions_file: "/home/ac.ogokdemir/distllm/test_questions_simple.json"
+
+model:
+  generator:
+    generator_type: "vllm"
+  
+  generator_settings:
+    # Traditional fields (still required but may be ignored if boot_local=True)
+    server: "localhost"  # Will be overridden by local_host if boot_local=True
+    port: 8000          # Will be overridden by auto_port if boot_local=True and auto_port=True
+    api_key: "CELS"
+    model: "meta-llama/Llama-2-7b-chat-hf"  # Will be overridden by hf_model_id if boot_local=True
+    temperature: 0.0
+    max_tokens: 1024
+    
+    # New local vLLM server booting fields
+    boot_local: true                        # Enable local server booting
+    hf_model_id: "meta-llama/Llama-2-7b-chat-hf"  # Huggingface model ID to load
+    auto_port: true                         # Automatically find available port
+    local_host: "127.0.0.1"                # Host to bind local server to
+    server_startup_timeout: 300             # Timeout in seconds to wait for startup
+    
+    # Optional: Additional vLLM server arguments
+    vllm_args:
+      tensor_parallel_size: 1               # Number of GPUs to use
+      max_model_len: 4096                   # Maximum sequence length
+      trust_remote_code: false              # Whether to trust remote code
+      # gpu_memory_utilization: 0.9        # GPU memory utilization
+      # dtype: "auto"                       # Data type for model weights
+  
+  grader_shortname: "gpt-4.1"
+  model_config_file: "model_servers.yaml"
+
+rag:
+  enabled: true
+  use_context_field: false
+  retrieval_top_k: 5
+  retrieval_score_threshold: 0.0
+  chunk_logging_enabled: true
+
+processing:
+  parallel_workers: 1
+  question_format: "auto"
+  verbose: true
+  random_selection: null
+  random_seed: null
+
+output:
+  save_incorrect: false
+  output_directory: "."
+  output_prefix: "rag_results" 

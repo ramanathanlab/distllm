@@ -1,0 +1,14 @@
+[
+  {
+    "question": "What is 2+2?\nA) 3\nB) 4\nC) 5\nD) 6",
+    "answer": "B"
+  },
+  {
+    "question": "What color is the sky on a clear day?\nA) Red\nB) Green\nC) Blue\nD) Yellow",
+    "answer": "C"
+  },
+  {
+    "question": "What is the capital of France?",
+    "answer": "Paris"
+  }
+] 
