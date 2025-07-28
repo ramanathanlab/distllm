@@ -57,6 +57,9 @@ import json
 import os
 import random
 import re
+import signal
+import socket
+import subprocess
 import sys
 import threading
 import time
@@ -70,7 +73,7 @@ import openai
 import requests
 import yaml
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from tqdm import tqdm
 
 from distllm.generate.prompts import (
@@ -106,6 +109,35 @@ class VLLMGeneratorSettings(BaseModel):
     api_key: str = Field(..., description='API key')
     temperature: float = Field(0.0, description='Generation temperature')
     max_tokens: int = Field(1024, description='Maximum tokens to generate')
+
+    # New fields for local vLLM server booting
+    boot_local: bool = Field(
+        False, description='Whether to boot a local vLLM server'
+    )
+    hf_model_id: Optional[str] = Field(
+        None,
+        description='Huggingface model ID to load (required if boot_local=True)',
+    )
+    auto_port: bool = Field(
+        True,
+        description='Automatically find available port when booting locally',
+    )
+    local_host: str = Field(
+        '127.0.0.1', description='Host to bind local vLLM server to'
+    )
+    vllm_args: Optional[Dict[str, Any]] = Field(
+        None, description='Additional arguments for vLLM server'
+    )
+    server_startup_timeout: int = Field(
+        120, description='Timeout in seconds to wait for server startup'
+    )
+
+    @model_validator(mode='after')
+    def validate_boot_local_requirements(self):
+        """Validate that hf_model_id is provided when boot_local=True."""
+        if self.boot_local and not self.hf_model_id:
+            raise ValueError('hf_model_id is required when boot_local=True')
+        return self
 
 
 class ArgoGeneratorSettings(BaseModel):
@@ -467,6 +499,50 @@ def check_source_chunk_retrieved(
 # Helper functions (from argonium_score_parallel_v9.py)
 # -----------------------------------------------------------------------------
 
+
+def find_available_port(
+    start_port: int = 8000, max_attempts: int = 100
+) -> int:
+    """Find an available port starting from start_port."""
+    for port in range(start_port, start_port + max_attempts):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(('', port))
+                return port
+            except OSError:
+                continue
+    raise RuntimeError(
+        f'Could not find available port in range {start_port}-{start_port + max_attempts}'
+    )
+
+
+def wait_for_server_ready(
+    host: str, port: int, timeout: int = 120, check_interval: float = 2.0
+) -> bool:
+    """Wait for server to be ready by checking if the port is accepting connections."""
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(1.0)
+                result = s.connect_ex((host, port))
+                if result == 0:
+                    # Server is accepting connections, now check if it's responding to HTTP
+                    time.sleep(2)  # Give it a moment to be fully ready
+                    try:
+                        response = requests.get(
+                            f'http://{host}:{port}/v1/models', timeout=5
+                        )
+                        if response.status_code == 200:
+                            return True
+                    except requests.exceptions.RequestException:
+                        pass
+        except Exception:
+            pass
+        time.sleep(check_interval)
+    return False
+
+
 # Global client cache for OpenAI clients (thread-safe)
 _client_cache = {}
 _client_cache_lock = threading.Lock()
@@ -687,19 +763,146 @@ class VLLMGeneratorConfig(BaseConfig):
         1024, description='Maximum number of tokens to generate.'
     )
 
+    # New fields for local vLLM server booting
+    boot_local: bool = Field(
+        False, description='Whether to boot a local vLLM server'
+    )
+    hf_model_id: Optional[str] = Field(
+        None,
+        description='Huggingface model ID to load (required if boot_local=True)',
+    )
+    auto_port: bool = Field(
+        True,
+        description='Automatically find available port when booting locally',
+    )
+    local_host: str = Field(
+        '127.0.0.1', description='Host to bind local vLLM server to'
+    )
+    vllm_args: Optional[Dict[str, Any]] = Field(
+        None, description='Additional arguments for vLLM server'
+    )
+    server_startup_timeout: int = Field(
+        120, description='Timeout in seconds to wait for server startup'
+    )
+
     def get_generator(self) -> 'VLLMGenerator':
         """Get the vLLM generator."""
         return VLLMGenerator(self)
 
 
 class VLLMGenerator:
-    """Generator for vLLM server."""
+    """Generator for vLLM server with support for local server booting."""
 
     def __init__(self, config: VLLMGeneratorConfig) -> None:
         self.config = config
-        self.base_url = f'http://{config.server}:{config.port}'
-        self.api_key = config.api_key
-        self.model = config.model
+        self.server_process = None
+        self.local_server_started = False
+
+        # Determine which configuration to use
+        if config.boot_local:
+            self._start_local_server()
+        else:
+            self.base_url = f'http://{config.server}:{config.port}'
+            self.api_key = config.api_key
+            self.model = config.model
+
+    def _start_local_server(self) -> None:
+        """Start a local vLLM server with the specified model."""
+        if not self.config.hf_model_id:
+            raise ValueError('hf_model_id is required when boot_local=True')
+
+        # Find available port if auto_port is enabled
+        if self.config.auto_port:
+            port = find_available_port()
+            print(f'Found available port: {port}')
+        else:
+            port = self.config.port
+
+        # Build vLLM command
+        cmd = [
+            sys.executable,
+            '-m',
+            'vllm.entrypoints.openai.api_server',
+            '--model',
+            self.config.hf_model_id,
+            '--host',
+            self.config.local_host,
+            '--port',
+            str(port),
+        ]
+
+        # Add additional vLLM arguments if provided
+        if self.config.vllm_args:
+            for key, value in self.config.vllm_args.items():
+                if isinstance(value, bool):
+                    if value:  # Only add the flag if True
+                        cmd.append(f'--{key}')
+                else:
+                    cmd.extend([f'--{key}', str(value)])
+
+        print(f'Starting local vLLM server with command: {" ".join(cmd)}')
+
+        try:
+            # Start the server process
+            self.server_process = subprocess.Popen(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+            )
+
+            # Wait for server to be ready
+            print(
+                f'Waiting for vLLM server to start on {self.config.local_host}:{port}...'
+            )
+            if wait_for_server_ready(
+                self.config.local_host,
+                port,
+                self.config.server_startup_timeout,
+            ):
+                self.local_server_started = True
+                self.base_url = f'http://{self.config.local_host}:{port}'
+                self.api_key = (
+                    self.config.api_key or 'CELS'
+                )  # Use default if not provided
+                self.model = self.config.hf_model_id
+                print(f'vLLM server successfully started at {self.base_url}')
+            else:
+                # Server failed to start, clean up
+                self._cleanup_local_server()
+                raise RuntimeError(
+                    f'vLLM server failed to start within {self.config.server_startup_timeout} seconds'
+                )
+
+        except Exception as e:
+            self._cleanup_local_server()
+            raise RuntimeError(f'Failed to start local vLLM server: {e}')
+
+    def _cleanup_local_server(self) -> None:
+        """Clean up the local vLLM server process."""
+        if self.server_process:
+            try:
+                self.server_process.terminate()
+                # Give it a moment to terminate gracefully
+                try:
+                    self.server_process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    # Force kill if it doesn't terminate gracefully
+                    self.server_process.kill()
+                    self.server_process.wait()
+                print('Local vLLM server terminated')
+            except Exception as e:
+                print(f'Warning: Error cleaning up local vLLM server: {e}')
+            finally:
+                self.server_process = None
+                self.local_server_started = False
+
+    def __del__(self):
+        """Ensure cleanup when object is destroyed."""
+        if self.local_server_started:
+            self._cleanup_local_server()
+
+    def shutdown(self) -> None:
+        """Explicitly shutdown the local server if running."""
+        if self.local_server_started:
+            self._cleanup_local_server()
 
     def generate(
         self,
@@ -708,6 +911,9 @@ class VLLMGenerator:
         max_tokens: Optional[int] = None,
     ) -> str:
         """Generate text using vLLM server."""
+        if self.config.boot_local and not self.local_server_started:
+            raise RuntimeError('Local vLLM server is not running')
+
         # Use config defaults if not provided
         if temperature is None:
             temperature = self.config.temperature
@@ -1736,6 +1942,12 @@ def main():
                 model=vllm_settings.model,
                 temperature=vllm_settings.temperature,
                 max_tokens=vllm_settings.max_tokens,
+                boot_local=vllm_settings.boot_local,
+                hf_model_id=vllm_settings.hf_model_id,
+                auto_port=vllm_settings.auto_port,
+                local_host=vllm_settings.local_host,
+                vllm_args=vllm_settings.vllm_args,
+                server_startup_timeout=vllm_settings.server_startup_timeout,
             )
 
         # Create full RAG configuration
@@ -1777,6 +1989,12 @@ def main():
                 model=vllm_settings.model,
                 temperature=vllm_settings.temperature,
                 max_tokens=vllm_settings.max_tokens,
+                boot_local=vllm_settings.boot_local,
+                hf_model_id=vllm_settings.hf_model_id,
+                auto_port=vllm_settings.auto_port,
+                local_host=vllm_settings.local_host,
+                vllm_args=vllm_settings.vllm_args,
+                server_startup_timeout=vllm_settings.server_startup_timeout,
             )
 
         rag_model_config = RetrievalAugmentedGenerationConfig(
@@ -1817,6 +2035,12 @@ def main():
                 model=vllm_settings.model,
                 temperature=vllm_settings.temperature,
                 max_tokens=vllm_settings.max_tokens,
+                boot_local=vllm_settings.boot_local,
+                hf_model_id=vllm_settings.hf_model_id,
+                auto_port=vllm_settings.auto_port,
+                local_host=vllm_settings.local_host,
+                vllm_args=vllm_settings.vllm_args,
+                server_startup_timeout=vllm_settings.server_startup_timeout,
             )
 
         rag_model_config = RetrievalAugmentedGenerationConfig(
@@ -1829,201 +2053,239 @@ def main():
     # Create RAG model
     rag_model = rag_model_config.get_rag_model()
 
-    # Print configuration summary
-    print(f'Configuration Summary:')
-    print(f'  Generator Type: {config.model.generator.generator_type}')
-    print(f'  Generator Model: {config.model.generator_settings.model}')
-    print(f'  Grader: {config.model.grader_shortname}')
-    print(f'  RAG Enabled: {config.rag.enabled}')
-    print(f'  Parallel Workers: {config.processing.parallel_workers}')
-    print(f'  Question Format: {question_format}')
-    print(f'  Total Questions: {len(questions)}')
-
-    # Prepare items for parallel processing
-    items = [(i, qa_pair) for i, qa_pair in enumerate(questions, 1)]
-    results = []
-
-    # Process questions
-    start_time = time.time()
-    print(
-        f'\nProcessing {len(items)} questions with {"RAG" if use_rag else "DIRECT"} mode...'
-    )
-    if config.processing.parallel_workers > 1:
-        print(
-            f'Using {config.processing.parallel_workers} parallel workers...'
-        )
-    print(
-        'This may take some time. Each model call has built-in retries and waiting.'
-    )
-
-    # Track progress
-    completed = 0
-    total = len(items)
-    results_lock = threading.Lock()
-
-    def update_progress(result):
-        nonlocal completed
-        with results_lock:
-            completed += 1
-            results.append(result)
-            if not config.processing.verbose:
-                print(
-                    f'Progress: {completed}/{total} ({completed / total * 100:.1f}%)',
-                    end='\r',
-                )
-
-    def process_item(item):
-        try:
-            result = process_question(
-                item,
-                rag_model,
-                grader_config,
-                question_format,
-                config.processing.verbose,
-                config.rag.use_context_field,
-                config.rag.retrieval_top_k,
-                config.rag.retrieval_score_threshold,
-                use_rag,
-            )
-            update_progress(result)
-            return result
-        except Exception as e:
-            error_result = {
-                'question_id': item[0],
-                'error': str(e),
-                'skipped': True,
-            }
-            update_progress(error_result)
-            return error_result
-
-    # Execute processing
-    if config.processing.parallel_workers == 1:
-        for item in items:
-            process_item(item)
-    else:
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=config.processing.parallel_workers
-        ) as executor:
-            futures = [executor.submit(process_item, item) for item in items]
-            concurrent.futures.wait(futures)
-
-    total_time = time.time() - start_time
-    print(f'\nCompleted processing in {total_time:.2f} seconds')
-
-    # Filter out skipped results for statistics
-    processed_results = [r for r in results if not r.get('skipped', False)]
-
-    if processed_results:
-        # Calculate statistics
-        all_scores = [r['score'] for r in processed_results]
-        mc_results = [r for r in processed_results if r.get('format') == 'mc']
-        qa_results = [r for r in processed_results if r.get('format') == 'qa']
-
-        mc_scores = [r['score'] for r in mc_results]
-        qa_scores = [r['score'] for r in qa_results]
-
-        overall_accuracy = (
-            sum(all_scores) / len(all_scores) if all_scores else 0
-        )
-        mc_accuracy = sum(mc_scores) / len(mc_scores) if mc_scores else None
-        qa_accuracy = sum(qa_scores) / len(qa_scores) if qa_scores else None
-
-        print(f'\n=== EVALUATION RESULTS ===')
-        print(
-            f'Overall Accuracy: {overall_accuracy:.3f} ({sum(all_scores)}/{len(all_scores)})'
-        )
-        if mc_accuracy is not None:
-            print(
-                f'MC Accuracy: {mc_accuracy:.3f} ({sum(mc_scores)}/{len(mc_scores)})'
-            )
-        if qa_accuracy is not None:
-            print(
-                f'QA Accuracy: {qa_accuracy:.3f} ({sum(qa_scores)}/{len(qa_scores)})'
-            )
-
-        # Source chunk retrieval statistics
-        if use_rag:
-            source_retrieved_results = [
-                r
-                for r in processed_results
-                if r.get('source_chunk_retrieved') is not None
-            ]
-            if source_retrieved_results:
-                source_retrieved_count = sum(
-                    1
-                    for r in source_retrieved_results
-                    if r.get('source_chunk_retrieved')
-                )
-                source_retrieval_rate = source_retrieved_count / len(
-                    source_retrieved_results
-                )
-                print(
-                    f'Source Chunk Retrieval Rate: {source_retrieval_rate:.3f} ({source_retrieved_count}/{len(source_retrieved_results)})'
-                )
-
-        # Create metadata
-        metadata = create_metadata(config, questions, rag_config, args.config)
-
-        # Save results with metadata (directory already created at start)
-        output_file = os.path.join(
-            config.output.output_directory,
-            f'{config.output.output_prefix}_{model_name}_{timestamp}.json',
-        )
-
-        # Create final output structure with metadata
-        output_data = {
-            'metadata': metadata,
-            'results': results,
-        }
-
-        with open(output_file, 'w') as f:
-            json.dump(output_data, f, indent=2)
-
-        print(f'Results saved to {output_file}')
-
-        # Save incorrect answers if requested
-        if config.output.save_incorrect:
-            incorrect_results = [
-                r for r in processed_results if r['score'] < 1.0
-            ]
-            if incorrect_results:
-                incorrect_file = os.path.join(
-                    config.output.output_directory,
-                    f'{config.output.output_prefix}_incorrect_{model_name}_{timestamp}.json',
-                )
-                incorrect_data = {
-                    'metadata': metadata,
-                    'results': incorrect_results,
-                }
-                with open(incorrect_file, 'w') as f:
-                    json.dump(incorrect_data, f, indent=2)
-                print(f'Incorrect answers saved to {incorrect_file}')
-
-        # Print sample chunk logging if available
-        if (
-            use_rag
-            and processed_results
-            and processed_results[0]
-            .get('retrieval_info', {})
-            .get('retrieved_chunks')
+    # Setup cleanup handling for local vLLM servers
+    def cleanup_handler(signum=None, frame=None):
+        """Cleanup handler to ensure local vLLM servers are shut down."""
+        print('\nShutting down...')
+        if hasattr(rag_model, 'generator') and hasattr(
+            rag_model.generator, 'shutdown'
         ):
-            print(f'\n--- SAMPLE CHUNK LOGGING ---')
-            sample_result = processed_results[0]
-            print(f'Question ID: {sample_result["question_id"]}')
-            print(f'Retrieved chunks:')
-            for chunk_list in sample_result['retrieval_info'][
-                'retrieved_chunks'
-            ]:
-                for chunk in chunk_list:
-                    print(f'  - Chunk ID: {chunk["chunk_id"]}')
-                    print(f'    Score: {chunk["score"]:.4f}')
-                    print(f'    Path: {chunk["path"]}')
-                    print(f'    Text preview: {chunk["text"][:100]}...')
-                    print()
+            try:
+                rag_model.generator.shutdown()
+            except Exception as e:
+                print(f'Warning: Error during cleanup: {e}')
+        if signum is not None:
+            sys.exit(0)
 
-    else:
-        print('\nNo questions were successfully processed.')
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, cleanup_handler)
+    signal.signal(signal.SIGTERM, cleanup_handler)
+
+    try:
+        # Print configuration summary
+        print(f'Configuration Summary:')
+        print(f'  Generator Type: {config.model.generator.generator_type}')
+        print(f'  Generator Model: {config.model.generator_settings.model}')
+        print(f'  Grader: {config.model.grader_shortname}')
+        print(f'  RAG Enabled: {config.rag.enabled}')
+        print(f'  Parallel Workers: {config.processing.parallel_workers}')
+        print(f'  Question Format: {question_format}')
+        print(f'  Total Questions: {len(questions)}')
+
+        # Prepare items for parallel processing
+        items = [(i, qa_pair) for i, qa_pair in enumerate(questions, 1)]
+        results = []
+
+        # Process questions
+        start_time = time.time()
+        print(
+            f'\nProcessing {len(items)} questions with {"RAG" if use_rag else "DIRECT"} mode...'
+        )
+        if config.processing.parallel_workers > 1:
+            print(
+                f'Using {config.processing.parallel_workers} parallel workers...'
+            )
+        print(
+            'This may take some time. Each model call has built-in retries and waiting.'
+        )
+
+        # Track progress
+        completed = 0
+        total = len(items)
+        results_lock = threading.Lock()
+
+        def update_progress(result):
+            nonlocal completed
+            with results_lock:
+                completed += 1
+                results.append(result)
+                if not config.processing.verbose:
+                    print(
+                        f'Progress: {completed}/{total} ({completed / total * 100:.1f}%)',
+                        end='\r',
+                    )
+
+        def process_item(item):
+            try:
+                result = process_question(
+                    item,
+                    rag_model,
+                    grader_config,
+                    question_format,
+                    config.processing.verbose,
+                    config.rag.use_context_field,
+                    config.rag.retrieval_top_k,
+                    config.rag.retrieval_score_threshold,
+                    use_rag,
+                )
+                update_progress(result)
+                return result
+            except Exception as e:
+                error_result = {
+                    'question_id': item[0],
+                    'error': str(e),
+                    'skipped': True,
+                }
+                update_progress(error_result)
+                return error_result
+
+        # Execute processing
+        if config.processing.parallel_workers == 1:
+            for item in items:
+                process_item(item)
+        else:
+            with concurrent.futures.ThreadPoolExecutor(
+                max_workers=config.processing.parallel_workers
+            ) as executor:
+                futures = [
+                    executor.submit(process_item, item) for item in items
+                ]
+                concurrent.futures.wait(futures)
+
+        total_time = time.time() - start_time
+        print(f'\nCompleted processing in {total_time:.2f} seconds')
+
+        # Filter out skipped results for statistics
+        processed_results = [r for r in results if not r.get('skipped', False)]
+
+        if processed_results:
+            # Calculate statistics
+            all_scores = [r['score'] for r in processed_results]
+            mc_results = [
+                r for r in processed_results if r.get('format') == 'mc'
+            ]
+            qa_results = [
+                r for r in processed_results if r.get('format') == 'qa'
+            ]
+
+            mc_scores = [r['score'] for r in mc_results]
+            qa_scores = [r['score'] for r in qa_results]
+
+            overall_accuracy = (
+                sum(all_scores) / len(all_scores) if all_scores else 0
+            )
+            mc_accuracy = (
+                sum(mc_scores) / len(mc_scores) if mc_scores else None
+            )
+            qa_accuracy = (
+                sum(qa_scores) / len(qa_scores) if qa_scores else None
+            )
+
+            print(f'\n=== EVALUATION RESULTS ===')
+            print(
+                f'Overall Accuracy: {overall_accuracy:.3f} ({sum(all_scores)}/{len(all_scores)})'
+            )
+            if mc_accuracy is not None:
+                print(
+                    f'MC Accuracy: {mc_accuracy:.3f} ({sum(mc_scores)}/{len(mc_scores)})'
+                )
+            if qa_accuracy is not None:
+                print(
+                    f'QA Accuracy: {qa_accuracy:.3f} ({sum(qa_scores)}/{len(qa_scores)})'
+                )
+
+            # Source chunk retrieval statistics
+            if use_rag:
+                source_retrieved_results = [
+                    r
+                    for r in processed_results
+                    if r.get('source_chunk_retrieved') is not None
+                ]
+                if source_retrieved_results:
+                    source_retrieved_count = sum(
+                        1
+                        for r in source_retrieved_results
+                        if r.get('source_chunk_retrieved')
+                    )
+                    source_retrieval_rate = source_retrieved_count / len(
+                        source_retrieved_results
+                    )
+                    print(
+                        f'Source Chunk Retrieval Rate: {source_retrieval_rate:.3f} ({source_retrieved_count}/{len(source_retrieved_results)})'
+                    )
+
+            # Create metadata
+            metadata = create_metadata(
+                config, questions, rag_config, args.config
+            )
+
+            # Save results with metadata (directory already created at start)
+            output_file = os.path.join(
+                config.output.output_directory,
+                f'{config.output.output_prefix}_{model_name}_{timestamp}.json',
+            )
+
+            # Create final output structure with metadata
+            output_data = {
+                'metadata': metadata,
+                'results': results,
+            }
+
+            with open(output_file, 'w') as f:
+                json.dump(output_data, f, indent=2)
+
+            print(f'Results saved to {output_file}')
+
+            # Save incorrect answers if requested
+            if config.output.save_incorrect:
+                incorrect_results = [
+                    r for r in processed_results if r['score'] < 1.0
+                ]
+                if incorrect_results:
+                    incorrect_file = os.path.join(
+                        config.output.output_directory,
+                        f'{config.output.output_prefix}_incorrect_{model_name}_{timestamp}.json',
+                    )
+                    incorrect_data = {
+                        'metadata': metadata,
+                        'results': incorrect_results,
+                    }
+                    with open(incorrect_file, 'w') as f:
+                        json.dump(incorrect_data, f, indent=2)
+                    print(f'Incorrect answers saved to {incorrect_file}')
+
+            # Print sample chunk logging if available
+            if (
+                use_rag
+                and processed_results
+                and processed_results[0]
+                .get('retrieval_info', {})
+                .get('retrieved_chunks')
+            ):
+                print(f'\n--- SAMPLE CHUNK LOGGING ---')
+                sample_result = processed_results[0]
+                print(f'Question ID: {sample_result["question_id"]}')
+                print(f'Retrieved chunks:')
+                for chunk_list in sample_result['retrieval_info'][
+                    'retrieved_chunks'
+                ]:
+                    for chunk in chunk_list:
+                        print(f'  - Chunk ID: {chunk["chunk_id"]}')
+                        print(f'    Score: {chunk["score"]:.4f}')
+                        print(f'    Path: {chunk["path"]}')
+                        print(f'    Text preview: {chunk["text"][:100]}...')
+                        print()
+
+        else:
+            print('\nNo questions were successfully processed.')
+            return
+
+    except Exception as e:
+        print(f'Error in main function: {str(e)}')
         return
+    finally:
+        # Ensure cleanup happens even if an exception occurs
+        cleanup_handler()
 
 
 if __name__ == '__main__':
