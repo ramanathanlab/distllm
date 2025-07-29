@@ -2255,8 +2255,8 @@ Configuration File Usage:
     )
     parser.add_argument(
         '--checkpoint-dir',
-        default='checkpoints',
-        help='Directory to store checkpoint files (default: checkpoints)',
+        default=None,
+        help='Directory to store checkpoint files (default: from config or "checkpoints")',
     )
     parser.add_argument(
         '--resume-from',
