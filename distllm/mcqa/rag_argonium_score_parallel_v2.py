@@ -132,6 +132,20 @@ class VLLMGeneratorSettings(BaseModel):
         120, description='Timeout in seconds to wait for server startup'
     )
 
+    # New fields for batching support
+    enable_batching: bool = Field(
+        False,
+        description='Whether to enable request batching for improved throughput',
+    )
+    batch_size: int = Field(
+        8,
+        description='Number of requests to batch together (if enable_batching=True)',
+    )
+    batch_timeout: float = Field(
+        1.0,
+        description='Maximum time to wait for batch to fill before sending (seconds)',
+    )
+
     @model_validator(mode='after')
     def validate_boot_local_requirements(self):
         """Validate that hf_model_id is provided when boot_local=True."""
@@ -785,6 +799,20 @@ class VLLMGeneratorConfig(BaseConfig):
         120, description='Timeout in seconds to wait for server startup'
     )
 
+    # New fields for batching support
+    enable_batching: bool = Field(
+        False,
+        description='Whether to enable request batching for improved throughput',
+    )
+    batch_size: int = Field(
+        8,
+        description='Number of requests to batch together (if enable_batching=True)',
+    )
+    batch_timeout: float = Field(
+        1.0,
+        description='Maximum time to wait for batch to fill before sending (seconds)',
+    )
+
     def get_generator(self) -> 'VLLMGenerator':
         """Get the vLLM generator."""
         return VLLMGenerator(self)
@@ -801,6 +829,14 @@ class VLLMGenerator:
         self.stdout_thread = None
         self.stderr_thread = None
 
+        # Batching support
+        self.batch_queue = []
+        self.batch_lock = threading.Lock()
+        self.batch_results = {}
+        self.batch_condition = threading.Condition(self.batch_lock)
+        self.batch_thread = None
+        self.batching_active = False
+
         # Determine which configuration to use
         if config.boot_local:
             self._start_local_server()
@@ -808,6 +844,10 @@ class VLLMGenerator:
             self.base_url = f'http://{config.server}:{config.port}'
             self.api_key = config.api_key
             self.model = config.model
+
+        # Start batch processing thread if batching is enabled
+        if config.enable_batching:
+            self._start_batch_processor()
 
     def _start_local_server(self) -> None:
         """Start a local vLLM server with the specified model."""
@@ -1155,6 +1195,12 @@ class VLLMGenerator:
 
     def _cleanup_local_server(self) -> None:
         """Clean up the local vLLM server process."""
+        # Stop batch processing
+        if hasattr(self, 'batching_active'):
+            self.batching_active = False
+            with self.batch_condition:
+                self.batch_condition.notify_all()
+
         # Stop monitoring threads
         if hasattr(self, 'monitoring_active'):
             self.monitoring_active = False
@@ -1179,11 +1225,209 @@ class VLLMGenerator:
                 self.server_process = None
                 self.local_server_started = False
 
-        # Wait for monitoring threads to finish
+        # Wait for threads to finish
+        if hasattr(self, 'batch_thread') and self.batch_thread.is_alive():
+            self.batch_thread.join(timeout=2)
         if hasattr(self, 'stdout_thread') and self.stdout_thread.is_alive():
             self.stdout_thread.join(timeout=2)
         if hasattr(self, 'stderr_thread') and self.stderr_thread.is_alive():
             self.stderr_thread.join(timeout=2)
+
+    def _start_batch_processor(self):
+        """Start the batch processing thread."""
+        self.batching_active = True
+        self.batch_thread = threading.Thread(
+            target=self._batch_processor_thread, daemon=True
+        )
+        self.batch_thread.start()
+        print(
+            f'🚀 Started batch processor (batch_size={self.config.batch_size}, timeout={self.config.batch_timeout}s)'
+        )
+
+    def _batch_processor_thread(self):
+        """Background thread that processes batched requests."""
+        import uuid
+
+        while self.batching_active:
+            with self.batch_condition:
+                # Wait for requests or timeout
+                if not self.batch_queue:
+                    self.batch_condition.wait(
+                        timeout=self.config.batch_timeout
+                    )
+
+                # If we have requests, process them
+                if self.batch_queue:
+                    # Take up to batch_size requests
+                    current_batch = self.batch_queue[: self.config.batch_size]
+                    self.batch_queue = self.batch_queue[
+                        self.config.batch_size :
+                    ]
+
+                    if current_batch:
+                        try:
+                            # Process the batch
+                            self._process_batch(current_batch)
+                        except Exception as e:
+                            # Mark all requests in batch as failed
+                            for request_id, _, _, _ in current_batch:
+                                self.batch_results[request_id] = (
+                                    f'Batch processing error: {e}'
+                                )
+
+                        # Notify waiting threads
+                        self.batch_condition.notify_all()
+
+    def _process_batch(self, batch_requests):
+        """Process a batch of requests."""
+        if not batch_requests:
+            return
+
+        # Prepare batch payload for vLLM
+        messages_list = []
+        request_map = {}
+
+        for i, (request_id, prompt, temperature, max_tokens) in enumerate(
+            batch_requests
+        ):
+            messages_list.append(
+                {
+                    'messages': [{'role': 'user', 'content': prompt}],
+                    'temperature': temperature,
+                    'max_tokens': max_tokens,
+                    'model': self.model,
+                }
+            )
+            request_map[i] = request_id
+
+        # Use vLLM's batch endpoint or send concurrent requests
+        try:
+            if len(batch_requests) == 1:
+                # Single request - use regular endpoint
+                request_id, prompt, temperature, max_tokens = batch_requests[0]
+                result = self._single_request(prompt, temperature, max_tokens)
+                self.batch_results[request_id] = result
+            else:
+                # Multiple requests - use concurrent approach
+                import concurrent.futures
+
+                def send_request(request_data):
+                    prompt = request_data['messages'][0]['content']
+                    return self._single_request(
+                        prompt,
+                        request_data['temperature'],
+                        request_data['max_tokens'],
+                    )
+
+                with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=min(8, len(messages_list))
+                ) as executor:
+                    future_to_idx = {
+                        executor.submit(send_request, msg): idx
+                        for idx, msg in enumerate(messages_list)
+                    }
+
+                    for future in concurrent.futures.as_completed(
+                        future_to_idx
+                    ):
+                        idx = future_to_idx[future]
+                        request_id = request_map[idx]
+                        try:
+                            result = future.result()
+                            self.batch_results[request_id] = result
+                        except Exception as e:
+                            self.batch_results[request_id] = (
+                                f'Request error: {e}'
+                            )
+
+        except Exception as e:
+            # Mark all requests as failed
+            for request_id, _, _, _ in batch_requests:
+                self.batch_results[request_id] = f'Batch error: {e}'
+
+    def _single_request(
+        self, prompt: str, temperature: float, max_tokens: int
+    ) -> str:
+        """Send a single request to vLLM server."""
+        url = f'{self.base_url}/v1/chat/completions'
+        headers = {
+            'Authorization': f'Bearer {self.api_key}',
+            'Content-Type': 'application/json',
+        }
+
+        data = {
+            'model': self.model,
+            'messages': [{'role': 'user', 'content': prompt}],
+            'temperature': temperature,
+            'max_tokens': max_tokens,
+        }
+
+        try:
+            response = requests.post(
+                url, headers=headers, json=data, timeout=120
+            )
+            response.raise_for_status()
+            result = response.json()
+            return result['choices'][0]['message']['content']
+        except requests.exceptions.RequestException as e:
+            return f'Error: {e!s}'
+        except (KeyError, IndexError) as e:
+            return f'Error: {e!s}'
+
+    def batch_generate(
+        self,
+        prompts: List[str],
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+    ) -> List[str]:
+        """Generate responses for multiple prompts using batching."""
+        if not self.config.enable_batching:
+            # Fall back to individual requests
+            return [
+                self.generate(prompt, temperature, max_tokens)
+                for prompt in prompts
+            ]
+
+        if self.config.boot_local and not self.local_server_started:
+            raise RuntimeError('Local vLLM server is not running')
+
+        # Use config defaults if not provided
+        if temperature is None:
+            temperature = self.config.temperature
+        if max_tokens is None:
+            max_tokens = self.config.max_tokens
+
+        import uuid
+
+        request_ids = [str(uuid.uuid4()) for _ in prompts]
+
+        # Add requests to batch queue
+        with self.batch_condition:
+            for request_id, prompt in zip(request_ids, prompts):
+                self.batch_queue.append(
+                    (request_id, prompt, temperature, max_tokens)
+                )
+            self.batch_condition.notify()
+
+        # Wait for results
+        results = []
+        for request_id in request_ids:
+            with self.batch_condition:
+                # Wait until our result is ready
+                while request_id not in self.batch_results:
+                    self.batch_condition.wait(
+                        timeout=30
+                    )  # Timeout to prevent hanging
+
+                    if request_id not in self.batch_results:
+                        # Check if still waiting or if we should timeout
+                        continue
+
+                # Get the result and clean up
+                result = self.batch_results.pop(request_id)
+                results.append(result)
+
+        return results
 
     def __del__(self):
         """Ensure cleanup when object is destroyed."""
@@ -1192,6 +1436,15 @@ class VLLMGenerator:
 
     def shutdown(self) -> None:
         """Explicitly shutdown the local server if running."""
+        # Stop batch processing
+        if hasattr(self, 'batching_active'):
+            self.batching_active = False
+            with self.batch_condition:
+                self.batch_condition.notify_all()
+
+        if hasattr(self, 'batch_thread') and self.batch_thread.is_alive():
+            self.batch_thread.join(timeout=5)
+
         if self.local_server_started:
             self._cleanup_local_server()
 
@@ -2119,6 +2372,211 @@ def create_metadata(
     return metadata
 
 
+def process_question_batch(
+    items: List[Tuple[int, Dict]],
+    rag_model: RagGeneratorWithChunkLogging,
+    grader_config: Dict[str, Any],
+    question_format: str = 'auto',
+    verbose: bool = False,
+    use_context_field: bool = False,
+    retrieval_top_k: int = 5,
+    retrieval_score_threshold: float = 0.0,
+    use_rag: bool = True,
+) -> List[Dict]:
+    """Process a batch of questions together for improved throughput."""
+    if not items:
+        return []
+
+    # Check if the generator supports batching
+    generator = rag_model.generator
+    if (
+        not hasattr(generator, 'batch_generate')
+        or not generator.config.enable_batching
+    ):
+        # Fall back to individual processing
+        return [
+            process_question(
+                item,
+                rag_model,
+                grader_config,
+                question_format,
+                verbose,
+                use_context_field,
+                retrieval_top_k,
+                retrieval_score_threshold,
+                use_rag,
+            )
+            for item in items
+        ]
+
+    batch_size = len(items)
+    if verbose:
+        print(f'\n🚀 Processing batch of {batch_size} questions...')
+
+    # Extract questions and prepare for batch processing
+    questions = []
+    contexts = []
+    question_ids = []
+    valid_items = []
+
+    for item in items:
+        i, qa_pair = item
+        question = qa_pair.get('question', '')
+        reference_answer = qa_pair.get('answer', '')
+        context_text = qa_pair.get('text', '') if use_context_field else None
+
+        if not question or not reference_answer:
+            # Handle invalid items separately
+            continue
+
+        questions.append(question)
+        contexts.append(context_text)
+        question_ids.append(i)
+        valid_items.append(item)
+
+    if not questions:
+        return []
+
+    try:
+        # Generate batch of model answers
+        start_time = time.time()
+
+        if use_rag and rag_model.retriever:
+            # Generate RAG answers with batch processing
+            model_answers = generate_rag_answer_batch(
+                questions=questions,
+                rag_model=rag_model,
+                question_format=question_format,
+                contexts=contexts,
+                retrieval_top_k=retrieval_top_k,
+                retrieval_score_threshold=retrieval_score_threshold,
+            )
+        else:
+            # Direct generation without RAG
+            model_answers = generator.batch_generate(questions)
+
+        batch_generation_time = time.time() - start_time
+
+        if verbose:
+            print(
+                f'✅ Generated {len(model_answers)} answers in {batch_generation_time:.2f}s'
+            )
+            print(
+                f'   Throughput: {len(model_answers) / batch_generation_time:.1f} answers/sec'
+            )
+
+    except Exception as e:
+        if verbose:
+            print(f'❌ Batch generation failed: {e}')
+        # Fall back to individual processing
+        return [
+            process_question(
+                item,
+                rag_model,
+                grader_config,
+                question_format,
+                verbose,
+                use_context_field,
+                retrieval_top_k,
+                retrieval_score_threshold,
+                use_rag,
+            )
+            for item in items
+        ]
+
+    # Process evaluation (can also be batched if needed)
+    results = []
+    for idx, (item, model_answer) in enumerate(
+        zip(valid_items, model_answers)
+    ):
+        i, qa_pair = item
+        question = qa_pair.get('question', '')
+        reference_answer = qa_pair.get('answer', '')
+
+        try:
+            # Evaluate the answer
+            start_time = time.time()
+            evaluation = evaluate_answer(
+                question,
+                reference_answer,
+                model_answer,
+                grader_config,
+                question_format,
+            )
+            eval_time = time.time() - start_time
+
+            # Get the score and format
+            score = evaluation.get('score', 0)
+            format_type = evaluation.get('format', question_format)
+            if format_type == 'auto':
+                format_type = 'mc' if 'correct_letter' in evaluation else 'qa'
+
+            # Prepare result
+            result = {
+                'question_id': i,
+                'question': question,
+                'reference_answer': reference_answer,
+                'model_answer': model_answer,
+                'evaluation': evaluation,
+                'score': score,
+                'format': format_type,
+                'model_time_seconds': batch_generation_time
+                / len(model_answers),  # Approximate
+                'evaluation_time_seconds': eval_time,
+                'skipped': False,
+                'batch_processed': True,
+                'batch_size': batch_size,
+            }
+
+            results.append(result)
+
+        except Exception as e:
+            error_result = {
+                'question_id': i,
+                'error': str(e),
+                'skipped': True,
+                'batch_processed': False,
+            }
+            results.append(error_result)
+
+    if verbose:
+        successful = len([r for r in results if not r.get('skipped', False)])
+        print(
+            f'📊 Batch processing complete: {successful}/{len(results)} successful'
+        )
+
+    return results
+
+
+def generate_rag_answer_batch(
+    questions: List[str],
+    rag_model: RagGeneratorWithChunkLogging,
+    question_format: str = 'auto',
+    contexts: Optional[List[Optional[str]]] = None,
+    retrieval_top_k: int = 5,
+    retrieval_score_threshold: float = 0.0,
+) -> List[str]:
+    """Generate RAG answers for a batch of questions."""
+    if contexts is None:
+        contexts = [None] * len(questions)
+
+    # For now, fall back to individual RAG processing
+    # In the future, this could be optimized to batch retrieve + batch generate
+    answers = []
+    for question, context in zip(questions, contexts):
+        answer = generate_rag_answer(
+            question=question,
+            rag_model=rag_model,
+            question_format=question_format,
+            context_text=context,
+            retrieval_top_k=retrieval_top_k,
+            retrieval_score_threshold=retrieval_score_threshold,
+        )
+        answers.append(answer)
+
+    return answers
+
+
 def main():
     """Main function."""
     args = parse_arguments()
@@ -2239,6 +2697,9 @@ def main():
                 local_host=vllm_settings.local_host,
                 vllm_args=vllm_settings.vllm_args,
                 server_startup_timeout=vllm_settings.server_startup_timeout,
+                enable_batching=vllm_settings.enable_batching,
+                batch_size=vllm_settings.batch_size,
+                batch_timeout=vllm_settings.batch_timeout,
             )
 
         # Create full RAG configuration
@@ -2286,6 +2747,9 @@ def main():
                 local_host=vllm_settings.local_host,
                 vllm_args=vllm_settings.vllm_args,
                 server_startup_timeout=vllm_settings.server_startup_timeout,
+                enable_batching=vllm_settings.enable_batching,
+                batch_size=vllm_settings.batch_size,
+                batch_timeout=vllm_settings.batch_timeout,
             )
 
         rag_model_config = RetrievalAugmentedGenerationConfig(
@@ -2332,6 +2796,9 @@ def main():
                 local_host=vllm_settings.local_host,
                 vllm_args=vllm_settings.vllm_args,
                 server_startup_timeout=vllm_settings.server_startup_timeout,
+                enable_batching=vllm_settings.enable_batching,
+                batch_size=vllm_settings.batch_size,
+                batch_timeout=vllm_settings.batch_timeout,
             )
 
         rag_model_config = RetrievalAugmentedGenerationConfig(
@@ -2371,7 +2838,24 @@ def main():
         print(f'  RAG Enabled: {config.rag.enabled}')
         print(f'  Parallel Workers: {config.processing.parallel_workers}')
         print(f'  Question Format: {question_format}')
+
+        # Check if batching is enabled
+        use_batching = (
+            hasattr(rag_model.generator, 'config')
+            and hasattr(rag_model.generator.config, 'enable_batching')
+            and rag_model.generator.config.enable_batching
+        )
+
+        if use_batching:
+            batch_size = rag_model.generator.config.batch_size
+            print(f'🚀 Batch processing enabled (batch_size={batch_size})')
+
         print(f'  Total Questions: {len(questions)}')
+        if use_batching:
+            print(f'  Batch Size: {batch_size}')
+            print(
+                f'  Estimated Batches: {(len(questions) + batch_size - 1) // batch_size}'
+            )
 
         # Prepare items for parallel processing
         items = [(i, qa_pair) for i, qa_pair in enumerate(questions, 1)]
@@ -2386,6 +2870,8 @@ def main():
             print(
                 f'Using {config.processing.parallel_workers} parallel workers...'
             )
+        if use_batching:
+            print(f'Using batch processing with batch_size={batch_size}')
         print(
             'This may take some time. Each model call has built-in retries and waiting.'
         )
@@ -2395,11 +2881,18 @@ def main():
         total = len(items)
         results_lock = threading.Lock()
 
-        def update_progress(result):
+        def update_progress(batch_results):
             nonlocal completed
             with results_lock:
-                completed += 1
-                results.append(result)
+                if isinstance(batch_results, list):
+                    # Batch results
+                    completed += len(batch_results)
+                    results.extend(batch_results)
+                else:
+                    # Single result
+                    completed += 1
+                    results.append(batch_results)
+
                 if not config.processing.verbose:
                     print(
                         f'Progress: {completed}/{total} ({completed / total * 100:.1f}%)',
@@ -2430,18 +2923,69 @@ def main():
                 update_progress(error_result)
                 return error_result
 
+        def process_batch(batch_items):
+            try:
+                batch_results = process_question_batch(
+                    batch_items,
+                    rag_model,
+                    grader_config,
+                    question_format,
+                    config.processing.verbose,
+                    config.rag.use_context_field,
+                    config.rag.retrieval_top_k,
+                    config.rag.retrieval_score_threshold,
+                    use_rag,
+                )
+                update_progress(batch_results)
+                return batch_results
+            except Exception as e:
+                # Fall back to individual processing for this batch
+                error_results = []
+                for item in batch_items:
+                    error_result = {
+                        'question_id': item[0],
+                        'error': str(e),
+                        'skipped': True,
+                    }
+                    error_results.append(error_result)
+                update_progress(error_results)
+                return error_results
+
         # Execute processing
-        if config.processing.parallel_workers == 1:
-            for item in items:
-                process_item(item)
+        if use_batching and len(items) > 1:
+            # Batch processing mode
+            batches = [
+                items[i : i + batch_size]
+                for i in range(0, len(items), batch_size)
+            ]
+
+            if config.processing.parallel_workers == 1:
+                # Sequential batch processing
+                for batch in batches:
+                    process_batch(batch)
+            else:
+                # Parallel batch processing
+                with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=config.processing.parallel_workers
+                ) as executor:
+                    futures = [
+                        executor.submit(process_batch, batch)
+                        for batch in batches
+                    ]
+                    concurrent.futures.wait(futures)
         else:
-            with concurrent.futures.ThreadPoolExecutor(
-                max_workers=config.processing.parallel_workers
-            ) as executor:
-                futures = [
-                    executor.submit(process_item, item) for item in items
-                ]
-                concurrent.futures.wait(futures)
+            # Individual processing mode (original behavior)
+            if config.processing.parallel_workers == 1:
+                for item in items:
+                    process_item(item)
+            else:
+                with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=config.processing.parallel_workers
+                ) as executor:
+                    futures = [
+                        executor.submit(process_item, item) for item in items
+                    ]
+                    concurrent.futures.wait(futures)
 
         total_time = time.time() - start_time
         print(f'\nCompleted processing in {total_time:.2f} seconds')
