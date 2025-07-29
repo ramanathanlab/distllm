@@ -293,19 +293,45 @@ class RAGConfiguration(BaseModel):
     )
 
 
-class ProcessingConfiguration(BaseModel):
-    """Processing and execution configuration."""
+class ProcessingConfig(BaseModel):
+    """Processing configuration."""
 
-    parallel_workers: int = Field(1, description='Number of parallel workers')
+    parallel_workers: int = Field(
+        1, description='Number of parallel workers for processing'
+    )
     question_format: str = Field(
-        'auto', description='Question format: auto, mc, or qa'
+        'auto', description='Question format: mc, qa, or auto-detect'
     )
     verbose: bool = Field(False, description='Enable verbose output')
     random_selection: Optional[int] = Field(
-        None, description='Randomly select N questions'
+        None, description='Number of questions to randomly select'
     )
     random_seed: Optional[int] = Field(
         None, description='Random seed for reproducible selection'
+    )
+
+    # New checkpointing and progress monitoring fields
+    enable_checkpointing: bool = Field(
+        True, description='Enable periodic checkpointing of results'
+    )
+    checkpoint_interval: int = Field(
+        100, description='Save checkpoint every N completed questions'
+    )
+    checkpoint_directory: str = Field(
+        'checkpoints', description='Directory to store checkpoint files'
+    )
+    resume_from_checkpoint: Optional[str] = Field(
+        None, description='Path to checkpoint file to resume from'
+    )
+    auto_resume: bool = Field(
+        True,
+        description='Automatically find and resume from latest checkpoint',
+    )
+    progress_bar: bool = Field(
+        True, description='Show progress bar with percentage completion'
+    )
+    save_incremental: bool = Field(
+        False, description='Save each result immediately (for ultra-safe mode)'
     )
 
 
@@ -331,7 +357,7 @@ class MCQAConfig(BaseModel):
     )
     model: ModelConfiguration
     rag: RAGConfiguration = RAGConfiguration()
-    processing: ProcessingConfiguration = ProcessingConfiguration()
+    processing: ProcessingConfig = ProcessingConfig()
     output: OutputConfiguration = OutputConfiguration()
 
     @field_validator('processing')
@@ -2215,6 +2241,43 @@ Configuration File Usage:
         help='Save incorrectly answered questions to a separate file',
     )
 
+    # Checkpointing and progress monitoring arguments
+    parser.add_argument(
+        '--disable-checkpointing',
+        action='store_true',
+        help='Disable automatic checkpointing (enabled by default)',
+    )
+    parser.add_argument(
+        '--checkpoint-interval',
+        type=int,
+        default=100,
+        help='Save checkpoint every N completed questions (default: 100)',
+    )
+    parser.add_argument(
+        '--checkpoint-dir',
+        default='checkpoints',
+        help='Directory to store checkpoint files (default: checkpoints)',
+    )
+    parser.add_argument(
+        '--resume-from',
+        help='Resume from specific checkpoint file path',
+    )
+    parser.add_argument(
+        '--no-auto-resume',
+        action='store_true',
+        help='Disable automatic resume from latest checkpoint',
+    )
+    parser.add_argument(
+        '--save-incremental',
+        action='store_true',
+        help='Save each result immediately (ultra-safe mode, slower)',
+    )
+    parser.add_argument(
+        '--no-progress-bar',
+        action='store_true',
+        help='Disable progress bar with percentage completion',
+    )
+
     return parser.parse_args()
 
 
@@ -2299,6 +2362,27 @@ def create_config_from_args(args) -> MCQAConfig:
 
     if args.save_incorrect:
         config.output.save_incorrect = True
+
+    if args.disable_checkpointing:
+        config.processing.enable_checkpointing = False
+
+    if args.checkpoint_interval is not None:
+        config.processing.checkpoint_interval = args.checkpoint_interval
+
+    if args.checkpoint_dir:
+        config.processing.checkpoint_directory = args.checkpoint_dir
+
+    if args.resume_from:
+        config.processing.resume_from_checkpoint = args.resume_from
+
+    if args.no_auto_resume:
+        config.processing.auto_resume = False
+
+    if args.save_incremental:
+        config.processing.save_incremental = True
+
+    if args.no_progress_bar:
+        config.processing.progress_bar = False
 
     return config
 
@@ -2575,6 +2659,192 @@ def generate_rag_answer_batch(
         answers.append(answer)
 
     return answers
+
+
+# -----------------------------------------------------------------------------
+# Checkpointing and Progress Management
+# -----------------------------------------------------------------------------
+
+
+def create_checkpoint_directory(checkpoint_dir: str) -> None:
+    """Create checkpoint directory if it doesn't exist."""
+    Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
+
+
+def get_checkpoint_filename(config: MCQAConfig, timestamp: str) -> str:
+    """Generate checkpoint filename based on config."""
+    model_name = config.model.generator_settings.model.replace('/', '_')
+    questions_file = Path(config.questions_file).stem
+    return f'checkpoint_{questions_file}_{model_name}_{timestamp}.json'
+
+
+def save_checkpoint(
+    results: List[Dict],
+    completed_indices: set,
+    config: MCQAConfig,
+    metadata: Dict,
+    checkpoint_file: str,
+) -> None:
+    """Save current progress to checkpoint file."""
+    checkpoint_data = {
+        'timestamp': datetime.now().isoformat(),
+        'completed_count': len(results),
+        'completed_indices': list(completed_indices),
+        'results': results,
+        'metadata': metadata,
+        'config': config.dict(),
+        'version': '2.0',
+    }
+
+    try:
+        with open(checkpoint_file, 'w') as f:
+            json.dump(checkpoint_data, f, indent=2)
+        print(
+            f'💾 Checkpoint saved: {checkpoint_file} ({len(results)} results)'
+        )
+    except Exception as e:
+        print(f'⚠️  Warning: Failed to save checkpoint: {e}')
+
+
+def load_checkpoint(checkpoint_file: str) -> Optional[Dict]:
+    """Load checkpoint file and return checkpoint data."""
+    try:
+        with open(checkpoint_file, 'r') as f:
+            checkpoint_data = json.load(f)
+
+        print(f'📂 Loaded checkpoint: {checkpoint_file}')
+        print(
+            f'   Previous progress: {checkpoint_data["completed_count"]} questions'
+        )
+        print(f'   Checkpoint time: {checkpoint_data["timestamp"]}')
+
+        return checkpoint_data
+    except FileNotFoundError:
+        print(f'❌ Checkpoint file not found: {checkpoint_file}')
+        return None
+    except Exception as e:
+        print(f'❌ Error loading checkpoint: {e}')
+        return None
+
+
+def find_latest_checkpoint(
+    checkpoint_dir: str, config: MCQAConfig
+) -> Optional[str]:
+    """Find the most recent checkpoint file for this configuration."""
+    try:
+        checkpoint_dir_path = Path(checkpoint_dir)
+        if not checkpoint_dir_path.exists():
+            return None
+
+        # Look for checkpoint files matching our pattern
+        model_name = config.model.generator_settings.model.replace('/', '_')
+        questions_file = Path(config.questions_file).stem
+        pattern = f'checkpoint_{questions_file}_{model_name}_*.json'
+
+        checkpoint_files = list(checkpoint_dir_path.glob(pattern))
+        if not checkpoint_files:
+            return None
+
+        # Find the most recent checkpoint
+        latest_checkpoint = max(
+            checkpoint_files, key=lambda x: x.stat().st_mtime
+        )
+        return str(latest_checkpoint)
+    except Exception as e:
+        print(f'⚠️  Warning: Error finding latest checkpoint: {e}')
+        return None
+
+
+def filter_remaining_items(items: List, completed_indices: set) -> List:
+    """Filter out already completed items based on checkpoint."""
+    remaining_items = []
+    for item in items:
+        question_id = item[0]  # First element is the question ID
+        if question_id not in completed_indices:
+            remaining_items.append(item)
+
+    skipped_count = len(items) - len(remaining_items)
+    if skipped_count > 0:
+        print(
+            f'📋 Resuming: Skipping {skipped_count} already completed questions'
+        )
+        print(f'📋 Remaining: {len(remaining_items)} questions to process')
+
+    return remaining_items
+
+
+def create_progress_monitor(total_questions: int, completed_count: int = 0):
+    """Create a progress monitoring object."""
+    if completed_count > 0:
+        print(
+            f'📊 Progress: Starting from {completed_count}/{total_questions} ({completed_count / total_questions * 100:.1f}%)'
+        )
+
+    try:
+        from tqdm import tqdm
+
+        return tqdm(
+            total=total_questions,
+            initial=completed_count,
+            desc='Processing questions',
+            unit='questions',
+            bar_format='{desc}: {percentage:3.1f}%|{bar}| {n}/{total} [{elapsed}<{remaining}, {rate_fmt}]',
+        )
+    except ImportError:
+        # Fallback to simple progress tracking
+        class SimpleProgress:
+            def __init__(self, total, initial=0):
+                self.total = total
+                self.current = initial
+
+            def update(self, n=1):
+                self.current += n
+                pct = (self.current / self.total) * 100
+                print(
+                    f'Progress: {self.current}/{self.total} ({pct:.1f}%)',
+                    end='\r',
+                )
+
+            def close(self):
+                print()  # New line when done
+
+        return SimpleProgress(total_questions, completed_count)
+
+
+def validate_checkpoint_compatibility(
+    checkpoint_data: Dict, config: MCQAConfig
+) -> bool:
+    """Validate that checkpoint is compatible with current configuration."""
+    try:
+        checkpoint_config = checkpoint_data.get('config', {})
+
+        # Check critical compatibility factors
+        current_model = config.model.generator_settings.model
+        checkpoint_model = (
+            checkpoint_config.get('model', {})
+            .get('generator_settings', {})
+            .get('model', '')
+        )
+
+        current_questions = config.questions_file
+        checkpoint_questions = checkpoint_config.get('questions_file', '')
+
+        if current_model != checkpoint_model:
+            print(f'⚠️  Warning: Model mismatch in checkpoint')
+            print(f'   Current: {current_model}')
+            print(f'   Checkpoint: {checkpoint_model}')
+            return False
+
+        if current_questions != checkpoint_questions:
+            print(f'⚠️  Warning: Questions file mismatch in checkpoint')
+            print(f'   Current: {current_questions}')
+            print(f'   Checkpoint: {checkpoint_questions}')
+            return False
+
+        return True
+    except Exception as e:
+        print(f'⚠️  Warning: Error validating checkpoint compatibility: {e}')
+        return False
 
 
 def main():
@@ -2859,7 +3129,66 @@ def main():
 
         # Prepare items for parallel processing
         items = [(i, qa_pair) for i, qa_pair in enumerate(questions, 1)]
+
+        # Checkpoint management setup
         results = []
+        completed_indices = set()
+        checkpoint_data = None
+
+        # Create checkpoint directory
+        if config.processing.enable_checkpointing:
+            create_checkpoint_directory(config.processing.checkpoint_directory)
+
+            # Try to resume from checkpoint
+            checkpoint_file_to_resume = None
+
+            if config.processing.resume_from_checkpoint:
+                # Explicit checkpoint file specified
+                checkpoint_file_to_resume = (
+                    config.processing.resume_from_checkpoint
+                )
+            elif config.processing.auto_resume:
+                # Auto-find latest checkpoint
+                checkpoint_file_to_resume = find_latest_checkpoint(
+                    config.processing.checkpoint_directory, config
+                )
+
+            # Load checkpoint if found
+            if checkpoint_file_to_resume:
+                checkpoint_data = load_checkpoint(checkpoint_file_to_resume)
+                if checkpoint_data and validate_checkpoint_compatibility(
+                    checkpoint_data, config
+                ):
+                    # Restore previous progress
+                    results = checkpoint_data['results']
+                    completed_indices = set(
+                        checkpoint_data['completed_indices']
+                    )
+                    items = filter_remaining_items(items, completed_indices)
+                    print(
+                        f'🔄 Resuming from checkpoint with {len(results)} completed questions'
+                    )
+                else:
+                    print('⚠️  Cannot resume from checkpoint, starting fresh')
+                    checkpoint_data = None
+
+        # Create metadata for checkpointing
+        metadata = create_metadata(config, questions, rag_config, args.config)
+
+        # Setup progress monitoring
+        progress_monitor = None
+        if config.processing.progress_bar:
+            progress_monitor = create_progress_monitor(
+                total_questions=len(questions), completed_count=len(results)
+            )
+
+        # Determine checkpoint filename for this run
+        checkpoint_filename = None
+        if config.processing.enable_checkpointing:
+            checkpoint_filename = os.path.join(
+                config.processing.checkpoint_directory,
+                get_checkpoint_filename(config, timestamp),
+            )
 
         # Process questions
         start_time = time.time()
@@ -2872,31 +3201,75 @@ def main():
             )
         if use_batching:
             print(f'Using batch processing with batch_size={batch_size}')
+        if config.processing.enable_checkpointing:
+            print(
+                f'💾 Checkpointing enabled (interval: {config.processing.checkpoint_interval})'
+            )
+            print(
+                f'📁 Checkpoint directory: {config.processing.checkpoint_directory}'
+            )
         print(
             'This may take some time. Each model call has built-in retries and waiting.'
         )
 
-        # Track progress
-        completed = 0
-        total = len(items)
+        # Track progress with checkpointing
+        completed = len(results)  # Start from checkpoint if resumed
+        total = len(questions)
         results_lock = threading.Lock()
+        last_checkpoint_count = len(results)
 
-        def update_progress(batch_results):
-            nonlocal completed
+        def update_progress_with_checkpointing(batch_results):
+            nonlocal completed, last_checkpoint_count
             with results_lock:
                 if isinstance(batch_results, list):
                     # Batch results
                     completed += len(batch_results)
                     results.extend(batch_results)
+                    # Update completed indices
+                    for result in batch_results:
+                        completed_indices.add(result['question_id'])
                 else:
                     # Single result
                     completed += 1
                     results.append(batch_results)
+                    completed_indices.add(batch_results['question_id'])
 
-                if not config.processing.verbose:
+                # Update progress monitor
+                if progress_monitor:
+                    if isinstance(batch_results, list):
+                        progress_monitor.update(len(batch_results))
+                    else:
+                        progress_monitor.update(1)
+                elif not config.processing.verbose:
                     print(
                         f'Progress: {completed}/{total} ({completed / total * 100:.1f}%)',
                         end='\r',
+                    )
+
+                # Periodic checkpointing
+                if (
+                    config.processing.enable_checkpointing
+                    and checkpoint_filename
+                    and completed - last_checkpoint_count
+                    >= config.processing.checkpoint_interval
+                ):
+                    save_checkpoint(
+                        results,
+                        completed_indices,
+                        config,
+                        metadata,
+                        checkpoint_filename,
+                    )
+                    last_checkpoint_count = completed
+
+                # Save incremental if enabled (ultra-safe mode)
+                if config.processing.save_incremental and checkpoint_filename:
+                    save_checkpoint(
+                        results,
+                        completed_indices,
+                        config,
+                        metadata,
+                        checkpoint_filename,
                     )
 
         def process_item(item):
@@ -2912,7 +3285,7 @@ def main():
                     config.rag.retrieval_score_threshold,
                     use_rag,
                 )
-                update_progress(result)
+                update_progress_with_checkpointing(result)
                 return result
             except Exception as e:
                 error_result = {
@@ -2920,7 +3293,7 @@ def main():
                     'error': str(e),
                     'skipped': True,
                 }
-                update_progress(error_result)
+                update_progress_with_checkpointing(error_result)
                 return error_result
 
         def process_batch(batch_items):
@@ -2936,7 +3309,7 @@ def main():
                     config.rag.retrieval_score_threshold,
                     use_rag,
                 )
-                update_progress(batch_results)
+                update_progress_with_checkpointing(batch_results)
                 return batch_results
             except Exception as e:
                 # Fall back to individual processing for this batch
@@ -2948,7 +3321,7 @@ def main():
                         'skipped': True,
                     }
                     error_results.append(error_result)
-                update_progress(error_results)
+                update_progress_with_checkpointing(error_results)
                 return error_results
 
         # Execute processing
@@ -2989,6 +3362,23 @@ def main():
 
         total_time = time.time() - start_time
         print(f'\nCompleted processing in {total_time:.2f} seconds')
+
+        # Close progress monitor
+        if progress_monitor:
+            progress_monitor.close()
+
+        # Save final checkpoint
+        if config.processing.enable_checkpointing and checkpoint_filename:
+            save_checkpoint(
+                results,
+                completed_indices,
+                config,
+                metadata,
+                checkpoint_filename,
+            )
+            print(
+                f'✅ Final checkpoint saved with {len(results)} total results'
+            )
 
         # Filter out skipped results for statistics
         processed_results = [r for r in results if not r.get('skipped', False)]
