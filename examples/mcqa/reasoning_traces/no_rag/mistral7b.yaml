@@ -1,0 +1,69 @@
+# Multi-GPU Configuration for 8 GPUs with Batching Support
+# Strategy: Single vLLM server with tensor parallelism across 8 GPUs + request batching
+
+questions_file: "/rbstor/ac.ogokdemir/ArgoniumRick/reasoning-evals/HR-GOOD-10-MC.json"
+
+model:
+  generator:
+    generator_type: "vllm"
+  
+  generator_settings:
+    # Traditional fields
+    server: "localhost"
+    port: 8000
+    api_key: "CELS"
+    model: "mistralai/Mistral-7B-Instruct-v0.3"
+    temperature: 0.0
+    max_tokens: 1024
+    
+    # Local vLLM server configuration
+    boot_local: true
+    hf_model_id: "mistralai/Mistral-7B-Instruct-v0.3"  # Your target model
+    auto_port: true
+    local_host: "127.0.0.1"
+    server_startup_timeout: 300  # Large models need more time
+    
+    # vLLM arguments for 8-GPU tensor parallelism
+    vllm_args:
+      tensor_parallel_size: 8                    # Use all 8 GPUs
+      max_model_len: 4096                        # Reasonable context length
+      gpu_memory_utilization: 0.9                # Use most of GPU memory
+      dtype: "auto"                              # Let vLLM choose optimal precision
+      trust_remote_code: false                   # Security
+      seed: 42                                   # Reproducible results
+      
+      # Performance optimizations for multi-GPU
+      pipeline_parallel_size: 1                 # Keep simple for now
+      max_num_batched_tokens: 16384              # Allow larger batches
+      max_num_seqs: 256                         # More concurrent sequences
+      
+    # Request batching configuration
+    enable_batching: true                        # Enable request batching
+    batch_size: 32                              # Process 16 requests per batch
+    batch_timeout: 1.0                          # Wait max 0.5s to fill batch
+  
+  grader_shortname: "gpt-4.1"
+  model_config_file: "model_servers.yaml"
+
+rag:
+  enabled: false  # Disable for pure generation testing
+  use_context_field: false
+
+processing:
+  parallel_workers: 8                           # 8 workers feeding the single server
+  question_format: "mc"
+  verbose: true
+  random_selection: null                        # Process all questions
+  random_seed: 42
+
+output:
+  save_incorrect: true
+  output_directory: "/rbstor/ac.ogokdemir/ArgoniumRick/reasoning-evals/mistral7b"
+  output_prefix: "mistral7b_norag"
+
+# Performance Notes:
+# - Single vLLM server with tensor_parallel_size=8 distributes model across all GPUs
+# - 8 parallel workers generate requests that get batched together
+# - Request batching reduces I/O overhead and improves throughput
+# - vLLM's internal batching handles multiple concurrent sequences efficiently
+# - Expected throughput: High (limited mainly by model size and GPU memory) 

@@ -1,0 +1,90 @@
+# Multi-Server Configuration for 8 GPUs with Batching Support  
+# Strategy: 4 vLLM servers, each using 2 GPUs + request batching
+# Note: This config shows server 1 setup. You'll need 4 similar configs with different ports/GPU assignments.
+
+questions_file: "test_questions_simple.json"
+
+model:
+  generator:
+    generator_type: "vllm"
+  
+  generator_settings:
+    # Traditional fields
+    server: "localhost"
+    port: 8000
+    api_key: "CELS"
+    model: "meta-llama/Llama-2-7b-chat-hf"
+    temperature: 0.0
+    max_tokens: 1024
+    
+    # Local vLLM server configuration (Server 1 of 4)
+    boot_local: true
+    hf_model_id: "meta-llama/Llama-2-7b-chat-hf"
+    auto_port: true
+    local_host: "127.0.0.1"
+    server_startup_timeout: 300
+    
+    # vLLM arguments for 2-GPU setup (GPUs 0,1)
+    vllm_args:
+      tensor_parallel_size: 2                    # Use 2 GPUs per server
+      max_model_len: 2048
+      gpu_memory_utilization: 0.9
+      dtype: "auto"
+      trust_remote_code: false
+      seed: 42
+      
+      # GPU assignment (for server 1)
+      # For other servers, you'd use different GPU IDs:
+      # Server 2: export CUDA_VISIBLE_DEVICES=2,3
+      # Server 3: export CUDA_VISIBLE_DEVICES=4,5  
+      # Server 4: export CUDA_VISIBLE_DEVICES=6,7
+      
+      # Performance optimizations
+      max_num_batched_tokens: 4096
+      max_num_seqs: 64
+      
+    # Request batching configuration
+    enable_batching: true
+    batch_size: 8                               # Smaller batches per server
+    batch_timeout: 0.3                          # Faster batching
+  
+  grader_shortname: "gpt41"
+  model_config_file: "model_servers.yaml"
+
+rag:
+  enabled: false
+  use_context_field: false
+
+processing:
+  parallel_workers: 4                           # 4 workers for this server
+  question_format: "auto"
+  verbose: true
+  random_selection: null
+  random_seed: 42
+
+output:
+  save_incorrect: true
+  output_directory: "."
+  output_prefix: "multi_server_batch_results_server1"
+
+# Multi-Server Deployment Guide:
+# 
+# 1. Create 4 config files (server1.yaml, server2.yaml, server3.yaml, server4.yaml)
+# 2. Set different ports for each (8000, 8001, 8002, 8003)
+# 3. Set CUDA_VISIBLE_DEVICES before starting each:
+#
+# Terminal 1: export CUDA_VISIBLE_DEVICES=0,1 && python script.py --config server1.yaml
+# Terminal 2: export CUDA_VISIBLE_DEVICES=2,3 && python script.py --config server2.yaml  
+# Terminal 3: export CUDA_VISIBLE_DEVICES=4,5 && python script.py --config server3.yaml
+# Terminal 4: export CUDA_VISIBLE_DEVICES=6,7 && python script.py --config server4.yaml
+#
+# Benefits:
+# - Better fault isolation (one server failure doesn't kill everything)
+# - More granular scaling (can start/stop individual servers)
+# - Better memory distribution across GPUs
+# - Can handle different models on different servers
+#
+# Tradeoffs:
+# - More complex deployment
+# - Higher memory overhead (4 model copies vs 1 sharded model)
+# - Need to coordinate work distribution across servers 

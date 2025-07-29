@@ -1,4 +1,4 @@
-questions_file: "/home/ac.ogokdemir/distllm/test_questions_simple.json"
+questions_file: "/rbstor/ac.ogokdemir/ArgoniumRick/reasoning_eval/HR-GOOD-10-MC.json"
 
 model:
   generator:
@@ -15,7 +15,7 @@ model:
     
     # New local vLLM server booting fields
     boot_local: true                        # Enable local server booting
-    hf_model_id: "meta-llama/Llama-2-7b-chat-hf"  # Huggingface model ID to load
+    hf_model_id: "EleutherAI/pythia-410m"  # Huggingface model ID to load
     auto_port: true                         # Automatically find available port
     local_host: "127.0.0.1"                # Host to bind local server to
     server_startup_timeout: 300             # Timeout in seconds to wait for startup
@@ -32,7 +32,7 @@ model:
   model_config_file: "model_servers.yaml"
 
 rag:
-  enabled: true
+  enabled: false
   use_context_field: false
   retrieval_top_k: 5
   retrieval_score_threshold: 0.0
@@ -40,12 +40,12 @@ rag:
 
 processing:
   parallel_workers: 1
-  question_format: "auto"
+  question_format: "mc"
   verbose: true
   random_selection: null
   random_seed: null
 
 output:
-  save_incorrect: false
-  output_directory: "."
-  output_prefix: "rag_results" 
+  save_incorrect: true
+  output_directory: "/rbstor/ac.ogokdemir/ArgoniumRick/mcqa_results/reasoning/pythia"
+  output_prefix: "pythia_norag" 
