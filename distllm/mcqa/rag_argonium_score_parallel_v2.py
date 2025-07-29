@@ -797,6 +797,9 @@ class VLLMGenerator:
         self.config = config
         self.server_process = None
         self.local_server_started = False
+        self.monitoring_active = False
+        self.stdout_thread = None
+        self.stderr_thread = None
 
         # Determine which configuration to use
         if config.boot_local:
@@ -817,6 +820,12 @@ class VLLMGenerator:
             print(f'Found available port: {port}')
         else:
             port = self.config.port
+
+        # Check if model exists on HuggingFace (basic validation)
+        print(
+            f"🔍 Validating model '{self.config.hf_model_id}' availability..."
+        )
+        self._validate_hf_model()
 
         # Build vLLM command
         cmd = [
@@ -840,59 +849,341 @@ class VLLMGenerator:
                 else:
                     cmd.extend([f'--{key}', str(value)])
 
-        print(f'Starting local vLLM server with command: {" ".join(cmd)}')
+        print(f'🚀 Starting local vLLM server with command:')
+        print(f'   {" ".join(cmd)}')
+        print(f'📋 Model: {self.config.hf_model_id}')
+        print(f'🌐 Address: {self.config.local_host}:{port}')
+
+        # Create log files for monitoring
+        log_dir = Path('vllm_logs')
+        log_dir.mkdir(exist_ok=True)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        stdout_log = log_dir / f'vllm_stdout_{timestamp}.log'
+        stderr_log = log_dir / f'vllm_stderr_{timestamp}.log'
+
+        print(f'📝 Logs will be written to:')
+        print(f'   STDOUT: {stdout_log}')
+        print(f'   STDERR: {stderr_log}')
 
         try:
-            # Start the server process
+            # Start the server process with real-time monitoring
             self.server_process = subprocess.Popen(
-                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,  # Line buffered
+                universal_newlines=True,
             )
 
-            # Wait for server to be ready
+            # Start monitoring threads
+            self._start_monitoring_threads(stdout_log, stderr_log)
+
+            # Wait for server to be ready with detailed progress
             print(
-                f'Waiting for vLLM server to start on {self.config.local_host}:{port}...'
+                f'⏳ Waiting for vLLM server to start (timeout: {self.config.server_startup_timeout}s)...'
             )
-            if wait_for_server_ready(
+            print('📊 Progress indicators:')
+            print('   - Model download/loading')
+            print('   - GPU memory allocation')
+            print('   - Server initialization')
+            print('   - API endpoint readiness')
+
+            if self._wait_for_server_with_monitoring(
                 self.config.local_host,
                 port,
                 self.config.server_startup_timeout,
             ):
                 self.local_server_started = True
                 self.base_url = f'http://{self.config.local_host}:{port}'
-                self.api_key = (
-                    self.config.api_key or 'CELS'
-                )  # Use default if not provided
+                self.api_key = self.config.api_key or 'CELS'
                 self.model = self.config.hf_model_id
-                print(f'vLLM server successfully started at {self.base_url}')
+                print(
+                    f'✅ vLLM server successfully started at {self.base_url}'
+                )
+                print(f'🔧 Model loaded: {self.config.hf_model_id}')
             else:
-                # Server failed to start, clean up
+                # Server failed to start, provide detailed error info
+                self._report_startup_failure()
                 self._cleanup_local_server()
                 raise RuntimeError(
-                    f'vLLM server failed to start within {self.config.server_startup_timeout} seconds'
+                    f'❌ vLLM server failed to start within {self.config.server_startup_timeout} seconds'
                 )
 
         except Exception as e:
+            print(f'❌ Failed to start local vLLM server: {e}')
             self._cleanup_local_server()
             raise RuntimeError(f'Failed to start local vLLM server: {e}')
 
+    def _validate_hf_model(self):
+        """Basic validation that the HuggingFace model exists and is accessible."""
+        try:
+            import requests
+
+            # Try to access the model's config.json to verify it exists
+            url = f'https://huggingface.co/{self.config.hf_model_id}/resolve/main/config.json'
+            response = requests.head(url, timeout=10)
+            if response.status_code == 200:
+                print(
+                    f"✅ Model '{self.config.hf_model_id}' found on HuggingFace"
+                )
+            else:
+                print(
+                    f"⚠️  Warning: Could not verify model '{self.config.hf_model_id}' on HuggingFace (status: {response.status_code})"
+                )
+                print(
+                    '   This might be a private model or network issue - continuing anyway...'
+                )
+        except Exception as e:
+            print(
+                f"⚠️  Warning: Could not validate model '{self.config.hf_model_id}': {e}"
+            )
+            print(
+                '   Continuing anyway - vLLM will validate during loading...'
+            )
+
+    def _start_monitoring_threads(self, stdout_log: Path, stderr_log: Path):
+        """Start threads to monitor and log vLLM server output."""
+        self.monitoring_active = True
+
+        def monitor_stdout():
+            with open(stdout_log, 'w') as f:
+                while (
+                    self.monitoring_active
+                    and self.server_process
+                    and self.server_process.poll() is None
+                ):
+                    try:
+                        line = self.server_process.stdout.readline()
+                        if line:
+                            # Write to log file
+                            f.write(line)
+                            f.flush()
+                            # Print important messages to console
+                            line_lower = line.lower().strip()
+                            if any(
+                                keyword in line_lower
+                                for keyword in [
+                                    'loading',
+                                    'downloaded',
+                                    'gpu',
+                                    'memory',
+                                    'model',
+                                    'error',
+                                    'warning',
+                                    'initialized',
+                                    'ready',
+                                    'listening',
+                                    'started',
+                                ]
+                            ):
+                                print(f'📤 vLLM: {line.strip()}')
+                    except Exception:
+                        break
+
+        def monitor_stderr():
+            with open(stderr_log, 'w') as f:
+                while (
+                    self.monitoring_active
+                    and self.server_process
+                    and self.server_process.poll() is None
+                ):
+                    try:
+                        line = self.server_process.stderr.readline()
+                        if line:
+                            # Write to log file
+                            f.write(line)
+                            f.flush()
+                            # Print all stderr messages as they might be important
+                            print(f'🚨 vLLM Error: {line.strip()}')
+                    except Exception:
+                        break
+
+        # Start monitoring threads
+        import threading
+
+        self.stdout_thread = threading.Thread(
+            target=monitor_stdout, daemon=True
+        )
+        self.stderr_thread = threading.Thread(
+            target=monitor_stderr, daemon=True
+        )
+        self.stdout_thread.start()
+        self.stderr_thread.start()
+
+    def _wait_for_server_with_monitoring(
+        self, host: str, port: int, timeout: int
+    ) -> bool:
+        """Wait for server with enhanced monitoring and progress reporting."""
+        start_time = time.time()
+        last_check_time = start_time
+        check_interval = 2.0
+        progress_interval = 10.0  # Report progress every 10 seconds
+
+        print(f'🔄 Starting health checks every {check_interval}s...')
+
+        while time.time() - start_time < timeout:
+            current_time = time.time()
+            elapsed = current_time - start_time
+
+            # Report progress periodically
+            if current_time - last_check_time >= progress_interval:
+                print(f'⏱️  Still waiting... ({elapsed:.0f}s / {timeout}s)')
+                self._report_system_status()
+                last_check_time = current_time
+
+            # Check if process is still running
+            if self.server_process and self.server_process.poll() is not None:
+                print(
+                    f'❌ vLLM process exited with code: {self.server_process.returncode}'
+                )
+                return False
+
+            # Try to connect to the server
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.settimeout(1.0)
+                    result = s.connect_ex((host, port))
+                    if result == 0:
+                        print(f'🔗 Port {port} is accepting connections')
+                        # Give server a moment to fully initialize
+                        time.sleep(3)
+
+                        # Try to access the health endpoint
+                        try:
+                            response = requests.get(
+                                f'http://{host}:{port}/v1/models', timeout=10
+                            )
+                            if response.status_code == 200:
+                                print(
+                                    f'✅ vLLM API is responding successfully'
+                                )
+                                return True
+                            else:
+                                print(
+                                    f'⚠️  API endpoint returned status {response.status_code}'
+                                )
+                        except requests.exceptions.RequestException as e:
+                            print(f'⚠️  API endpoint not ready yet: {e}')
+            except Exception:
+                pass
+
+            time.sleep(check_interval)
+
+        print(f'⏰ Timeout reached after {timeout}s')
+        return False
+
+    def _report_system_status(self):
+        """Report current system status for debugging."""
+        try:
+            import psutil
+            import GPUtil
+
+            # CPU and memory
+            cpu_percent = psutil.cpu_percent(interval=1)
+            memory = psutil.virtual_memory()
+            print(
+                f'💻 System: CPU {cpu_percent:.1f}%, RAM {memory.percent:.1f}%'
+            )
+
+            # GPU information
+            try:
+                gpus = GPUtil.getGPUs()
+                for i, gpu in enumerate(gpus):
+                    print(
+                        f'🎮 GPU {i}: {gpu.name}, Memory: {gpu.memoryUtil * 100:.1f}% ({gpu.memoryUsed}MB/{gpu.memoryTotal}MB)'
+                    )
+            except Exception:
+                print('🎮 GPU: Could not get GPU information')
+
+        except ImportError:
+            print('📊 System monitoring: psutil/GPUtil not available')
+        except Exception as e:
+            print(f'📊 System monitoring error: {e}')
+
+    def _report_startup_failure(self):
+        """Report detailed information about startup failure."""
+        print('\n' + '=' * 60)
+        print('❌ vLLM SERVER STARTUP FAILURE REPORT')
+        print('=' * 60)
+
+        # Process status
+        if self.server_process:
+            returncode = self.server_process.poll()
+            print(f'Process return code: {returncode}')
+
+            # Try to get any remaining output
+            try:
+                stdout, stderr = self.server_process.communicate(timeout=5)
+                if stdout:
+                    print(f'\nFinal STDOUT:\n{stdout}')
+                if stderr:
+                    print(f'\nFinal STDERR:\n{stderr}')
+            except subprocess.TimeoutExpired:
+                print('Process still running but not responding')
+            except Exception as e:
+                print(f'Could not get process output: {e}')
+
+        # Check logs
+        log_dir = Path('vllm_logs')
+        if log_dir.exists():
+            latest_logs = sorted(
+                log_dir.glob('vllm_*.log'),
+                key=lambda x: x.stat().st_mtime,
+                reverse=True,
+            )
+            for log_file in latest_logs[:2]:  # Show last 2 log files
+                if log_file.stat().st_size > 0:
+                    print(f'\n📋 Last 20 lines from {log_file.name}:')
+                    try:
+                        with open(log_file, 'r') as f:
+                            lines = f.readlines()
+                            for line in lines[-20:]:
+                                print(f'  {line.rstrip()}')
+                    except Exception as e:
+                        print(f'  Could not read log file: {e}')
+
+        print('\n💡 TROUBLESHOOTING SUGGESTIONS:')
+        print('1. Check GPU memory availability')
+        print('2. Verify the model ID exists on HuggingFace')
+        print(
+            "3. Try a smaller model first (e.g., 'microsoft/DialoGPT-small')"
+        )
+        print('4. Check vLLM installation: pip install vllm')
+        print('5. Review the full logs in vllm_logs/ directory')
+        print('=' * 60)
+
     def _cleanup_local_server(self) -> None:
         """Clean up the local vLLM server process."""
+        # Stop monitoring threads
+        if hasattr(self, 'monitoring_active'):
+            self.monitoring_active = False
+
         if self.server_process:
             try:
+                print('🛑 Terminating vLLM server...')
                 self.server_process.terminate()
                 # Give it a moment to terminate gracefully
                 try:
                     self.server_process.wait(timeout=10)
+                    print('✅ vLLM server terminated gracefully')
                 except subprocess.TimeoutExpired:
                     # Force kill if it doesn't terminate gracefully
+                    print('⚠️  Force killing vLLM server...')
                     self.server_process.kill()
                     self.server_process.wait()
-                print('Local vLLM server terminated')
+                    print('🔪 vLLM server force killed')
             except Exception as e:
-                print(f'Warning: Error cleaning up local vLLM server: {e}')
+                print(f'⚠️  Warning: Error cleaning up local vLLM server: {e}')
             finally:
                 self.server_process = None
                 self.local_server_started = False
+
+        # Wait for monitoring threads to finish
+        if hasattr(self, 'stdout_thread') and self.stdout_thread.is_alive():
+            self.stdout_thread.join(timeout=2)
+        if hasattr(self, 'stderr_thread') and self.stderr_thread.is_alive():
+            self.stderr_thread.join(timeout=2)
 
     def __del__(self):
         """Ensure cleanup when object is destroyed."""
