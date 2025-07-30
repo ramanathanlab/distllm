@@ -386,7 +386,7 @@ class MCQAConfig(BaseModel):
     def to_yaml(self, yaml_path: str) -> None:
         """Save configuration to YAML file."""
         with open(yaml_path, 'w') as f:
-            yaml.dump(self.dict(), f, default_flow_style=False, indent=2)
+            yaml.dump(self.model_dump(), f, default_flow_style=False, indent=2)
 
 
 # -----------------------------------------------------------------------------
@@ -1118,17 +1118,20 @@ class VLLMGenerator:
                         # Try to access the health endpoint
                         try:
                             response = requests.get(
-                                f'http://{host}:{port}/v1/models', timeout=10
+                                f'http://{host}:{port}/v1/models', timeout=15
                             )
                             if response.status_code == 200:
                                 print(
                                     f'✅ vLLM API is responding successfully'
                                 )
+                                # Give it an extra moment to be fully ready
+                                time.sleep(2)
                                 return True
                             else:
                                 print(
                                     f'⚠️  API endpoint returned status {response.status_code}'
                                 )
+                                print(f'   Response: {response.text[:200]}...')
                         except requests.exceptions.RequestException as e:
                             print(f'⚠️  API endpoint not ready yet: {e}')
             except Exception:
@@ -1252,11 +1255,11 @@ class VLLMGenerator:
                 self.local_server_started = False
 
         # Wait for threads to finish
-        if hasattr(self, 'batch_thread') and self.batch_thread.is_alive():
+        if hasattr(self, 'batch_thread') and self.batch_thread and self.batch_thread.is_alive():
             self.batch_thread.join(timeout=2)
-        if hasattr(self, 'stdout_thread') and self.stdout_thread.is_alive():
+        if hasattr(self, 'stdout_thread') and self.stdout_thread and self.stdout_thread.is_alive():
             self.stdout_thread.join(timeout=2)
-        if hasattr(self, 'stderr_thread') and self.stderr_thread.is_alive():
+        if hasattr(self, 'stderr_thread') and self.stderr_thread and self.stderr_thread.is_alive():
             self.stderr_thread.join(timeout=2)
 
     def _start_batch_processor(self):
@@ -1468,7 +1471,7 @@ class VLLMGenerator:
             with self.batch_condition:
                 self.batch_condition.notify_all()
 
-        if hasattr(self, 'batch_thread') and self.batch_thread.is_alive():
+        if hasattr(self, 'batch_thread') and self.batch_thread and self.batch_thread.is_alive():
             self.batch_thread.join(timeout=5)
 
         if self.local_server_started:
@@ -2428,7 +2431,7 @@ def create_metadata(
             'script_version': '2.0',
             'script_name': 'rag_argonium_score_parallel_v2.py',
             'timestamp': datetime.now().isoformat(),
-            'configuration': config.dict(),
+            'configuration': config.model_dump(),
             'config_file_used': config_file_used,
             'question_statistics': {
                 'total_questions': len(questions),
@@ -2692,7 +2695,7 @@ def save_checkpoint(
         'completed_indices': list(completed_indices),
         'results': results,
         'metadata': metadata,
-        'config': config.dict(),
+        'config': config.model_dump(),
         'version': '2.0',
     }
 
