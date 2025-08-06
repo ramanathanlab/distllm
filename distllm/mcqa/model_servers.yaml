@@ -2,7 +2,11 @@
 # Last updated: 2025-05-24
 
 servers:
-
+- server: rbh101
+  shortname: oss120
+  openai_api_key: CELS
+  openai_api_base: http://66.55.67.65:80/v1
+  openai_model: oss120
 - server: lambda5
   shortname: gpt-4.1
   openai_api_key: no_key
