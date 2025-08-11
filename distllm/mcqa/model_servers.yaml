@@ -2,6 +2,11 @@
 # Last updated: 2025-05-24
 
 servers:
+- server: lambda5
+  shortname: gpt-5
+  openai_api_key: CELS
+  openai_api_base: http://lambda5:55625/v1
+  openai_model: argo:gpt-5
 - server: rbh101
   shortname: oss120
   openai_api_key: CELS
