@@ -46,6 +46,8 @@ model:
       max_model_len: 4096
       trust_remote_code: false
       gpu_memory_utilization: 0.9
+      # Chat template for models that don't have one (e.g., OLMo-7B-hf)
+      # chat_template: "/path/to/chat_template.jinja"
 ```
 
 ### 2. Command Line Usage
@@ -62,6 +64,60 @@ python rag_argonium_score_parallel_v2.py --config sample_local_vllm_config.yaml
    - Wait for the server to be ready (up to `server_startup_timeout` seconds)
 
 2. **Processing**: Once the server is running, it operates exactly like a remote vLLM server
+
+## Chat Template Fix for Models Without Default Templates
+
+Some models (like `allenai/OLMo-7B-hf`) don't include a default chat template. With transformers v4.44+, vLLM requires explicit chat templates for such models.
+
+### Quick Fix
+
+Add a `chat_template` parameter to your `vllm_args`:
+
+```yaml
+vllm_args:
+  # ... other args ...
+  chat_template: "/path/to/your/chat_template.jinja"
+```
+
+### Example Chat Templates
+
+1. **Simple template** (`olmo_chat_template.jinja`):
+```jinja
+{% for message in messages %}
+{%- if message['role'] == 'user' -%}
+User: {{ message['content'] }}
+
+{%- elif message['role'] == 'assistant' -%}
+Assistant: {{ message['content'] }}
+
+{%- elif message['role'] == 'system' -%}
+{{ message['content'] }}
+
+{%- endif -%}
+{%- endfor -%}
+Assistant:
+```
+
+2. **Inline template** (directly in YAML):
+```yaml
+vllm_args:
+  chat_template: "{% for message in messages %}{{ message['role'] + ': ' + message['content'] + '\n' }}{% endfor %}Assistant:"
+```
+
+### Complete OLMo-7B-hf Example
+
+```yaml
+model:
+  generator:
+    generator_type: "vllm"
+  generator_settings:
+    boot_local: true
+    hf_model_id: "allenai/OLMo-7B-hf"
+    vllm_args:
+      tensor_parallel_size: 8
+      max_model_len: 2048
+      chat_template: "/home/user/projects/distllm/olmo_chat_template.jinja"
+```
 
 3. **Cleanup**: The server is automatically shut down when:
    - The script completes normally

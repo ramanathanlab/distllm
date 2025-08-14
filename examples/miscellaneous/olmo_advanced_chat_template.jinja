@@ -1,0 +1,17 @@
+{% if messages[0]['role'] == 'system' %}
+{{ messages[0]['content'] }}
+
+{% set loop_messages = messages[1:] %}
+{% else %}
+{% set loop_messages = messages %}
+{% endif %}
+{% for message in loop_messages %}
+{% if message['role'] == 'user' %}
+Human: {{ message['content'] }}
+
+{% elif message['role'] == 'assistant' %}
+Assistant: {{ message['content'] }}
+
+{% endif %}
+{% endfor %}
+Assistant:

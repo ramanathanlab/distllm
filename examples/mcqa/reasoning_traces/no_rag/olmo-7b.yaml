@@ -37,6 +37,9 @@ model:
       max_num_batched_tokens: 16384           # 2x increase for more aggressive batching
       max_num_seqs: 512                       # 2x increase for higher concurrency
       
+      # 🔧 CHAT TEMPLATE FIX: Required for transformers v4.44+ with OLMo-7B-hf
+      chat_template: "/home/ac.ogokdemir/projects/distllm/olmo_advanced_chat_template.jinja"
+      
     # Request batching configuration - optimized for high throughput
     enable_batching: true
     batch_size: 64                            # Increased for better amortization
