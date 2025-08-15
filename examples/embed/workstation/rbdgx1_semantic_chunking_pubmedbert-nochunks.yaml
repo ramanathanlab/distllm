@@ -1,0 +1,44 @@
+# An input directory containing the files to embed.
+input_dir: /homes/ogokdemir/lambda_stor/TPC-Paper/reasoning_traces/focused
+# An output directory to save the embeddings.
+output_dir: /homes/ogokdemir/lambda_stor/TPC-Paper/reasoning_traces/focused
+# A set of glob patterns to match the input files.
+glob_patterns: ['*.jsonl']
+
+# Settings for reading the input files.
+dataset_config:
+  name: jsonl_chunk
+  # Set buffer_size to 1 to avoid grouping sentences together
+  buffer_size: 1
+  batch_size: 512
+  # Set min_buffer_length to 0 to avoid filtering out any text
+  min_buffer_length: 0
+
+# Settings for the encoder.
+encoder_config:
+  name: auto
+  pretrained_model_name_or_path: pritamdeka/S-PubMedBert-MS-MARCO
+
+# Settings for the pooler.
+pooler_config:
+  name: mean
+
+# Settings for the embedder.
+embedder_config:
+  name: semantic_chunk
+  chunk_batch_size: 512
+  normalize_embeddings: true
+  # Set breakpoint_percentile_threshold to 100 to prevent semantic chunking
+  # This ensures each line remains as a single chunk
+  breakpoint_percentile_threshold: 100
+  # Set min_chunk_length to 0 to avoid filtering out any chunks
+  min_chunk_length: 0
+
+# Settings for the writer.
+writer_config:
+  name: huggingface
+
+# Settings for the parsl compute backend.
+compute_config:
+  name: workstation
+  available_accelerators: ["0", "1", "5", "6", "7"]
