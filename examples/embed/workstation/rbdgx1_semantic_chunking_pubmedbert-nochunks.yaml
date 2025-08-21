@@ -1,7 +1,13 @@
 # An input directory containing the files to embed.
+<<<<<<< Updated upstream
 input_dir: /rbstor/ac.ogokdemir/TPC-Paper/reasoning_traces/datasets/efficient
 # An output directory to save the embeddings.
 output_dir: /home/ac.ogokdemir/distllm
+=======
+input_dir: /homes/ogokdemir/lambda_stor/TPC-Paper/reasoning_traces/datasets/efficient
+# An output directory to save the embeddings.
+output_dir: /homes/ogokdemir/lambda_stor/TPC-Paper/reasoning_traces/datasets/efficient
+>>>>>>> Stashed changes
 # A set of glob patterns to match the input files.
 glob_patterns: ['*.jsonl']
 
