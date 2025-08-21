@@ -1,7 +1,7 @@
 # An input directory containing the files to embed.
-input_dir: /homes/ogokdemir/lambda_stor/TPC-Paper/reasoning_traces/focused
+input_dir: /rbstor/ac.ogokdemir/TPC-Paper/reasoning_traces/datasets/efficient
 # An output directory to save the embeddings.
-output_dir: /homes/ogokdemir/lambda_stor/TPC-Paper/reasoning_traces/focused
+output_dir: /home/ac.ogokdemir/distllm
 # A set of glob patterns to match the input files.
 glob_patterns: ['*.jsonl']
 
@@ -41,4 +41,4 @@ writer_config:
 # Settings for the parsl compute backend.
 compute_config:
   name: workstation
-  available_accelerators: ["0", "1", "5", "6", "7"]
+  available_accelerators: ["2", "3", "4", "5", "6", "7"]
