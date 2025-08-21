@@ -33,7 +33,8 @@ Where:
     - model_shortname: The shortname of the model to test from model_servers.yaml
     - grader_shortname: The shortname of the model to use for grading from model_servers.yaml
 
-Examples:
+Examples
+--------
     # Recommended: Everything in YAML config
     python rag_argonium_score_parallel_v3.py --config mcqa_config.yaml
 
@@ -56,6 +57,7 @@ The script:
 10) Tracks whether the source chunk of each question was retrieved (RAG mode only)
 11) Uses Pydantic and YAML for clean configuration management
 """
+from __future__ import annotations
 
 import argparse
 import concurrent.futures
@@ -72,23 +74,24 @@ import threading
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
+from typing import Optional
+from typing import Union
 
 import backoff
-import numpy as np
 import openai
 import requests
 import yaml
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field, field_validator, model_validator
-from tqdm import tqdm
+from pydantic import BaseModel
+from pydantic import Field
+from pydantic import field_validator
+from pydantic import model_validator
 
-from distllm.generate.prompts import (
-    IdentityPromptTemplate,
-    IdentityPromptTemplateConfig,
-    PromptTemplate,
-)
-from distllm.rag.search import Retriever, RetrieverConfig
+from distllm.generate.prompts import IdentityPromptTemplate
+from distllm.generate.prompts import IdentityPromptTemplateConfig
+from distllm.rag.search import Retriever
+from distllm.rag.search import RetrieverConfig
 from distllm.utils import BaseConfig
 
 # Load environment variables
@@ -103,7 +106,8 @@ class GeneratorConfig(BaseModel):
     """Base generator configuration."""
 
     generator_type: str = Field(
-        ..., description="Generator type: 'vllm' or 'argo'"
+        ...,
+        description="Generator type: 'vllm' or 'argo'",
     )
 
 
@@ -115,11 +119,12 @@ class VLLMGeneratorSettings(BaseModel):
     port: int = Field(..., description='Port number')
     api_key: str = Field(..., description='API key')
     temperature: float = Field(0.0, description='Generation temperature')
-    max_tokens: int = Field(1024, description='Maximum tokens to generate')
+    max_tokens: int = Field(64, description='Maximum tokens to generate')
 
     # New fields for local vLLM server booting
     boot_local: bool = Field(
-        False, description='Whether to boot a local vLLM server'
+        False,
+        description='Whether to boot a local vLLM server',
     )
     hf_model_id: Optional[str] = Field(
         None,
@@ -130,13 +135,16 @@ class VLLMGeneratorSettings(BaseModel):
         description='Automatically find available port when booting locally',
     )
     local_host: str = Field(
-        '127.0.0.1', description='Host to bind local vLLM server to'
+        '127.0.0.1',
+        description='Host to bind local vLLM server to',
     )
-    vllm_args: Optional[Dict[str, Any]] = Field(
-        None, description='Additional arguments for vLLM server'
+    vllm_args: Optional[dict[str, Any]] = Field(
+        None,
+        description='Additional arguments for vLLM server',
     )
     server_startup_timeout: int = Field(
-        120, description='Timeout in seconds to wait for server startup'
+        120,
+        description='Timeout in seconds to wait for server startup',
     )
 
     # New fields for batching support
@@ -165,26 +173,29 @@ class ArgoGeneratorSettings(BaseModel):
     """Argo-specific generator settings."""
 
     model: str = Field(
-        ..., description="Argo model name (e.g., 'argo:gpt-4o')"
+        ...,
+        description="Argo model name (e.g., 'argo:gpt-4o')",
     )
     base_url: str = Field(..., description='Argo proxy base URL')
     api_key: str = Field('whatever+random', description='API key for Argo')
     temperature: float = Field(0.0, description='Generation temperature')
-    max_tokens: int = Field(1024, description='Maximum tokens to generate')
+    max_tokens: int = Field(64, description='Maximum tokens to generate')
 
 
 class ModelConfiguration(BaseModel):
     """Model configuration settings."""
 
     generator: GeneratorConfig
-    generator_settings: Union[VLLMGeneratorSettings, ArgoGeneratorSettings] = (
-        Field(..., description='Generator-specific settings')
-    )
+    generator_settings: Union[
+        VLLMGeneratorSettings, ArgoGeneratorSettings
+    ] = Field(..., description='Generator-specific settings')
     grader_shortname: str = Field(
-        ..., description='Grader model shortname from model_servers.yaml'
+        ...,
+        description='Grader model shortname from model_servers.yaml',
     )
     model_config_file: str = Field(
-        'model_servers.yaml', description='Model configuration file path'
+        'model_servers.yaml',
+        description='Model configuration file path',
     )
 
     @field_validator('generator_settings')
@@ -200,16 +211,18 @@ class ModelConfiguration(BaseModel):
         )
 
         if generator_type == 'vllm' and not isinstance(
-            v, VLLMGeneratorSettings
+            v,
+            VLLMGeneratorSettings,
         ):
             raise ValueError(
-                "generator_settings must be VLLMGeneratorSettings when generator_type is 'vllm'"
+                "generator_settings must be VLLMGeneratorSettings when generator_type is 'vllm'",
             )
         elif generator_type == 'argo' and not isinstance(
-            v, ArgoGeneratorSettings
+            v,
+            ArgoGeneratorSettings,
         ):
             raise ValueError(
-                "generator_settings must be ArgoGeneratorSettings when generator_type is 'argo'"
+                "generator_settings must be ArgoGeneratorSettings when generator_type is 'argo'",
             )
 
         return v
@@ -221,19 +234,23 @@ class FaissIndexConfiguration(BaseModel):
 
     name: str = Field('faiss_index_v2', description='Index name')
     dataset_dir: str = Field(
-        ..., description='Path to the HF dataset directory'
+        ...,
+        description='Path to the HF dataset directory',
     )
     faiss_index_path: str = Field(..., description='Path to the FAISS index')
-    dataset_chunk_paths: Optional[List[str]] = Field(
-        None, description='Paths to dataset chunks'
+    dataset_chunk_paths: Optional[list[str]] = Field(
+        None,
+        description='Paths to dataset chunks',
     )
     precision: str = Field('float32', description='Embedding precision')
     search_algorithm: str = Field('exact', description='Search algorithm')
     rescore_multiplier: int = Field(
-        2, description='Oversampling factor for rescoring'
+        2,
+        description='Oversampling factor for rescoring',
     )
     num_quantization_workers: int = Field(
-        1, description='Number of quantization workers'
+        1,
+        description='Number of quantization workers',
     )
 
 
@@ -242,15 +259,18 @@ class EncoderConfiguration(BaseModel):
 
     name: str = Field('auto', description='Encoder name')
     pretrained_model_name_or_path: str = Field(
-        ..., description='Pre-trained model name or path'
+        ...,
+        description='Pre-trained model name or path',
     )
     tokenizer_name: Optional[str] = Field(
-        None, description='Optional tokenizer name'
+        None,
+        description='Optional tokenizer name',
     )
     half_precision: bool = Field(False, description='Use half precision')
     eval_mode: bool = Field(True, description='Set model to evaluation mode')
     compile_model: bool = Field(
-        False, description='Compile model for faster inference'
+        False,
+        description='Compile model for faster inference',
     )
     quantization: bool = Field(True, description='Use quantization')
 
@@ -265,13 +285,16 @@ class RetrieverConfiguration(BaseModel):
     """Configuration for the retriever."""
 
     faiss_config: FaissIndexConfiguration = Field(
-        ..., description='FAISS index configuration'
+        ...,
+        description='FAISS index configuration',
     )
     encoder_config: EncoderConfiguration = Field(
-        ..., description='Encoder configuration'
+        ...,
+        description='Encoder configuration',
     )
     pooler_config: PoolerConfiguration = Field(
-        ..., description='Pooler configuration'
+        ...,
+        description='Pooler configuration',
     )
     batch_size: int = Field(4, description='Batch size for the embedder model')
 
@@ -281,22 +304,28 @@ class RAGConfiguration(BaseModel):
 
     enabled: bool = Field(True, description='Enable RAG functionality')
     rag_config_file: Optional[str] = Field(
-        None, description='RAG configuration file (YAML)'
+        None,
+        description='RAG configuration file (YAML)',
     )
     retriever_config: Optional[RetrieverConfiguration] = Field(
-        None, description='Retriever configuration'
+        None,
+        description='Retriever configuration',
     )
     use_context_field: bool = Field(
-        False, description="Use 'text' field from JSON as context"
+        False,
+        description="Use 'text' field from JSON as context",
     )
     retrieval_top_k: int = Field(
-        5, description='Number of documents to retrieve'
+        5,
+        description='Number of documents to retrieve',
     )
     retrieval_score_threshold: float = Field(
-        0.0, description='Minimum retrieval score threshold'
+        0.0,
+        description='Minimum retrieval score threshold',
     )
     chunk_logging_enabled: bool = Field(
-        True, description='Enable detailed chunk logging'
+        True,
+        description='Enable detailed chunk logging',
     )
 
 
@@ -304,41 +333,51 @@ class ProcessingConfig(BaseModel):
     """Processing configuration."""
 
     parallel_workers: int = Field(
-        1, description='Number of parallel workers for processing'
+        1,
+        description='Number of parallel workers for processing',
     )
     question_format: str = Field(
-        'auto', description='Question format: mc, qa, or auto-detect'
+        'auto',
+        description='Question format: mc, qa, or auto-detect',
     )
     verbose: bool = Field(False, description='Enable verbose output')
     random_selection: Optional[int] = Field(
-        None, description='Number of questions to randomly select'
+        None,
+        description='Number of questions to randomly select',
     )
     random_seed: Optional[int] = Field(
-        None, description='Random seed for reproducible selection'
+        None,
+        description='Random seed for reproducible selection',
     )
 
     # New checkpointing and progress monitoring fields
     enable_checkpointing: bool = Field(
-        True, description='Enable periodic checkpointing of results'
+        True,
+        description='Enable periodic checkpointing of results',
     )
     checkpoint_interval: int = Field(
-        100, description='Save checkpoint every N completed questions'
+        100,
+        description='Save checkpoint every N completed questions',
     )
     checkpoint_directory: str = Field(
-        'checkpoints', description='Directory to store checkpoint files'
+        'checkpoints',
+        description='Directory to store checkpoint files',
     )
     resume_from_checkpoint: Optional[str] = Field(
-        None, description='Path to checkpoint file to resume from'
+        None,
+        description='Path to checkpoint file to resume from',
     )
     auto_resume: bool = Field(
         True,
         description='Automatically find and resume from latest checkpoint',
     )
     progress_bar: bool = Field(
-        True, description='Show progress bar with percentage completion'
+        True,
+        description='Show progress bar with percentage completion',
     )
     save_incremental: bool = Field(
-        False, description='Save each result immediately (for ultra-safe mode)'
+        False,
+        description='Save each result immediately (for ultra-safe mode)',
     )
 
 
@@ -346,13 +385,16 @@ class OutputConfiguration(BaseModel):
     """Output and result configuration."""
 
     save_incorrect: bool = Field(
-        False, description='Save incorrectly answered questions'
+        False,
+        description='Save incorrectly answered questions',
     )
     output_directory: str = Field(
-        '.', description='Output directory for results'
+        '.',
+        description='Output directory for results',
     )
     output_prefix: str = Field(
-        'rag_results', description='Prefix for output files'
+        'rag_results',
+        description='Prefix for output files',
     )
 
 
@@ -360,7 +402,8 @@ class MCQAConfig(BaseModel):
     """Main MCQA evaluation configuration."""
 
     questions_file: str = Field(
-        ..., description='Path to JSON file containing questions'
+        ...,
+        description='Path to JSON file containing questions',
     )
     model: ModelConfiguration
     rag: RAGConfiguration = RAGConfiguration()
@@ -384,9 +427,9 @@ class MCQAConfig(BaseModel):
         return v
 
     @classmethod
-    def from_yaml(cls, yaml_path: str) -> 'MCQAConfig':
+    def from_yaml(cls, yaml_path: str) -> MCQAConfig:
         """Load configuration from YAML file."""
-        with open(yaml_path, 'r') as f:
+        with open(yaml_path) as f:
             config_data = yaml.safe_load(f)
         return cls(**config_data)
 
@@ -412,14 +455,15 @@ def generate_chunk_id(dataset_index: int, path: str) -> str:
     return f'{file_id}_{chunk_index:04d}'
 
 
-def reverse_chunk_id(chunk_id: str) -> Tuple[str, int]:
+def reverse_chunk_id(chunk_id: str) -> tuple[str, int]:
     """
     Reverse engineer a chunk_id to get file_id and chunk_index.
 
     Args:
         chunk_id: The chunk ID in format {file_id}_{chunk_index:04d}
 
-    Returns:
+    Returns
+    -------
         Tuple[str, int]: (file_id, chunk_index)
     """
     parts = chunk_id.rsplit('_', 1)
@@ -436,7 +480,8 @@ def reverse_chunk_id(chunk_id: str) -> Tuple[str, int]:
 
 
 def get_original_path_from_chunk_id(
-    chunk_id: str, path_mapping: Dict[str, str]
+    chunk_id: str,
+    path_mapping: dict[str, str],
 ) -> Optional[str]:
     """
     Get the original file path from a chunk_id using the path mapping.
@@ -445,7 +490,8 @@ def get_original_path_from_chunk_id(
         chunk_id: The chunk ID to look up
         path_mapping: Dictionary mapping file_id to original_path
 
-    Returns:
+    Returns
+    -------
         Optional[str]: The original file path, or None if not found
     """
     try:
@@ -456,7 +502,9 @@ def get_original_path_from_chunk_id(
 
 
 def check_source_chunk_retrieved(
-    qa_pair: Dict[str, Any], retrieval_info: Dict[str, Any], use_rag: bool
+    qa_pair: dict[str, Any],
+    retrieval_info: dict[str, Any],
+    use_rag: bool,
 ) -> Optional[bool]:
     """
     Check if the source chunk of the question was included in the retrieved chunks.
@@ -466,7 +514,8 @@ def check_source_chunk_retrieved(
         retrieval_info: Information about retrieved chunks
         use_rag: Whether RAG was used for this evaluation
 
-    Returns:
+    Returns
+    -------
         True if source chunk was retrieved, False if not, None if RAG not used or no source info
     """
     # If RAG was not used, return None
@@ -543,7 +592,9 @@ def check_source_chunk_retrieved(
 
 
 def check_question_hash_retrieved(
-    qa_pair: Dict[str, Any], retrieval_info: Dict[str, Any], use_rag: bool
+    qa_pair: dict[str, Any],
+    retrieval_info: dict[str, Any],
+    use_rag: bool,
 ) -> Optional[bool]:
     """
     Check if the correct reasoning trace was retrieved based on question_hash matching.
@@ -556,7 +607,8 @@ def check_question_hash_retrieved(
         retrieval_info: Information about retrieved chunks
         use_rag: Whether RAG was used for this evaluation
 
-    Returns:
+    Returns
+    -------
         True if matching question_hash found in retrieved chunks, False if not,
         None if RAG not used or no question_hash available
     """
@@ -595,7 +647,8 @@ def check_question_hash_retrieved(
 
 
 def find_available_port(
-    start_port: int = 8000, max_attempts: int = 100
+    start_port: int = 8000,
+    max_attempts: int = 100,
 ) -> int:
     """Find an available port starting from start_port."""
     for port in range(start_port, start_port + max_attempts):
@@ -606,12 +659,15 @@ def find_available_port(
             except OSError:
                 continue
     raise RuntimeError(
-        f'Could not find available port in range {start_port}-{start_port + max_attempts}'
+        f'Could not find available port in range {start_port}-{start_port + max_attempts}',
     )
 
 
 def wait_for_server_ready(
-    host: str, port: int, timeout: int = 120, check_interval: float = 2.0
+    host: str,
+    port: int,
+    timeout: int = 120,
+    check_interval: float = 2.0,
 ) -> bool:
     """Wait for server to be ready by checking if the port is accepting connections."""
     start_time = time.time()
@@ -625,7 +681,8 @@ def wait_for_server_ready(
                     time.sleep(2)  # Give it a moment to be fully ready
                     try:
                         response = requests.get(
-                            f'http://{host}:{port}/v1/models', timeout=5
+                            f'http://{host}:{port}/v1/models',
+                            timeout=5,
                         )
                         if response.status_code == 200:
                             return True
@@ -649,7 +706,9 @@ def get_openai_client(api_key, api_base, timeout=120.0):
     with _client_cache_lock:
         if cache_key not in _client_cache:
             _client_cache[cache_key] = openai.OpenAI(
-                api_key=api_key, base_url=api_base, timeout=timeout
+                api_key=api_key,
+                base_url=api_base,
+                timeout=timeout,
             )
         return _client_cache[cache_key]
 
@@ -660,11 +719,12 @@ def load_model_config(model_shortname, config_file='model_servers.yaml'):
         yaml_path = config_file
     else:
         yaml_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), config_file
+            os.path.dirname(os.path.abspath(__file__)),
+            config_file,
         )
 
     try:
-        with open(yaml_path, 'r') as file:
+        with open(yaml_path) as file:
             config = yaml.safe_load(file)
     except FileNotFoundError:
         raise FileNotFoundError(f'Model config file not found: {yaml_path}')
@@ -683,7 +743,7 @@ def load_model_config(model_shortname, config_file='model_servers.yaml'):
             server.get('shortname') for server in config.get('servers', [])
         ]
         raise ValueError(
-            f'Model "{model_shortname}" not found in config. Available models: {available_models}'
+            f'Model "{model_shortname}" not found in config. Available models: {available_models}',
         )
 
     return model_config
@@ -716,7 +776,9 @@ def detect_question_format(questions):
 def detect_choice_identifier_type(question_text):
     """Detect if the question uses letters (A-E) or numbers (1-5) for choices."""
     letter_match = re.search(
-        r'(?:^|\n)\s*([A-E])[.):]\s', question_text, re.IGNORECASE
+        r'(?:^|\n)\s*([A-E])[.):]\s',
+        question_text,
+        re.IGNORECASE,
     )
     number_match = re.search(r'(?:^|\n)\s*([1-5])[.):]\s', question_text)
 
@@ -774,10 +836,10 @@ class RAGPromptTemplate:
 
     def preprocess(
         self,
-        text: Union[str, List[str]],
-        contexts: Optional[List[List[str]]] = None,
-        scores: Optional[List[List[float]]] = None,
-    ) -> List[str]:
+        text: Union[str, list[str]],
+        contexts: Optional[list[list[str]]] = None,
+        scores: Optional[list[list[float]]] = None,
+    ) -> list[str]:
         """Preprocess the texts into prompts with context."""
         if isinstance(text, str):
             text = [text]
@@ -811,7 +873,7 @@ Based on the context provided, answer the question."""
 
         return prompts
 
-    def postprocess(self, responses: List[str]) -> List[str]:
+    def postprocess(self, responses: list[str]) -> list[str]:
         """Postprocess the responses."""
         return responses
 
@@ -824,17 +886,17 @@ class DirectPromptTemplate:
 
     def preprocess(
         self,
-        text: Union[str, List[str]],
-        contexts: Optional[List[List[str]]] = None,
-        scores: Optional[List[List[float]]] = None,
-    ) -> List[str]:
+        text: Union[str, list[str]],
+        contexts: Optional[list[list[str]]] = None,
+        scores: Optional[list[list[float]]] = None,
+    ) -> list[str]:
         """Preprocess the texts into direct prompts without any context."""
         if isinstance(text, str):
             text = [text]
         # Always return texts as-is, ignoring any context
         return text
 
-    def postprocess(self, responses: List[str]) -> List[str]:
+    def postprocess(self, responses: list[str]) -> list[str]:
         """Postprocess the responses."""
         return responses
 
@@ -843,23 +905,28 @@ class VLLMGeneratorConfig(BaseConfig):
     """Configuration for the vLLM generator."""
 
     server: str = Field(
-        ..., description='Cels machine you are running on, e.g, rbdgx1'
+        ...,
+        description='Cels machine you are running on, e.g, rbdgx1',
     )
     port: int = Field(..., description='The port vLLM is listening to.')
     api_key: str = Field(
-        ..., description='The API key for vLLM server, e.g., CELS'
+        ...,
+        description='The API key for vLLM server, e.g., CELS',
     )
     model: str = Field(
-        ..., description='The model that vLLM server is running.'
+        ...,
+        description='The model that vLLM server is running.',
     )
     temperature: float = Field(0.0, description='Temperature for generation.')
     max_tokens: int = Field(
-        1024, description='Maximum number of tokens to generate.'
+        64,
+        description='Maximum number of tokens to generate.',
     )
 
     # New fields for local vLLM server booting
     boot_local: bool = Field(
-        False, description='Whether to boot a local vLLM server'
+        False,
+        description='Whether to boot a local vLLM server',
     )
     hf_model_id: Optional[str] = Field(
         None,
@@ -870,13 +937,16 @@ class VLLMGeneratorConfig(BaseConfig):
         description='Automatically find available port when booting locally',
     )
     local_host: str = Field(
-        '127.0.0.1', description='Host to bind local vLLM server to'
+        '127.0.0.1',
+        description='Host to bind local vLLM server to',
     )
-    vllm_args: Optional[Dict[str, Any]] = Field(
-        None, description='Additional arguments for vLLM server'
+    vllm_args: Optional[dict[str, Any]] = Field(
+        None,
+        description='Additional arguments for vLLM server',
     )
     server_startup_timeout: int = Field(
-        120, description='Timeout in seconds to wait for server startup'
+        120,
+        description='Timeout in seconds to wait for server startup',
     )
 
     # New fields for batching support
@@ -893,7 +963,7 @@ class VLLMGeneratorConfig(BaseConfig):
         description='Maximum time to wait for batch to fill before sending (seconds)',
     )
 
-    def get_generator(self) -> 'VLLMGenerator':
+    def get_generator(self) -> VLLMGenerator:
         """Get the vLLM generator."""
         return VLLMGenerator(self)
 
@@ -943,7 +1013,7 @@ class VLLMGenerator:
 
         # Check if model exists on HuggingFace (basic validation)
         print(
-            f"🔍 Validating model '{self.config.hf_model_id}' availability..."
+            f"🔍 Validating model '{self.config.hf_model_id}' availability...",
         )
         self._validate_hf_model()
 
@@ -969,7 +1039,7 @@ class VLLMGenerator:
                 else:
                     cmd.extend([f'--{key}', str(value)])
 
-        print(f'🚀 Starting local vLLM server with command:')
+        print('🚀 Starting local vLLM server with command:')
         print(f'   {" ".join(cmd)}')
         print(f'📋 Model: {self.config.hf_model_id}')
         print(f'🌐 Address: {self.config.local_host}:{port}')
@@ -981,7 +1051,7 @@ class VLLMGenerator:
         stdout_log = log_dir / f'vllm_stdout_{timestamp}.log'
         stderr_log = log_dir / f'vllm_stderr_{timestamp}.log'
 
-        print(f'📝 Logs will be written to:')
+        print('📝 Logs will be written to:')
         print(f'   STDOUT: {stdout_log}')
         print(f'   STDERR: {stderr_log}')
 
@@ -1001,7 +1071,7 @@ class VLLMGenerator:
 
             # Wait for server to be ready with detailed progress
             print(
-                f'⏳ Waiting for vLLM server to start (timeout: {self.config.server_startup_timeout}s)...'
+                f'⏳ Waiting for vLLM server to start (timeout: {self.config.server_startup_timeout}s)...',
             )
             print('📊 Progress indicators:')
             print('   - Model download/loading')
@@ -1019,7 +1089,7 @@ class VLLMGenerator:
                 self.api_key = self.config.api_key or 'CELS'
                 self.model = self.config.hf_model_id
                 print(
-                    f'✅ vLLM server successfully started at {self.base_url}'
+                    f'✅ vLLM server successfully started at {self.base_url}',
                 )
                 print(f'🔧 Model loaded: {self.config.hf_model_id}')
             else:
@@ -1027,7 +1097,7 @@ class VLLMGenerator:
                 self._report_startup_failure()
                 self._cleanup_local_server()
                 raise RuntimeError(
-                    f'❌ vLLM server failed to start within {self.config.server_startup_timeout} seconds'
+                    f'❌ vLLM server failed to start within {self.config.server_startup_timeout} seconds',
                 )
 
         except Exception as e:
@@ -1045,21 +1115,21 @@ class VLLMGenerator:
             response = requests.head(url, timeout=10)
             if response.status_code == 200:
                 print(
-                    f"✅ Model '{self.config.hf_model_id}' found on HuggingFace"
+                    f"✅ Model '{self.config.hf_model_id}' found on HuggingFace",
                 )
             else:
                 print(
-                    f"⚠️  Warning: Could not verify model '{self.config.hf_model_id}' on HuggingFace (status: {response.status_code})"
+                    f"⚠️  Warning: Could not verify model '{self.config.hf_model_id}' on HuggingFace (status: {response.status_code})",
                 )
                 print(
-                    '   This might be a private model or network issue - continuing anyway...'
+                    '   This might be a private model or network issue - continuing anyway...',
                 )
         except Exception as e:
             print(
-                f"⚠️  Warning: Could not validate model '{self.config.hf_model_id}': {e}"
+                f"⚠️  Warning: Could not validate model '{self.config.hf_model_id}': {e}",
             )
             print(
-                '   Continuing anyway - vLLM will validate during loading...'
+                '   Continuing anyway - vLLM will validate during loading...',
             )
 
     def _start_monitoring_threads(self, stdout_log: Path, stderr_log: Path):
@@ -1123,16 +1193,21 @@ class VLLMGenerator:
         import threading
 
         self.stdout_thread = threading.Thread(
-            target=monitor_stdout, daemon=True
+            target=monitor_stdout,
+            daemon=True,
         )
         self.stderr_thread = threading.Thread(
-            target=monitor_stderr, daemon=True
+            target=monitor_stderr,
+            daemon=True,
         )
         self.stdout_thread.start()
         self.stderr_thread.start()
 
     def _wait_for_server_with_monitoring(
-        self, host: str, port: int, timeout: int
+        self,
+        host: str,
+        port: int,
+        timeout: int,
     ) -> bool:
         """Wait for server with enhanced monitoring and progress reporting."""
         start_time = time.time()
@@ -1155,7 +1230,7 @@ class VLLMGenerator:
             # Check if process is still running
             if self.server_process and self.server_process.poll() is not None:
                 print(
-                    f'❌ vLLM process exited with code: {self.server_process.returncode}'
+                    f'❌ vLLM process exited with code: {self.server_process.returncode}',
                 )
                 return False
 
@@ -1172,18 +1247,19 @@ class VLLMGenerator:
                         # Try to access the health endpoint
                         try:
                             response = requests.get(
-                                f'http://{host}:{port}/v1/models', timeout=15
+                                f'http://{host}:{port}/v1/models',
+                                timeout=15,
                             )
                             if response.status_code == 200:
                                 print(
-                                    f'✅ vLLM API is responding successfully'
+                                    '✅ vLLM API is responding successfully',
                                 )
                                 # Give it an extra moment to be fully ready
                                 time.sleep(2)
                                 return True
                             else:
                                 print(
-                                    f'⚠️  API endpoint returned status {response.status_code}'
+                                    f'⚠️  API endpoint returned status {response.status_code}',
                                 )
                                 print(f'   Response: {response.text[:200]}...')
                         except requests.exceptions.RequestException as e:
@@ -1199,14 +1275,14 @@ class VLLMGenerator:
     def _report_system_status(self):
         """Report current system status for debugging."""
         try:
-            import psutil
             import GPUtil
+            import psutil
 
             # CPU and memory
             cpu_percent = psutil.cpu_percent(interval=1)
             memory = psutil.virtual_memory()
             print(
-                f'💻 System: CPU {cpu_percent:.1f}%, RAM {memory.percent:.1f}%'
+                f'💻 System: CPU {cpu_percent:.1f}%, RAM {memory.percent:.1f}%',
             )
 
             # GPU information
@@ -1214,7 +1290,7 @@ class VLLMGenerator:
                 gpus = GPUtil.getGPUs()
                 for i, gpu in enumerate(gpus):
                     print(
-                        f'🎮 GPU {i}: {gpu.name}, Memory: {gpu.memoryUtil * 100:.1f}% ({gpu.memoryUsed}MB/{gpu.memoryTotal}MB)'
+                        f'🎮 GPU {i}: {gpu.name}, Memory: {gpu.memoryUtil * 100:.1f}% ({gpu.memoryUsed}MB/{gpu.memoryTotal}MB)',
                     )
             except Exception:
                 print('🎮 GPU: Could not get GPU information')
@@ -1259,7 +1335,7 @@ class VLLMGenerator:
                 if log_file.stat().st_size > 0:
                     print(f'\n📋 Last 20 lines from {log_file.name}:')
                     try:
-                        with open(log_file, 'r') as f:
+                        with open(log_file) as f:
                             lines = f.readlines()
                             for line in lines[-20:]:
                                 print(f'  {line.rstrip()}')
@@ -1270,7 +1346,7 @@ class VLLMGenerator:
         print('1. Check GPU memory availability')
         print('2. Verify the model ID exists on HuggingFace')
         print(
-            "3. Try a smaller model first (e.g., 'microsoft/DialoGPT-small')"
+            "3. Try a smaller model first (e.g., 'microsoft/DialoGPT-small')",
         )
         print('4. Check vLLM installation: pip install vllm')
         print('5. Review the full logs in vllm_logs/ directory')
@@ -1332,23 +1408,22 @@ class VLLMGenerator:
         """Start the batch processing thread."""
         self.batching_active = True
         self.batch_thread = threading.Thread(
-            target=self._batch_processor_thread, daemon=True
+            target=self._batch_processor_thread,
+            daemon=True,
         )
         self.batch_thread.start()
         print(
-            f'🚀 Started batch processor (batch_size={self.config.batch_size}, timeout={self.config.batch_timeout}s)'
+            f'🚀 Started batch processor (batch_size={self.config.batch_size}, timeout={self.config.batch_timeout}s)',
         )
 
     def _batch_processor_thread(self):
         """Background thread that processes batched requests."""
-        import uuid
-
         while self.batching_active:
             with self.batch_condition:
                 # Wait for requests or timeout
                 if not self.batch_queue:
                     self.batch_condition.wait(
-                        timeout=self.config.batch_timeout
+                        timeout=self.config.batch_timeout,
                     )
 
                 # If we have requests, process them
@@ -1366,9 +1441,9 @@ class VLLMGenerator:
                         except Exception as e:
                             # Mark all requests in batch as failed
                             for request_id, _, _, _ in current_batch:
-                                self.batch_results[request_id] = (
-                                    f'Batch processing error: {e}'
-                                )
+                                self.batch_results[
+                                    request_id
+                                ] = f'Batch processing error: {e}'
 
                         # Notify waiting threads
                         self.batch_condition.notify_all()
@@ -1383,7 +1458,7 @@ class VLLMGenerator:
         request_map = {}
 
         for i, (request_id, prompt, temperature, max_tokens) in enumerate(
-            batch_requests
+            batch_requests,
         ):
             messages_list.append(
                 {
@@ -1391,7 +1466,7 @@ class VLLMGenerator:
                     'temperature': temperature,
                     'max_tokens': max_tokens,
                     'model': self.model,
-                }
+                },
             )
             request_map[i] = request_id
 
@@ -1415,7 +1490,7 @@ class VLLMGenerator:
                     )
 
                 with concurrent.futures.ThreadPoolExecutor(
-                    max_workers=min(8, len(messages_list))
+                    max_workers=min(8, len(messages_list)),
                 ) as executor:
                     future_to_idx = {
                         executor.submit(send_request, msg): idx
@@ -1423,7 +1498,7 @@ class VLLMGenerator:
                     }
 
                     for future in concurrent.futures.as_completed(
-                        future_to_idx
+                        future_to_idx,
                     ):
                         idx = future_to_idx[future]
                         request_id = request_map[idx]
@@ -1431,9 +1506,9 @@ class VLLMGenerator:
                             result = future.result()
                             self.batch_results[request_id] = result
                         except Exception as e:
-                            self.batch_results[request_id] = (
-                                f'Request error: {e}'
-                            )
+                            self.batch_results[
+                                request_id
+                            ] = f'Request error: {e}'
 
         except Exception as e:
             # Mark all requests as failed
@@ -1441,7 +1516,10 @@ class VLLMGenerator:
                 self.batch_results[request_id] = f'Batch error: {e}'
 
     def _single_request(
-        self, prompt: str, temperature: float, max_tokens: int
+        self,
+        prompt: str,
+        temperature: float,
+        max_tokens: int,
     ) -> str:
         """Send a single request to vLLM server."""
         url = f'{self.base_url}/v1/chat/completions'
@@ -1459,7 +1537,10 @@ class VLLMGenerator:
 
         try:
             response = requests.post(
-                url, headers=headers, json=data, timeout=120
+                url,
+                headers=headers,
+                json=data,
+                timeout=120,
             )
             response.raise_for_status()
             result = response.json()
@@ -1471,10 +1552,10 @@ class VLLMGenerator:
 
     def batch_generate(
         self,
-        prompts: List[str],
+        prompts: list[str],
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
-    ) -> List[str]:
+    ) -> list[str]:
         """Generate responses for multiple prompts using batching."""
         if not self.config.enable_batching:
             # Fall back to individual requests
@@ -1500,7 +1581,7 @@ class VLLMGenerator:
         with self.batch_condition:
             for request_id, prompt in zip(request_ids, prompts):
                 self.batch_queue.append(
-                    (request_id, prompt, temperature, max_tokens)
+                    (request_id, prompt, temperature, max_tokens),
                 )
             self.batch_condition.notify()
 
@@ -1511,7 +1592,7 @@ class VLLMGenerator:
                 # Wait until our result is ready
                 while request_id not in self.batch_results:
                     self.batch_condition.wait(
-                        timeout=30
+                        timeout=30,
                     )  # Timeout to prevent hanging
 
                     if request_id not in self.batch_results:
@@ -1578,7 +1659,10 @@ class VLLMGenerator:
 
         try:
             response = requests.post(
-                url, headers=headers, json=data, timeout=120
+                url,
+                headers=headers,
+                json=data,
+                timeout=120,
             )
             response.raise_for_status()
             result = response.json()
@@ -1600,7 +1684,8 @@ class ArgoGeneratorConfig(BaseConfig):
     )
     base_url: str = Field(
         default_factory=lambda: os.getenv(
-            'BASE_URL', 'http://localhost:56267'
+            'BASE_URL',
+            'http://localhost:56267',
         ),
         description='The base URL for the Argo proxy server.',
     )
@@ -1610,10 +1695,11 @@ class ArgoGeneratorConfig(BaseConfig):
     )
     temperature: float = Field(0.0, description='Temperature for generation.')
     max_tokens: int = Field(
-        2048, description='Maximum number of tokens to generate.'
+        2048,
+        description='Maximum number of tokens to generate.',
     )
 
-    def get_generator(self) -> 'ArgoGenerator':
+    def get_generator(self) -> ArgoGenerator:
         """Get the Argo generator."""
         return ArgoGenerator(self)
 
@@ -1672,14 +1758,14 @@ class RagGeneratorWithChunkLogging:
 
     def generate(
         self,
-        texts: Union[str, List[str]],
+        texts: Union[str, list[str]],
         prompt_template: Optional[Any] = None,
         retrieval_top_k: int = 5,
         retrieval_score_threshold: float = 0.0,
-        max_tokens: int = 1024,
+        max_tokens: int = 64,
         temperature: float = 0.0,
-        contexts: Optional[List[List[str]]] = None,
-    ) -> Tuple[List[str], Dict[str, Any]]:
+        contexts: Optional[list[list[str]]] = None,
+    ) -> tuple[list[str], dict[str, Any]]:
         """Generate responses to the given queries and return retrieval info."""
         if isinstance(texts, str):
             texts = [texts]
@@ -1687,7 +1773,7 @@ class RagGeneratorWithChunkLogging:
         # Use the identity prompt template if none is provided
         if prompt_template is None:
             prompt_template = IdentityPromptTemplate(
-                IdentityPromptTemplateConfig()
+                IdentityPromptTemplateConfig(),
             )
 
         # Initialize retrieval info
@@ -1749,19 +1835,22 @@ class RagGeneratorWithChunkLogging:
                                     path = self.retriever.get([idx], 'path')[0]
                                     chunk_data['path'] = path
                                     chunk_data['chunk_id'] = generate_chunk_id(
-                                        idx, path
+                                        idx,
+                                        path,
                                     )
                                 except (KeyError, IndexError):
                                     # If path is not available, use a placeholder
                                     chunk_data['path'] = f'unknown_path_{idx}'
                                     chunk_data['chunk_id'] = generate_chunk_id(
-                                        idx, f'unknown_path_{idx}'
+                                        idx,
+                                        f'unknown_path_{idx}',
                                     )
 
                                 # Try to get metadata information if available (for question_hash matching)
                                 try:
                                     metadata = self.retriever.get(
-                                        [idx], 'metadata'
+                                        [idx],
+                                        'metadata',
                                     )[0]
                                     chunk_data['metadata'] = metadata
                                 except (KeyError, IndexError):
@@ -1771,7 +1860,7 @@ class RagGeneratorWithChunkLogging:
                                 chunk_info.append(chunk_data)
 
                             retrieval_info['retrieved_chunks'].append(
-                                chunk_info
+                                chunk_info,
                             )
                         else:
                             retrieval_info['retrieved_chunks'].append([])
@@ -1801,10 +1890,10 @@ class RagGeneratorWithChunkLogging:
             if retrieval_info['retrieved_chunks']:
                 print('Retrieved chunks:')
                 for i, chunk in enumerate(
-                    retrieval_info['retrieved_chunks'][0]
+                    retrieval_info['retrieved_chunks'][0],
                 ):
                     print(
-                        f'  Chunk {i + 1}: ID={chunk["chunk_id"]}, Score={chunk["score"]:.4f}, Path={chunk["path"]}'
+                        f'  Chunk {i + 1}: ID={chunk["chunk_id"]}, Score={chunk["score"]:.4f}, Path={chunk["path"]}',
                     )
 
         # Generate responses
@@ -1824,14 +1913,17 @@ class RetrievalAugmentedGenerationConfig(BaseConfig):
     """Configuration for the retrieval-augmented generation model."""
 
     generator_config: Union[VLLMGeneratorConfig, ArgoGeneratorConfig] = Field(
-        ..., description='Settings for the generator (VLLM or Argo)'
+        ...,
+        description='Settings for the generator (VLLM or Argo)',
     )
     retriever_config: Optional[RetrieverConfig] = Field(
-        None, description='Settings for the retriever'
+        None,
+        description='Settings for the retriever',
     )
     verbose: bool = Field(False, description='Whether to print verbose output')
     use_rag: bool = Field(
-        True, description='Whether to use RAG or direct question answering'
+        True,
+        description='Whether to use RAG or direct question answering',
     )
 
     def get_rag_model(self) -> RagGeneratorWithChunkLogging:
@@ -1843,7 +1935,7 @@ class RetrievalAugmentedGenerationConfig(BaseConfig):
             generator = self.generator_config.get_generator()
         else:
             raise ValueError(
-                f'Unsupported generator config type: {type(self.generator_config)}'
+                f'Unsupported generator config type: {type(self.generator_config)}',
             )
 
         # Initialize the retriever (only if RAG is enabled)
@@ -1877,7 +1969,7 @@ def generate_rag_answer(
     retrieval_top_k: int = 5,
     retrieval_score_threshold: float = 0.0,
     use_rag: bool = True,
-) -> Tuple[str, Dict[str, Any]]:
+) -> tuple[str, dict[str, Any]]:
     """Generate an answer to a question using RAG and return chunk information."""
     # Auto-detect question format if not specified
     actual_format = question_format
@@ -1918,20 +2010,28 @@ def generate_rag_answer(
         )
         return responses[0], retrieval_info
     except Exception as e:
-        print(f'Error in generate_rag_answer (will retry): {str(e)}')
+        print(f'Error in generate_rag_answer (will retry): {e!s}')
         raise
 
 
 def _evaluate_answer_with_retry(
-    question, reference_answer, model_answer, config, question_format='auto'
+    question,
+    reference_answer,
+    model_answer,
+    config,
+    question_format='auto',
 ):
     """Wrapper for evaluate_answer with custom retry logic for JSON parsing issues."""
     try:
         return _evaluate_answer_core(
-            question, reference_answer, model_answer, config, question_format
+            question,
+            reference_answer,
+            model_answer,
+            config,
+            question_format,
         )
     except json.JSONDecodeError as e:
-        print(f'JSON parsing error (will retry): {str(e)}')
+        print(f'JSON parsing error (will retry): {e!s}')
         # Try again with a different approach
         try:
             return _evaluate_answer_core(
@@ -1943,7 +2043,7 @@ def _evaluate_answer_with_retry(
                 retry_count=1,
             )
         except json.JSONDecodeError as e2:
-            print(f'JSON parsing error on retry (will retry again): {str(e2)}')
+            print(f'JSON parsing error on retry (will retry again): {e2!s}')
             # Final attempt with simplified format
             return _evaluate_answer_core(
                 question,
@@ -2004,7 +2104,7 @@ Your task:
 
 Return your response in valid JSON format with these fields:
 - "reference_choice": the choice from the reference answer
-- "model_choice": the choice from the model answer  
+- "model_choice": the choice from the model answer
 - "score": 1 if choices match, 0 if they don't match
 - "reasoning": explanation of your evaluation
 - "format": "mc"'''
@@ -2092,11 +2192,15 @@ Evaluate the correctness of the model's answer."""
                 evaluation = json.loads(json_match.group(0))
             except json.JSONDecodeError:
                 raise json.JSONDecodeError(
-                    'Could not parse JSON from response', response_text, 0
+                    'Could not parse JSON from response',
+                    response_text,
+                    0,
                 )
         else:
             raise json.JSONDecodeError(
-                'No JSON found in response', response_text, 0
+                'No JSON found in response',
+                response_text,
+                0,
             )
 
     # Ensure required fields are present
@@ -2111,29 +2215,37 @@ Evaluate the correctness of the model's answer."""
     if actual_format == 'mc':
         if 'reference_choice' not in evaluation:
             evaluation['reference_choice'] = extract_choice_identifier(
-                reference_answer
+                reference_answer,
             )
         if 'model_choice' not in evaluation:
             evaluation['model_choice'] = extract_choice_identifier(
-                model_answer
+                model_answer,
             )
 
     return evaluation
 
 
 def evaluate_answer(
-    question, reference_answer, model_answer, config, question_format='auto'
+    question,
+    reference_answer,
+    model_answer,
+    config,
+    question_format='auto',
 ):
     """Evaluate a model's answer against the reference answer."""
     return _evaluate_answer_with_retry(
-        question, reference_answer, model_answer, config, question_format
+        question,
+        reference_answer,
+        model_answer,
+        config,
+        question_format,
     )
 
 
 def process_question(
     item,
     rag_model: RagGeneratorWithChunkLogging,
-    grader_config: Dict[str, Any],
+    grader_config: dict[str, Any],
     question_format: str = 'auto',
     verbose: bool = False,
     use_context_field: bool = False,
@@ -2179,7 +2291,7 @@ def process_question(
 
         if verbose:
             print(
-                f'\n--- {"RAG" if use_rag else "DIRECT"} RESPONSE FOR QUESTION {i} ---'
+                f'\n--- {"RAG" if use_rag else "DIRECT"} RESPONSE FOR QUESTION {i} ---',
             )
             print(model_answer)
             print(f'--- END {"RAG" if use_rag else "DIRECT"} RESPONSE ---')
@@ -2195,7 +2307,8 @@ def process_question(
                         print(f'  Path: {chunk["path"]}')
                         # Print question_hash from metadata if available
                         if chunk.get('metadata') and isinstance(
-                            chunk['metadata'], dict
+                            chunk['metadata'],
+                            dict,
                         ):
                             chunk_hash = chunk['metadata'].get('question_hash')
                             if chunk_hash:
@@ -2217,12 +2330,16 @@ def process_question(
 
         # Check if source chunk was retrieved
         source_chunk_retrieved = check_source_chunk_retrieved(
-            qa_pair, retrieval_info, use_rag
+            qa_pair,
+            retrieval_info,
+            use_rag,
         )
 
         # Check if correct reasoning trace was retrieved based on question_hash
         question_hash_retrieved = check_question_hash_retrieved(
-            qa_pair, retrieval_info, use_rag
+            qa_pair,
+            retrieval_info,
+            use_rag,
         )
 
         if verbose:
@@ -2280,10 +2397,10 @@ def parse_arguments():
 Configuration File Usage:
     Recommended: Specify everything in YAML config file
         python rag_argonium_score_parallel_v2.py --config mcqa_config.yaml
-    
+
     Alternative: Command-line arguments (for backward compatibility)
         python rag_argonium_score_parallel_v2.py questions.json --model llama --grader gpt41
-    
+
     See sample_mcqa_config.yaml for a complete configuration example.
     Command-line arguments will override YAML settings when provided.
         """,
@@ -2389,7 +2506,6 @@ Configuration File Usage:
 
 def create_config_from_args(args) -> MCQAConfig:
     """Create MCQAConfig from command-line arguments and YAML file."""
-
     # Start with defaults
     if args.config and os.path.exists(args.config):
         print(f'Loading configuration from {args.config}')
@@ -2397,21 +2513,21 @@ def create_config_from_args(args) -> MCQAConfig:
     else:
         if args.config:
             print(
-                f'Warning: Configuration file {args.config} not found, using defaults'
+                f'Warning: Configuration file {args.config} not found, using defaults',
             )
 
         # Ensure required arguments are provided when no config file
         if not args.questions_file:
             raise ValueError(
-                'questions_file must be provided either as argument or in config file'
+                'questions_file must be provided either as argument or in config file',
             )
         if not args.model:
             raise ValueError(
-                '--model must be provided either as argument or in config file'
+                '--model must be provided either as argument or in config file',
             )
         if not args.grader:
             raise ValueError(
-                '--grader must be provided either as argument or in config file'
+                '--grader must be provided either as argument or in config file',
             )
 
         # Create default configuration based on model argument
@@ -2495,7 +2611,7 @@ def create_config_from_args(args) -> MCQAConfig:
 
 def convert_mcqa_retriever_to_distllm_config(
     retriever_config: RetrieverConfiguration,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Convert MCQA retriever configuration to distllm format."""
     from pathlib import Path
 
@@ -2524,10 +2640,10 @@ def convert_mcqa_retriever_to_distllm_config(
 
 def create_metadata(
     config: MCQAConfig,
-    questions: List[Dict],
-    rag_config: Optional[Dict] = None,
+    questions: list[dict],
+    rag_config: Optional[dict] = None,
     config_file_used: Optional[str] = None,
-) -> Dict:
+) -> dict:
     """Create metadata for the evaluation run."""
     metadata = {
         'evaluation_metadata': {
@@ -2557,22 +2673,22 @@ def create_metadata(
                 'verbose': config.processing.verbose,
                 'chunk_logging_enabled': config.rag.chunk_logging_enabled,
             },
-        }
+        },
     }
     return metadata
 
 
 def process_question_batch(
-    items: List[Tuple[int, Dict]],
+    items: list[tuple[int, dict]],
     rag_model: RagGeneratorWithChunkLogging,
-    grader_config: Dict[str, Any],
+    grader_config: dict[str, Any],
     question_format: str = 'auto',
     verbose: bool = False,
     use_context_field: bool = False,
     retrieval_top_k: int = 5,
     retrieval_score_threshold: float = 0.0,
     use_rag: bool = True,
-) -> List[Dict]:
+) -> list[dict]:
     """Process a batch of questions together for improved throughput."""
     if not items:
         return []
@@ -2649,10 +2765,10 @@ def process_question_batch(
 
         if verbose:
             print(
-                f'✅ Generated {len(model_answers)} answers in {batch_generation_time:.2f}s'
+                f'✅ Generated {len(model_answers)} answers in {batch_generation_time:.2f}s',
             )
             print(
-                f'   Throughput: {len(model_answers) / batch_generation_time:.1f} answers/sec'
+                f'   Throughput: {len(model_answers) / batch_generation_time:.1f} answers/sec',
             )
 
     except Exception as e:
@@ -2677,7 +2793,7 @@ def process_question_batch(
     # Process evaluation (can also be batched if needed)
     results = []
     for idx, (item, model_answer) in enumerate(
-        zip(valid_items, model_answers)
+        zip(valid_items, model_answers),
     ):
         i, qa_pair = item
         question = qa_pair.get('question', '')
@@ -2732,20 +2848,20 @@ def process_question_batch(
     if verbose:
         successful = len([r for r in results if not r.get('skipped', False)])
         print(
-            f'📊 Batch processing complete: {successful}/{len(results)} successful'
+            f'📊 Batch processing complete: {successful}/{len(results)} successful',
         )
 
     return results
 
 
 def generate_rag_answer_batch(
-    questions: List[str],
+    questions: list[str],
     rag_model: RagGeneratorWithChunkLogging,
     question_format: str = 'auto',
-    contexts: Optional[List[Optional[str]]] = None,
+    contexts: Optional[list[Optional[str]]] = None,
     retrieval_top_k: int = 5,
     retrieval_score_threshold: float = 0.0,
-) -> List[str]:
+) -> list[str]:
     """Generate RAG answers for a batch of questions."""
     if contexts is None:
         contexts = [None] * len(questions)
@@ -2785,10 +2901,10 @@ def get_checkpoint_filename(config: MCQAConfig, timestamp: str) -> str:
 
 
 def save_checkpoint(
-    results: List[Dict],
+    results: list[dict],
     completed_indices: set,
     config: MCQAConfig,
-    metadata: Dict,
+    metadata: dict,
     checkpoint_file: str,
 ) -> None:
     """Save current progress to checkpoint file."""
@@ -2806,21 +2922,21 @@ def save_checkpoint(
         with open(checkpoint_file, 'w') as f:
             json.dump(checkpoint_data, f, indent=2)
         print(
-            f'💾 Checkpoint saved: {checkpoint_file} ({len(results)} results)'
+            f'💾 Checkpoint saved: {checkpoint_file} ({len(results)} results)',
         )
     except Exception as e:
         print(f'⚠️  Warning: Failed to save checkpoint: {e}')
 
 
-def load_checkpoint(checkpoint_file: str) -> Optional[Dict]:
+def load_checkpoint(checkpoint_file: str) -> Optional[dict]:
     """Load checkpoint file and return checkpoint data."""
     try:
-        with open(checkpoint_file, 'r') as f:
+        with open(checkpoint_file) as f:
             checkpoint_data = json.load(f)
 
         print(f'📂 Loaded checkpoint: {checkpoint_file}')
         print(
-            f'   Previous progress: {checkpoint_data["completed_count"]} questions'
+            f'   Previous progress: {checkpoint_data["completed_count"]} questions',
         )
         print(f'   Checkpoint time: {checkpoint_data["timestamp"]}')
 
@@ -2834,7 +2950,8 @@ def load_checkpoint(checkpoint_file: str) -> Optional[Dict]:
 
 
 def find_latest_checkpoint(
-    checkpoint_dir: str, config: MCQAConfig
+    checkpoint_dir: str,
+    config: MCQAConfig,
 ) -> Optional[str]:
     """Find the most recent checkpoint file for this configuration."""
     try:
@@ -2853,7 +2970,8 @@ def find_latest_checkpoint(
 
         # Find the most recent checkpoint
         latest_checkpoint = max(
-            checkpoint_files, key=lambda x: x.stat().st_mtime
+            checkpoint_files,
+            key=lambda x: x.stat().st_mtime,
         )
         return str(latest_checkpoint)
     except Exception as e:
@@ -2861,7 +2979,7 @@ def find_latest_checkpoint(
         return None
 
 
-def filter_remaining_items(items: List, completed_indices: set) -> List:
+def filter_remaining_items(items: list, completed_indices: set) -> list:
     """Filter out already completed items based on checkpoint."""
     remaining_items = []
     for item in items:
@@ -2872,7 +2990,7 @@ def filter_remaining_items(items: List, completed_indices: set) -> List:
     skipped_count = len(items) - len(remaining_items)
     if skipped_count > 0:
         print(
-            f'📋 Resuming: Skipping {skipped_count} already completed questions'
+            f'📋 Resuming: Skipping {skipped_count} already completed questions',
         )
         print(f'📋 Remaining: {len(remaining_items)} questions to process')
 
@@ -2883,7 +3001,7 @@ def create_progress_monitor(total_questions: int, completed_count: int = 0):
     """Create a progress monitoring object."""
     if completed_count > 0:
         print(
-            f'📊 Progress: Starting from {completed_count}/{total_questions} ({completed_count / total_questions * 100:.1f}%)'
+            f'📊 Progress: Starting from {completed_count}/{total_questions} ({completed_count / total_questions * 100:.1f}%)',
         )
 
     try:
@@ -2918,7 +3036,8 @@ def create_progress_monitor(total_questions: int, completed_count: int = 0):
 
 
 def validate_checkpoint_compatibility(
-    checkpoint_data: Dict, config: MCQAConfig
+    checkpoint_data: dict,
+    config: MCQAConfig,
 ) -> bool:
     """Validate that checkpoint is compatible with current configuration."""
     try:
@@ -2936,13 +3055,13 @@ def validate_checkpoint_compatibility(
         checkpoint_questions = checkpoint_config.get('questions_file', '')
 
         if current_model != checkpoint_model:
-            print(f'⚠️  Warning: Model mismatch in checkpoint')
+            print('⚠️  Warning: Model mismatch in checkpoint')
             print(f'   Current: {current_model}')
             print(f'   Checkpoint: {checkpoint_model}')
             return False
 
         if current_questions != checkpoint_questions:
-            print(f'⚠️  Warning: Questions file mismatch in checkpoint')
+            print('⚠️  Warning: Questions file mismatch in checkpoint')
             print(f'   Current: {current_questions}')
             print(f'   Checkpoint: {checkpoint_questions}')
             return False
@@ -2966,7 +3085,8 @@ def main():
     # Generate timestamp and model name for filenames
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     model_name = config.model.generator_settings.model.replace(
-        '/', '_'
+        '/',
+        '_',
     ).replace(':', '_')
 
     # Save configuration file immediately for experiment tracking
@@ -2978,7 +3098,7 @@ def main():
     try:
         config.to_yaml(config_output_file)
         print(
-            f'Configuration saved for experiment tracking: {config_output_file}'
+            f'Configuration saved for experiment tracking: {config_output_file}',
         )
     except Exception as e:
         print(f'Warning: Could not save initial configuration file: {e}')
@@ -2988,36 +3108,38 @@ def main():
         random.seed(config.processing.random_seed)
 
     # Load questions
-    with open(config.questions_file, 'r') as f:
+    with open(config.questions_file) as f:
         questions = json.load(f)
 
     # Randomly select questions if specified
     if config.processing.random_selection:
         if config.processing.random_selection < len(questions):
             questions = random.sample(
-                questions, config.processing.random_selection
+                questions,
+                config.processing.random_selection,
             )
             print(f'Randomly selected {len(questions)} questions')
         else:
             print(
-                f'Requested {config.processing.random_selection} questions but only {len(questions)} available'
+                f'Requested {config.processing.random_selection} questions but only {len(questions)} available',
             )
 
     # Load model configurations
     grader_config = load_model_config(
-        config.model.grader_shortname, config.model.model_config_file
+        config.model.grader_shortname,
+        config.model.model_config_file,
     )
 
     # Load RAG configuration if provided
     rag_config = None
     if config.rag.rag_config_file:
-        with open(config.rag.rag_config_file, 'r') as f:
+        with open(config.rag.rag_config_file) as f:
             rag_config = yaml.safe_load(f)
         print(f'Using RAG configuration from {config.rag.rag_config_file}')
     elif config.rag.retriever_config:
         # Convert MCQA retriever config to distllm format
         retriever_config_dict = convert_mcqa_retriever_to_distllm_config(
-            config.rag.retriever_config
+            config.rag.retriever_config,
         )
         print('Using inline retriever configuration')
     else:
@@ -3039,10 +3161,11 @@ def main():
         # Create generator config based on model settings
         if config.model.generator.generator_type == 'argo':
             if not isinstance(
-                config.model.generator_settings, ArgoGeneratorSettings
+                config.model.generator_settings,
+                ArgoGeneratorSettings,
             ):
                 raise ValueError(
-                    "Generator type is 'argo' but settings are not ArgoGeneratorSettings"
+                    "Generator type is 'argo' but settings are not ArgoGeneratorSettings",
                 )
             argo_settings = config.model.generator_settings
             generator_config = ArgoGeneratorConfig(
@@ -3054,10 +3177,11 @@ def main():
             )
         else:
             if not isinstance(
-                config.model.generator_settings, VLLMGeneratorSettings
+                config.model.generator_settings,
+                VLLMGeneratorSettings,
             ):
                 raise ValueError(
-                    "Generator type is 'vllm' but settings are not VLLMGeneratorSettings"
+                    "Generator type is 'vllm' but settings are not VLLMGeneratorSettings",
                 )
             vllm_settings = config.model.generator_settings
             generator_config = VLLMGeneratorConfig(
@@ -3089,10 +3213,11 @@ def main():
         # Create basic RAG model without retrieval
         if config.model.generator.generator_type == 'argo':
             if not isinstance(
-                config.model.generator_settings, ArgoGeneratorSettings
+                config.model.generator_settings,
+                ArgoGeneratorSettings,
             ):
                 raise ValueError(
-                    "Generator type is 'argo' but settings are not ArgoGeneratorSettings"
+                    "Generator type is 'argo' but settings are not ArgoGeneratorSettings",
                 )
             argo_settings = config.model.generator_settings
             generator_config = ArgoGeneratorConfig(
@@ -3104,10 +3229,11 @@ def main():
             )
         else:
             if not isinstance(
-                config.model.generator_settings, VLLMGeneratorSettings
+                config.model.generator_settings,
+                VLLMGeneratorSettings,
             ):
                 raise ValueError(
-                    "Generator type is 'vllm' but settings are not VLLMGeneratorSettings"
+                    "Generator type is 'vllm' but settings are not VLLMGeneratorSettings",
                 )
             vllm_settings = config.model.generator_settings
             generator_config = VLLMGeneratorConfig(
@@ -3138,10 +3264,11 @@ def main():
         # Create model for context field usage or no-RAG mode
         if config.model.generator.generator_type == 'argo':
             if not isinstance(
-                config.model.generator_settings, ArgoGeneratorSettings
+                config.model.generator_settings,
+                ArgoGeneratorSettings,
             ):
                 raise ValueError(
-                    "Generator type is 'argo' but settings are not ArgoGeneratorSettings"
+                    "Generator type is 'argo' but settings are not ArgoGeneratorSettings",
                 )
             argo_settings = config.model.generator_settings
             generator_config = ArgoGeneratorConfig(
@@ -3153,10 +3280,11 @@ def main():
             )
         else:
             if not isinstance(
-                config.model.generator_settings, VLLMGeneratorSettings
+                config.model.generator_settings,
+                VLLMGeneratorSettings,
             ):
                 raise ValueError(
-                    "Generator type is 'vllm' but settings are not VLLMGeneratorSettings"
+                    "Generator type is 'vllm' but settings are not VLLMGeneratorSettings",
                 )
             vllm_settings = config.model.generator_settings
             generator_config = VLLMGeneratorConfig(
@@ -3192,7 +3320,8 @@ def main():
         """Cleanup handler to ensure local vLLM servers are shut down."""
         print('\nShutting down...')
         if hasattr(rag_model, 'generator') and hasattr(
-            rag_model.generator, 'shutdown'
+            rag_model.generator,
+            'shutdown',
         ):
             try:
                 rag_model.generator.shutdown()
@@ -3207,7 +3336,7 @@ def main():
 
     try:
         # Print configuration summary
-        print(f'Configuration Summary:')
+        print('Configuration Summary:')
         print(f'  Generator Type: {config.model.generator.generator_type}')
         print(f'  Generator Model: {config.model.generator_settings.model}')
         print(f'  Grader: {config.model.grader_shortname}')
@@ -3230,7 +3359,7 @@ def main():
         if use_batching:
             print(f'  Batch Size: {batch_size}')
             print(
-                f'  Estimated Batches: {(len(questions) + batch_size - 1) // batch_size}'
+                f'  Estimated Batches: {(len(questions) + batch_size - 1) // batch_size}',
             )
 
         # Prepare items for parallel processing
@@ -3256,23 +3385,25 @@ def main():
             elif config.processing.auto_resume:
                 # Auto-find latest checkpoint
                 checkpoint_file_to_resume = find_latest_checkpoint(
-                    config.processing.checkpoint_directory, config
+                    config.processing.checkpoint_directory,
+                    config,
                 )
 
             # Load checkpoint if found
             if checkpoint_file_to_resume:
                 checkpoint_data = load_checkpoint(checkpoint_file_to_resume)
                 if checkpoint_data and validate_checkpoint_compatibility(
-                    checkpoint_data, config
+                    checkpoint_data,
+                    config,
                 ):
                     # Restore previous progress
                     results = checkpoint_data['results']
                     completed_indices = set(
-                        checkpoint_data['completed_indices']
+                        checkpoint_data['completed_indices'],
                     )
                     items = filter_remaining_items(items, completed_indices)
                     print(
-                        f'🔄 Resuming from checkpoint with {len(results)} completed questions'
+                        f'🔄 Resuming from checkpoint with {len(results)} completed questions',
                     )
                 else:
                     print('⚠️  Cannot resume from checkpoint, starting fresh')
@@ -3285,7 +3416,8 @@ def main():
         progress_monitor = None
         if config.processing.progress_bar:
             progress_monitor = create_progress_monitor(
-                total_questions=len(questions), completed_count=len(results)
+                total_questions=len(questions),
+                completed_count=len(results),
             )
 
         # Determine checkpoint filename for this run
@@ -3299,23 +3431,23 @@ def main():
         # Process questions
         start_time = time.time()
         print(
-            f'\nProcessing {len(items)} questions with {"RAG" if use_rag else "DIRECT"} mode...'
+            f'\nProcessing {len(items)} questions with {"RAG" if use_rag else "DIRECT"} mode...',
         )
         if config.processing.parallel_workers > 1:
             print(
-                f'Using {config.processing.parallel_workers} parallel workers...'
+                f'Using {config.processing.parallel_workers} parallel workers...',
             )
         if use_batching:
             print(f'Using batch processing with batch_size={batch_size}')
         if config.processing.enable_checkpointing:
             print(
-                f'💾 Checkpointing enabled (interval: {config.processing.checkpoint_interval})'
+                f'💾 Checkpointing enabled (interval: {config.processing.checkpoint_interval})',
             )
             print(
-                f'📁 Checkpoint directory: {config.processing.checkpoint_directory}'
+                f'📁 Checkpoint directory: {config.processing.checkpoint_directory}',
             )
         print(
-            'This may take some time. Each model call has built-in retries and waiting.'
+            'This may take some time. Each model call has built-in retries and waiting.',
         )
 
         # Track progress with checkpointing
@@ -3445,7 +3577,7 @@ def main():
             else:
                 # Parallel batch processing
                 with concurrent.futures.ThreadPoolExecutor(
-                    max_workers=config.processing.parallel_workers
+                    max_workers=config.processing.parallel_workers,
                 ) as executor:
                     futures = [
                         executor.submit(process_batch, batch)
@@ -3459,7 +3591,7 @@ def main():
                     process_item(item)
             else:
                 with concurrent.futures.ThreadPoolExecutor(
-                    max_workers=config.processing.parallel_workers
+                    max_workers=config.processing.parallel_workers,
                 ) as executor:
                     futures = [
                         executor.submit(process_item, item) for item in items
@@ -3483,7 +3615,7 @@ def main():
                 checkpoint_filename,
             )
             print(
-                f'✅ Final checkpoint saved with {len(results)} total results'
+                f'✅ Final checkpoint saved with {len(results)} total results',
             )
 
         # Filter out skipped results for statistics
@@ -3512,17 +3644,17 @@ def main():
                 sum(qa_scores) / len(qa_scores) if qa_scores else None
             )
 
-            print(f'\n=== EVALUATION RESULTS ===')
+            print('\n=== EVALUATION RESULTS ===')
             print(
-                f'Overall Accuracy: {overall_accuracy:.3f} ({sum(all_scores)}/{len(all_scores)})'
+                f'Overall Accuracy: {overall_accuracy:.3f} ({sum(all_scores)}/{len(all_scores)})',
             )
             if mc_accuracy is not None:
                 print(
-                    f'MC Accuracy: {mc_accuracy:.3f} ({sum(mc_scores)}/{len(mc_scores)})'
+                    f'MC Accuracy: {mc_accuracy:.3f} ({sum(mc_scores)}/{len(mc_scores)})',
                 )
             if qa_accuracy is not None:
                 print(
-                    f'QA Accuracy: {qa_accuracy:.3f} ({sum(qa_scores)}/{len(qa_scores)})'
+                    f'QA Accuracy: {qa_accuracy:.3f} ({sum(qa_scores)}/{len(qa_scores)})',
                 )
 
             # Source chunk retrieval statistics
@@ -3539,10 +3671,10 @@ def main():
                         if r.get('source_chunk_retrieved')
                     )
                     source_retrieval_rate = source_retrieved_count / len(
-                        source_retrieved_results
+                        source_retrieved_results,
                     )
                     print(
-                        f'Source Chunk Retrieval Rate: {source_retrieval_rate:.3f} ({source_retrieved_count}/{len(source_retrieved_results)})'
+                        f'Source Chunk Retrieval Rate: {source_retrieval_rate:.3f} ({source_retrieved_count}/{len(source_retrieved_results)})',
                     )
 
                 # Question hash retrieval statistics (NEW in V3)
@@ -3562,12 +3694,15 @@ def main():
                         / len(question_hash_results)
                     )
                     print(
-                        f'Question Hash Retrieval Rate: {question_hash_retrieval_rate:.3f} ({question_hash_retrieved_count}/{len(question_hash_results)})'
+                        f'Question Hash Retrieval Rate: {question_hash_retrieval_rate:.3f} ({question_hash_retrieved_count}/{len(question_hash_results)})',
                     )
 
             # Create metadata
             metadata = create_metadata(
-                config, questions, rag_config, args.config
+                config,
+                questions,
+                rag_config,
+                args.config,
             )
 
             # Save results with metadata (directory already created at start)
@@ -3613,10 +3748,10 @@ def main():
                 .get('retrieval_info', {})
                 .get('retrieved_chunks')
             ):
-                print(f'\n--- SAMPLE CHUNK LOGGING ---')
+                print('\n--- SAMPLE CHUNK LOGGING ---')
                 sample_result = processed_results[0]
                 print(f'Question ID: {sample_result["question_id"]}')
-                print(f'Retrieved chunks:')
+                print('Retrieved chunks:')
                 for chunk_list in sample_result['retrieval_info'][
                     'retrieved_chunks'
                 ]:
@@ -3626,7 +3761,8 @@ def main():
                         print(f'    Path: {chunk["path"]}')
                         # Print question hash information if available
                         if chunk.get('metadata') and isinstance(
-                            chunk['metadata'], dict
+                            chunk['metadata'],
+                            dict,
                         ):
                             chunk_hash = chunk['metadata'].get('question_hash')
                             if chunk_hash:
@@ -3639,7 +3775,7 @@ def main():
             return
 
     except Exception as e:
-        print(f'Error in main function: {str(e)}')
+        print(f'Error in main function: {e!s}')
         return
     finally:
         # Ensure cleanup happens even if an exception occurs
