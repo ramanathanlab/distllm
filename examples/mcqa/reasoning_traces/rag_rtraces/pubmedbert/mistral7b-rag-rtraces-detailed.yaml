@@ -1,0 +1,109 @@
+# Enhanced Mistral-7B Configuration with Checkpointing and Progress Monitoring
+# Strategy: Single vLLM server with tensor parallelism + batching + comprehensive checkpointing
+
+questions_file: "/rbstor/ac.ogokdemir/TPC-Paper/Hashed-HR-GOOD-10-MC.json"
+
+model:
+  generator:
+    generator_type: "vllm"
+  
+  generator_settings:
+    # Traditional fields
+    server: "localhost"
+    port: 8000
+    api_key: "CELS"
+    model: "mistralai/Mistral-7B-Instruct-v0.3"
+    temperature: 0.0
+    max_tokens: 1024
+    
+    # Local vLLM server configuration
+    boot_local: true
+    hf_model_id: "mistralai/Mistral-7B-Instruct-v0.3"
+    auto_port: true
+    local_host: "127.0.0.1"
+    server_startup_timeout: 300
+    
+    # vLLM arguments for 8-GPU tensor parallelism
+    vllm_args:
+      tensor_parallel_size: 8
+      max_model_len: 32768
+      gpu_memory_utilization: 0.9
+      dtype: "auto"
+      trust_remote_code: false
+      seed: 42
+      
+      
+      # Performance optimizations
+      pipeline_parallel_size: 1
+      max_num_batched_tokens: 32768
+      max_num_seqs: 512
+      
+    # Request batching configuration
+    enable_batching: true
+    batch_size: 16
+    batch_timeout: 5.0
+  
+  grader_shortname: "gpt-4.1"
+  model_config_file: "model_servers.yaml"
+
+# RAG Configuration
+rag:
+  enabled: true                      # Enable/disable RAG functionality
+  rag_config_file: null             # Path to RAG configuration YAML file (optional)
+  
+  
+  # Optional: Inline retriever configuration (alternative to rag_config_file)
+  retriever_config:
+    faiss_config:
+      name: "faiss_index_v2"
+      dataset_dir: "/rbstor/ac.ogokdemir/TPC-Paper/reasoning_traces/datasets/detailed/embeddings/all_merged"
+      faiss_index_path: "/rbstor/ac.ogokdemir/TPC-Paper/reasoning_traces/datasets/detailed/faiss_indices/pubmedbert"
+      dataset_chunk_paths: null
+      precision: "float32"
+      search_algorithm: "exact"
+      rescore_multiplier: 2
+      num_quantization_workers: 1
+    
+    encoder_config:
+      name: "auto"
+      pretrained_model_name_or_path: "pritamdeka/S-PubMedBert-MS-MARCO"
+      quantization: false
+    
+    pooler_config:
+      name: "mean"
+    
+    batch_size: 16
+  
+  use_context_field: false          # Use 'text' field from JSON as context
+  retrieval_top_k: 5                # Number of documents to retrieve
+  retrieval_score_threshold: 0.0    # Minimum retrieval score threshold
+  chunk_logging_enabled: true       # Enable detailed chunk logging
+
+processing:
+  parallel_workers: 8
+  question_format: "mc"
+  verbose: true
+  random_selection: null
+  random_seed: 42
+  
+  # ✨ NEW: Comprehensive Checkpointing and Progress Monitoring
+  enable_checkpointing: true              # Enable automatic checkpointing
+  checkpoint_interval: 1024                 # Save checkpoint every 50 completed questions
+  checkpoint_directory: "/rbstor/ac.ogokdemir/TPC-Paper/test/checkpoints/"     # Directory for checkpoint files
+  resume_from_checkpoint: null            # Specify checkpoint file to resume from (null = auto-detect)
+  auto_resume: true                       # Automatically resume from latest checkpoint
+  progress_bar: true                      # Show progress bar with percentage
+  save_incremental: false                 # Ultra-safe mode: save after every question (slower)
+
+output:
+  save_incorrect: true
+  output_directory: "/rbstor/ac.ogokdemir/TPC-Paper/test"
+  output_prefix: "mistral7b_rag_checkpointed"
+
+# 🔋 Production Safety Features:
+# - Automatic checkpointing every 50 questions
+# - Auto-resume from crashes/interruptions  
+# - Progress monitoring with percentage completion
+# - Memory-safe: doesn't store everything in RAM
+# - Crash recovery: can resume from any checkpoint
+# - Ultra-safe mode option for critical workloads 
