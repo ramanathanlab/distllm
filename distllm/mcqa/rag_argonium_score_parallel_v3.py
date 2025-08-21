@@ -919,8 +919,12 @@ class VLLMGeneratorConfig(BaseConfig):
     )
     temperature: float = Field(0.0, description='Temperature for generation.')
     max_tokens: int = Field(
+<<<<<<< Updated upstream
         64,
         description='Maximum number of tokens to generate.',
+=======
+        64, description='Maximum number of tokens to generate.'
+>>>>>>> Stashed changes
     )
 
     # New fields for local vLLM server booting

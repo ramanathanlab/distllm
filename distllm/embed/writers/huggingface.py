@@ -58,16 +58,16 @@ class HuggingFaceWriter:
         result : EmbedderResult
             The result to write to disk.
         """
-        # TODO: Use Dataset.from_dict instead of Dataset.from_generator
-        # Create a dataset from the generator
-        dataset = Dataset.from_generator(
-            _generate_dataset,
-            gen_kwargs={
-                'embeddings': result.embeddings,
-                'text': result.text,
-                'metadata': result.metadata,
-            },
-        )
+        # Use Dataset.from_dict instead of Dataset.from_generator to avoid NFS issues
+        # Convert generator to dictionary
+        data = list(_generate_dataset(
+            result.embeddings,
+            result.text,
+            result.metadata,
+        ))
+        
+        # Create dataset from dictionary (avoids temporary file issues on NFS)
+        dataset = Dataset.from_list(data)
 
         # Write the dataset to disk
         dataset.save_to_disk(output_dir)
