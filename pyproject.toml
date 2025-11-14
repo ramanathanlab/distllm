@@ -33,7 +33,7 @@ dependencies = [
     "peft>=0.10.0",
     "sentence-transformers>=3.3.1",
     "torch",
-    "faiss-gpu==1.7.2",
+    "faiss-gpu-cu12==1.12.0",
     "numpy==1.26.4",
     "backoff==2.2.1"
 ]
