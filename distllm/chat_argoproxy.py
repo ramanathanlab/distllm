@@ -23,6 +23,10 @@ from distllm.utils import BaseConfig
 # Load environment variables
 load_dotenv()
 
+proxies = {
+    'http':  'http://proxy.alcf.anl.gov:3128',
+    'https': 'http://proxy.alcf.anl.gov:3128',
+}
 
 # -----------------------------------------------------------------------------
 # Prompt Templates
@@ -166,6 +170,7 @@ class VLLMGenerator:
             url,
             headers=headers,
             data=json.dumps(payload),
+            proxies=proxies
         )
         if response.status_code == 200:  # noqa: PLR2004
             result = response.json()['choices'][0]['message']['content']
