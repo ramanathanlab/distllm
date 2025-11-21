@@ -13,6 +13,7 @@ import openai
 import requests
 from dotenv import load_dotenv
 from pydantic import Field
+from pydantic import model_validator
 
 from distllm.generate.prompts import IdentityPromptTemplate
 from distllm.generate.prompts import IdentityPromptTemplateConfig
@@ -23,10 +24,7 @@ from distllm.utils import BaseConfig
 # Load environment variables
 load_dotenv()
 
-proxies = {
-    'http':  'http://proxy.alcf.anl.gov:3128',
-    'https': 'http://proxy.alcf.anl.gov:3128',
-}
+
 
 # -----------------------------------------------------------------------------
 # Prompt Templates
@@ -170,7 +168,6 @@ class VLLMGenerator:
             url,
             headers=headers,
             data=json.dumps(payload),
-            proxies=proxies
         )
         if response.status_code == 200:  # noqa: PLR2004
             result = response.json()['choices'][0]['message']['content']
@@ -258,6 +255,103 @@ class ArgoGenerator:
             result = f'Error: {e!s}'
 
         return result
+
+
+# Directly use the OpenAI API, instead of the argo-proxy models.
+class OpenAIAPIGeneratorConfig(BaseConfig):
+    """
+    Configuration for directly calling the OpenAI API (no proxy).
+    """
+
+    model: str = Field(
+        default_factory=lambda: os.getenv("OPENAI_MODEL", "gpt-4.1"),
+        description="OpenAI model name",
+    )
+    api_key: str = Field(
+        default_factory=lambda: os.getenv("OPENAI_API_KEY"),
+        description="OpenAI API key",
+    )
+    base_url: str | None = Field(
+        default_factory=lambda: os.getenv("OPENAI_BASE_URL", None),
+        description="Optional: override OpenAI base URL (e.g., Azure)",
+    )
+    temperature: float = Field(0.0)
+    max_tokens: int = Field(16384)
+
+    def get_generator(self) -> "OpenAIAPIGenerator":
+        return OpenAIAPIGenerator(config=self)
+
+
+class OpenAIAPIGenerator:
+    """Generator that hits the public OpenAI API directly."""
+
+    def __init__(self, config: OpenAIAPIGeneratorConfig) -> None:
+        self.model = config.model
+        self.temperature = config.temperature
+        self.max_tokens = config.max_tokens
+
+        # Validate API key
+        if not config.api_key:
+            raise ValueError(
+                'OpenAI API key is required. Set OPENAI_API_KEY environment variable '
+                'or provide it in the config file.',
+            )
+
+        # Initialize OpenAI client
+        if config.base_url:
+            self.client = openai.OpenAI(
+                api_key=config.api_key,
+                base_url=config.base_url,
+            )
+        else:
+            self.client = openai.OpenAI(
+                api_key=config.api_key,
+            )
+
+    def generate(
+        self,
+        prompt: str,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+    ) -> str:
+        temperature = self.temperature if temperature is None else temperature
+        max_tokens = self.max_tokens if max_tokens is None else max_tokens
+
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": prompt},
+        ]
+
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=temperature,
+                max_completion_tokens=max_tokens,
+            )
+            content = response.choices[0].message.content
+            
+            # Handle case where content might be None
+            if content is None:
+                # Check finish reason to understand why content is None
+                finish_reason = response.choices[0].finish_reason
+                # Debug: print full response structure for diagnosis
+                print(f"DEBUG: Response content is None. Finish reason: {finish_reason}")
+                print(f"DEBUG: Full response structure: {response}")
+                return f"[No content returned. Finish reason: {finish_reason}]"
+            
+            # Debug: check if content is empty string
+            if content == "":
+                finish_reason = response.choices[0].finish_reason
+                print(f"DEBUG: Response content is empty string. Finish reason: {finish_reason}")
+            
+            return content
+
+        except Exception as e:
+            print(f"Error calling OpenAI API: {e}")
+            return f"Error: {e}"
+
+
 
 
 class RagGenerator:
@@ -401,7 +495,7 @@ class RagGenerator:
 class RetrievalAugmentedGenerationConfig(BaseConfig):
     """Configuration for the retrieval-augmented generation model."""
 
-    generator_config: VLLMGeneratorConfig | ArgoGeneratorConfig = Field(
+    generator_config: VLLMGeneratorConfig | ArgoGeneratorConfig | OpenAIAPIGeneratorConfig = Field(
         ...,
         description='Settings for the generator (VLLM or Argo)',
     )
@@ -414,6 +508,46 @@ class RetrievalAugmentedGenerationConfig(BaseConfig):
         description='Whether to print retrieved contexts in chat.',
     )
 
+    @model_validator(mode='before')
+    @classmethod
+    def handle_target_field(cls, data: dict) -> dict:
+        """Handle _target_ field to instantiate the correct config class."""
+        if isinstance(data, dict) and 'generator_config' in data:
+            gen_config_data = data['generator_config']
+            
+            # If generator_config is a dict with _target_ field, instantiate the correct class
+            if isinstance(gen_config_data, dict) and '_target_' in gen_config_data:
+                target_class_name = gen_config_data.pop('_target_')
+                
+                # Map class names to config classes
+                config_class_map = {
+                    'VLLMGeneratorConfig': VLLMGeneratorConfig,
+                    'ArgoGeneratorConfig': ArgoGeneratorConfig,
+                    'OpenAIAPIGeneratorConfig': OpenAIAPIGeneratorConfig,
+                }
+                
+                if target_class_name not in config_class_map:
+                    raise ValueError(
+                        f'Unknown generator config class: {target_class_name}. '
+                        f'Available: {list(config_class_map.keys())}',
+                    )
+                
+                config_class = config_class_map[target_class_name]
+                
+                # Handle environment variable substitution (${env:VAR_NAME})
+                processed_data = {}
+                for key, value in gen_config_data.items():
+                    if isinstance(value, str) and value.startswith('${env:') and value.endswith('}'):
+                        env_var = value[6:-1]  # Extract VAR_NAME from ${env:VAR_NAME}
+                        processed_data[key] = os.getenv(env_var, '')
+                    else:
+                        processed_data[key] = value
+                
+                # Instantiate the config class
+                data['generator_config'] = config_class(**processed_data)
+        
+        return data
+
     def get_rag_model(self) -> RagGenerator:
         """Instantiate the RAG model."""
         # Initialize the generator (either VLLM or Argo)
@@ -421,6 +555,8 @@ class RetrievalAugmentedGenerationConfig(BaseConfig):
             generator = VLLMGenerator(self.generator_config)
         elif isinstance(self.generator_config, ArgoGeneratorConfig):
             generator = ArgoGenerator(self.generator_config)
+        elif isinstance(self.generator_config, OpenAIAPIGeneratorConfig):
+            generator = OpenAIAPIGenerator(self.generator_config)
         else:
             raise ValueError(
                 f'Unsupported generator config type: {type(self.generator_config)}',

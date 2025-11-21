@@ -1,0 +1,29 @@
+rag_configs:
+  generator_config:
+    _target_: OpenAIAPIGeneratorConfig
+    model: "gpt-4.1"
+    api_key: "${env:OPENAI_API_KEY}"
+    temperature: 0.0
+    max_tokens: 16000
+
+  retriever_config:
+    faiss_config:
+      name: faiss_index_v2
+      dataset_dir: /eagle/projects/argonne_tpc/ogokdemir/Nov30Demo/semantic_chunks/embeddings/merged
+      faiss_index_path: /eagle/projects/argonne_tpc/ogokdemir/Nov30Demo/faiss_indices/sfr_mistral_nmnat
+      dataset_chunk_paths: null
+      precision: float32
+      search_algorithm: exact
+      rescore_multiplier: 2
+      num_quantization_workers: 1
+
+    encoder_config:
+      name: auto
+      pretrained_model_name_or_path: "Salesforce/SFR-Embedding-Mistral"
+
+    pooler_config:
+      name: last_token
+
+  verbose: false
+
+save_conversation_path: /lus/eagle/projects/FoundEpidem/ogokdemir/
